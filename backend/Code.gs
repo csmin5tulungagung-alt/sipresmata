@@ -795,9 +795,14 @@ function getSiswaMap(db) {
 
 function cariSiswaByBarcode(db, barcode) {
   var list = getSiswaList(db);
-  var clean = barcode.trim().toUpperCase();
+  var clean = String(barcode || "").replace(/['"\s]/g, "").trim().toUpperCase();
+  var rawNisnOnly = clean.replace(/^MIN5-?/i, "");
+
   for (var i = 0; i < list.length; i++) {
-    if (list[i].kode_barcode.toUpperCase() === clean || list[i].nisn.toUpperCase() === clean) {
+    var sNisn = String(list[i].nisn || "").replace(/['"\s]/g, "").trim().toUpperCase();
+    var sBarcode = String(list[i].kode_barcode || "").replace(/['"\s]/g, "").trim().toUpperCase();
+    
+    if (sBarcode === clean || sNisn === clean || sNisn === rawNisnOnly || sBarcode === ("MIN5-" + rawNisnOnly)) {
       return list[i];
     }
   }

@@ -40,8 +40,10 @@ export const CARD_GENERATOR = {
       if (qrElem && typeof QRCode !== 'undefined') {
         qrElem.innerHTML = ""; // Bersihkan kontainer
         try {
+          // Encode NISN langsung agar barcode dan teks di kartu 100% sama
+          const barcodeValue = String(s.nisn || s.kode_barcode || "").replace(/['"\s]/g, "").trim();
           new QRCode(qrElem, {
-            text: s.kode_barcode || `MIN5-${s.nisn}`,
+            text: barcodeValue,
             width: 82,
             height: 82,
             colorDark: "#022c22",
@@ -58,6 +60,7 @@ export const CARD_GENERATOR = {
   createCardHTML(s) {
     const rawKelas = s.nama_kelas || s.id_kelas || "1-A";
     const shortKelas = rawKelas.replace(/Kelas\s*/i, "").replace("KLS-", "").trim();
+    const cleanNisn = String(s.nisn || "").replace(/['"\s]/g, "").trim();
 
     return `
       <div class="student-card-portrait">
@@ -66,10 +69,10 @@ export const CARD_GENERATOR = {
         <div class="card-top-banner">
           <div class="banner-dots-pattern"></div>
           
-          <!-- Logo Resmi MIN 5 Tulungagung -->
+          <!-- Logo Asli MIN 5 Tulungagung dari Google Drive -->
           <div class="kemenag-logo-wrapper">
             <div class="min5-badge-logo" title="Logo Resmi MIN 5 Tulungagung">
-              <img src="/public/logo-min5.svg" class="min5-logo-card-img" alt="Logo MIN 5 Tulungagung" onerror="this.src='/logo-min5.svg'">
+              <img src="/public/logo-min5.png" class="min5-logo-card-img" alt="Logo MIN 5 Tulungagung" onerror="this.src='/logo-min5.png'">
             </div>
           </div>
 

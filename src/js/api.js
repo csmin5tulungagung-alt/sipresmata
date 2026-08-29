@@ -52,8 +52,14 @@ export const API = {
     const todayStr = now.toISOString().split("T")[0];
     const timeStr = now.toTimeString().split(" ")[0];
 
-    const clean = barcode.trim().toUpperCase();
-    const siswa = localStudents.find(s => s.kode_barcode.toUpperCase() === clean || s.nisn.toUpperCase() === clean);
+    const clean = String(barcode || "").replace(/['"\s]/g, "").trim().toUpperCase();
+    const rawNisnOnly = clean.replace(/^MIN5-?/i, "");
+
+    const siswa = localStudents.find(s => {
+      const sNisn = String(s.nisn || "").replace(/['"\s]/g, "").trim().toUpperCase();
+      const sBarcode = String(s.kode_barcode || "").replace(/['"\s]/g, "").trim().toUpperCase();
+      return sBarcode === clean || sNisn === clean || sNisn === rawNisnOnly || sBarcode === ("MIN5-" + rawNisnOnly);
+    });
 
     if (!siswa) {
       return {
