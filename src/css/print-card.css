@@ -1,0 +1,165 @@
+/* ==========================================================================
+   SIPRESMATA - PRINT ID CARD STYLESHEET (A4 Grid Layout)
+   Madrasah Ibtidaiyah Negeri 5 Tulungagung
+   ========================================================================== */
+
+.id-card-print-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12mm;
+  padding: 10mm;
+  background: transparent;
+}
+
+.student-id-card {
+  width: 85.6mm;
+  height: 54mm;
+  border: 1.5px solid #059669;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 3mm 4mm;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Card Header Kop */
+.id-card-header {
+  display: flex;
+  align-items: center;
+  gap: 2.5mm;
+  border-bottom: 1.5px solid #059669;
+  padding-bottom: 1.5mm;
+}
+
+.id-card-logo {
+  width: 9mm;
+  height: 9mm;
+  background: #059669;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 5pt;
+  text-align: center;
+}
+
+.id-card-title-group h4 {
+  font-size: 7.5pt;
+  font-weight: 800;
+  color: #059669;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.id-card-title-group p {
+  font-size: 5.5pt;
+  color: #475569;
+  line-height: 1;
+}
+
+/* Card Body */
+.id-card-body {
+  display: flex;
+  gap: 3mm;
+  align-items: center;
+  margin: 1.5mm 0;
+}
+
+.id-card-photo {
+  width: 18mm;
+  height: 22mm;
+  border: 1px dashed #94a3b8;
+  border-radius: 4px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14pt;
+  color: #64748b;
+}
+
+.id-card-info-table {
+  flex: 1;
+  font-size: 6.5pt;
+  line-height: 1.35;
+}
+
+.id-card-info-table .info-row {
+  display: flex;
+  margin-bottom: 0.8mm;
+}
+
+.id-card-info-table .label {
+  width: 14mm;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.id-card-info-table .val {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Card Footer Barcode */
+.id-card-footer {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.5mm;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.barcode-svg-render {
+  max-width: 50mm;
+  height: 10mm;
+}
+
+.barcode-text-code {
+  font-family: monospace;
+  font-size: 6.5pt;
+  font-weight: 800;
+  color: #059669;
+}
+
+/* Media Query Khusus Cetak Kertas */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #printable-cards-area, #printable-cards-area * {
+    visibility: visible;
+  }
+  
+  #printable-cards-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm; /* A4 Width */
+    margin: 0;
+    padding: 10mm;
+  }
+
+  .id-card-print-container {
+    display: grid;
+    grid-template-columns: repeat(2, 85.6mm);
+    gap: 8mm;
+    page-break-after: always;
+  }
+
+  .student-id-card {
+    page-break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

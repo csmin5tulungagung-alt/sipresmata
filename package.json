@@ -1,0 +1,24 @@
+{
+  "name": "sipresmata",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SIPRESMATA - Sistem Informasi Presensi Siswa Madrasah Terpadu MIN 5 Tulungagung",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "absensi",
+    "barcode",
+    "madrasah",
+    "google-apps-script",
+    "presensi-siswa",
+    "min5-tulungagung"
+  ],
+  "author": "MIN 5 Tulungagung",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.4.2"
+  }
+}
