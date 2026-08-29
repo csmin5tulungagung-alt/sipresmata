@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- * SIPRESMATA - MASTER SPA ORCHESTRATOR
+ * SIPRESMATA - MASTER SPA ORCHESTRATOR (DUAL MODE: KIOSK & CMS)
  * Madrasah Ibtidaiyah Negeri 5 Tulungagung
  * ============================================================================
  */
@@ -17,29 +17,33 @@ let currentSessionUser = JSON.parse(localStorage.getItem("SIPRESMATA_ADMIN_USER"
 
 document.addEventListener("DOMContentLoaded", () => {
   initLiveClock();
-  initNavigation();
+  initLayoutSwitching();
+  initCmsNavigation();
   initThemeToggle();
   initScannerView();
   initAdminForms();
   initSettingsView();
 
   ADMIN.populateClassSelects();
-  updateAuthUI();
+
+  // Jika sudah login sebelumnya, bisa langsung aktifkan CMS atau default Kiosk
+  if (currentSessionUser) {
+    updateCmsUserUI();
+  }
 });
 
 // 1. Live Clock & Session Indicator
 function initLiveClock() {
-  const clockElem = document.getElementById("live-digital-clock");
+  const kioskClock = document.getElementById("kiosk-live-clock");
+  const cmsClock = document.getElementById("cms-live-clock");
   const bannerSession = document.getElementById("kiosk-session-banner");
 
   function update() {
     const now = new Date();
     const timeStr = now.toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + " WIB";
-    const dateStr = now.toLocaleDateString("id-ID", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     
-    if (clockElem) {
-      clockElem.textContent = timeStr;
-    }
+    if (kioskClock) kioskClock.textContent = timeStr;
+    if (cmsClock) cmsClock.textContent = timeStr;
 
     const t = now.toTimeString().split(" ")[0];
     if (bannerSession) {
@@ -61,42 +65,96 @@ function initLiveClock() {
   setInterval(update, 1000);
 }
 
-// 2. Navigation SPA Tab Switcher
-function initNavigation() {
-  const tabBtns = document.querySelectorAll(".nav-tab-btn");
-  const views = document.querySelectorAll(".view-section");
+// 2. Dual Layout Switcher (Kiosk Mode vs CMS Mode)
+function initLayoutSwitching() {
+  const kioskLayout = document.getElementById("public-kiosk-layout");
+  const cmsLayout = document.getElementById("admin-cms-layout");
+  const btnOpenLogin = document.getElementById("btn-open-login");
+  const btnSwitchKiosk = document.getElementById("btn-cms-switch-kiosk");
+  const btnLogout = document.getElementById("btn-cms-logout");
 
-  tabBtns.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const targetView = btn.getAttribute("data-target");
-
-      // Proteksi rute admin jika belum login
-      if (targetView.startsWith("admin-") && !currentSessionUser) {
+  // Klik tombol Login Admin di Kiosk
+  if (btnOpenLogin) {
+    btnOpenLogin.addEventListener("click", () => {
+      if (currentSessionUser) {
+        // Jika sudah login, langsung buka CMS
+        switchToCms();
+      } else {
         openModal("modal-login-admin");
-        return;
       }
+    });
+  }
 
-      tabBtns.forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
+  // Tombol Kembali ke Kiosk Scanner dari CMS
+  if (btnSwitchKiosk) {
+    btnSwitchKiosk.addEventListener("click", () => {
+      switchToKiosk();
+    });
+  }
 
-      views.forEach(v => v.classList.remove("active"));
-      const activeView = document.getElementById(targetView);
+  // Logout Admin
+  if (btnLogout) {
+    btnLogout.addEventListener("click", () => {
+      currentSessionUser = null;
+      localStorage.removeItem("SIPRESMATA_ADMIN_USER");
+      showToast("Anda telah keluar dari Portal Administrator.", "info");
+      switchToKiosk();
+    });
+  }
+}
+
+export function switchToCms() {
+  document.getElementById("public-kiosk-layout").classList.remove("active");
+  document.getElementById("admin-cms-layout").classList.add("active");
+  document.body.className = "mode-cms";
+
+  // Stop camera saat di portal CMS
+  SCANNER.stop();
+
+  updateCmsUserUI();
+  // Default load Dashboard CMS
+  document.querySelector('.cms-nav-link[data-target="cms-view-dashboard"]').click();
+}
+
+export function switchToKiosk() {
+  document.getElementById("admin-cms-layout").classList.remove("active");
+  document.getElementById("public-kiosk-layout").classList.add("active");
+  document.body.className = "mode-kiosk";
+
+  // Re-start camera di kiosk
+  const camSelect = document.getElementById("select-camera");
+  if (camSelect && camSelect.value) {
+    SCANNER.start(camSelect.value, handleScanFeedback);
+  }
+}
+
+// 3. CMS Sidebar Navigation Switcher
+function initCmsNavigation() {
+  const navLinks = document.querySelectorAll(".cms-nav-link[data-target]");
+  const cmsViews = document.querySelectorAll(".cms-view-section");
+  const breadcrumbSub = document.getElementById("cms-breadcrumb-sub");
+
+  navLinks.forEach(link => {
+    link.addEventListener("click", () => {
+      const targetViewId = link.getAttribute("data-target");
+
+      navLinks.forEach(l => l.classList.remove("active"));
+      link.classList.add("active");
+
+      cmsViews.forEach(v => v.classList.remove("active"));
+      const activeView = document.getElementById(targetViewId);
       if (activeView) activeView.classList.add("active");
 
-      // Lifecycle hooks on view enter
-      if (targetView === "view-kiosk-scanner") {
-        const camSelect = document.getElementById("select-camera");
-        if (camSelect && camSelect.value) {
-          SCANNER.start(camSelect.value, handleScanFeedback);
-        }
-      } else {
-        SCANNER.stop();
+      // Update breadcrumb
+      if (breadcrumbSub) {
+        breadcrumbSub.textContent = link.textContent.trim().replace(/^.+?\s/, '');
       }
 
-      if (targetView === "admin-view-dashboard") ADMIN.loadDashboard();
-      if (targetView === "admin-view-students") ADMIN.loadStudents();
-      if (targetView === "admin-view-cards") CARD_GENERATOR.renderCards(document.getElementById("printable-cards-area"));
-      if (targetView === "admin-view-rekap") {
+      // Lifecycle hooks on CMS view enter
+      if (targetViewId === "cms-view-dashboard") ADMIN.loadDashboard();
+      if (targetViewId === "cms-view-students") ADMIN.loadStudents();
+      if (targetViewId === "cms-view-cards") CARD_GENERATOR.renderCards(document.getElementById("printable-cards-area"));
+      if (targetViewId === "cms-view-rekap") {
         const tglMulai = document.getElementById("rekap-tgl-mulai").value || new Date().toISOString().split("T")[0];
         const tglAkhir = document.getElementById("rekap-tgl-akhir").value || new Date().toISOString().split("T")[0];
         ADMIN.loadRekap(tglMulai, tglAkhir);
@@ -105,7 +163,7 @@ function initNavigation() {
   });
 }
 
-// 3. Scanner Kiosk Integration
+// 4. Scanner Kiosk Integration
 function initScannerView() {
   const camSelect = document.getElementById("select-camera");
   const manualBarcodeBtn = document.getElementById("btn-submit-manual-code");
@@ -180,7 +238,7 @@ function handleScanFeedback(res) {
   }
 }
 
-// 4. Admin Forms & Modals
+// 5. Admin Forms & Modals
 function initAdminForms() {
   // Login Form
   const formLogin = document.getElementById("form-login-admin");
@@ -195,25 +253,11 @@ function initAdminForms() {
         currentSessionUser = res.data;
         localStorage.setItem("SIPRESMATA_ADMIN_USER", JSON.stringify(currentSessionUser));
         closeModal("modal-login-admin");
-        updateAuthUI();
-        showToast("Login Berhasil! Selamat datang, " + currentSessionUser.nama_pengguna, "success");
-        // Pindah ke tab dashboard
-        document.querySelector('[data-target="admin-view-dashboard"]').click();
+        showToast("Login Berhasil! Selamat datang di Portal CMS Administrator.", "success");
+        switchToCms();
       } else {
         showToast(res.message, "danger");
       }
-    });
-  }
-
-  // Logout Button
-  const btnLogout = document.getElementById("btn-logout");
-  if (btnLogout) {
-    btnLogout.addEventListener("click", () => {
-      currentSessionUser = null;
-      localStorage.removeItem("SIPRESMATA_ADMIN_USER");
-      updateAuthUI();
-      showToast("Anda telah keluar dari mode admin.", "info");
-      document.querySelector('[data-target="view-kiosk-scanner"]').click();
     });
   }
 
@@ -327,7 +371,7 @@ function initAdminForms() {
   }
 }
 
-// 5. Global Window Bridges for Table Actions
+// 6. Global Window Bridges for Table Actions
 window.editStudent = async function(idSiswa) {
   const res = await API.getSiswa();
   const student = (res.data || []).find(s => s.id_siswa === idSiswa);
@@ -361,7 +405,7 @@ window.openAddStudentModal = function() {
   openModal("modal-student-form");
 };
 
-// 6. Settings View
+// 7. Settings View
 function initSettingsView() {
   const inputUrl = document.getElementById("setting-api-url");
   const inputKey = document.getElementById("setting-client-key");
@@ -380,7 +424,7 @@ function initSettingsView() {
   }
 }
 
-// 7. Modal & Toast Helpers
+// 8. Modal & Toast Helpers
 export function openModal(id) {
   const modal = document.getElementById(id);
   if (modal) modal.classList.add("active");
@@ -411,28 +455,34 @@ export function showToast(message, type = "info") {
   }, 3500);
 }
 
-// 8. Auth UI Update
-function updateAuthUI() {
-  const btnLoginNav = document.getElementById("nav-btn-login");
-  const adminBadges = document.querySelectorAll(".admin-only-badge");
+// 9. Update CMS User UI
+function updateCmsUserUI() {
+  const userNameElem = document.getElementById("cms-user-name");
+  const userRoleElem = document.getElementById("cms-user-role");
+  const userAvatarElem = document.getElementById("cms-user-avatar");
 
   if (currentSessionUser) {
-    if (btnLoginNav) btnLoginNav.textContent = `👤 ${currentSessionUser.nama_pengguna.split(" ")[0]}`;
-    adminBadges.forEach(el => el.style.display = "inline-block");
-  } else {
-    if (btnLoginNav) btnLoginNav.textContent = "🔒 Login Admin";
-    adminBadges.forEach(el => el.style.display = "none");
+    if (userNameElem) userNameElem.textContent = currentSessionUser.nama_pengguna;
+    if (userRoleElem) userRoleElem.textContent = currentSessionUser.role.replace("_", " ");
+    if (userAvatarElem) {
+      const initials = currentSessionUser.nama_pengguna.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase();
+      userAvatarElem.textContent = initials || "AD";
+    }
   }
 }
 
-// 9. Theme Toggle
+// 10. Theme Toggle
 function initThemeToggle() {
-  const btnToggle = document.getElementById("btn-toggle-theme");
-  if (!btnToggle) return;
+  const btnKiosk = document.getElementById("btn-toggle-theme-kiosk");
+  const btnCms = document.getElementById("btn-toggle-theme-cms");
 
-  btnToggle.addEventListener("click", () => {
+  function toggle() {
     document.body.classList.toggle("light-theme");
     const isLight = document.body.classList.contains("light-theme");
-    btnToggle.textContent = isLight ? "🌙" : "☀️";
-  });
+    if (btnKiosk) btnKiosk.textContent = isLight ? "🌙" : "☀️";
+    if (btnCms) btnCms.textContent = isLight ? "🌙" : "☀️";
+  }
+
+  if (btnKiosk) btnKiosk.addEventListener("click", toggle);
+  if (btnCms) btnCms.addEventListener("click", toggle);
 }

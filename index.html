@@ -22,71 +22,44 @@
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 </head>
-<body>
+<body class="mode-kiosk">
 
   <!-- ========================================================================
-       TOP HEADER & NAVIGATION BAR
+       1. TAMPILAN PUBLIK: KIOSK SCANNER PRESENSI SISWA
+       (Tampilan default untuk siswa dan umum di gerbang/ruang kelas)
        ======================================================================== -->
-  <header class="header-navbar">
-    <div class="brand-wrapper" onclick="document.querySelector('[data-target=\'view-kiosk-scanner\']').click()">
-      <div class="brand-logo-icon">M5</div>
-      <div class="brand-details">
-        <h1>SIPRESMATA</h1>
-        <p>MIN 5 TULUNGAGUNG • PRESENSI TEPAT, MASA DEPAN HEBAT</p>
-      </div>
-    </div>
-
-    <!-- Navigation Menu Tabs -->
-    <nav class="nav-tab-container">
-      <button class="nav-tab-btn active" data-target="view-kiosk-scanner" id="nav-tab-kiosk">
-        📷 Scanner Kiosk
-      </button>
-      <button class="nav-tab-btn" data-target="admin-view-dashboard">
-        📊 Dashboard
-      </button>
-      <button class="nav-tab-btn" data-target="admin-view-rekap">
-        📑 Rekap Presensi
-      </button>
-      <button class="nav-tab-btn" data-target="admin-view-students">
-        👥 Data Siswa
-      </button>
-      <button class="nav-tab-btn" data-target="admin-view-cards">
-        🪪 Cetak Kartu
-      </button>
-      <button class="nav-tab-btn" data-target="admin-view-manual">
-        📝 Izin / Sakit
-      </button>
-      <button class="nav-tab-btn" data-target="admin-view-settings">
-        ⚙️ Pengaturan
-      </button>
-    </nav>
-
-    <!-- Nav Controls (Clock, Theme, Login) -->
-    <div class="nav-controls">
-      <div class="live-clock-badge">
-        <span class="pulse-dot"></span>
-        <span id="live-digital-clock">07:00:00 WIB</span>
+  <div id="public-kiosk-layout" class="app-layout active">
+    
+    <!-- Kiosk Header Bar -->
+    <header class="kiosk-header">
+      <div class="brand-wrapper">
+        <div class="brand-logo-icon">M5</div>
+        <div class="brand-details">
+          <h1>SIPRESMATA</h1>
+          <p>MIN 5 TULUNGAGUNG • PRESENSI TEPAT, MASA DEPAN HEBAT</p>
+        </div>
       </div>
 
-      <button id="btn-toggle-theme" class="btn btn-secondary btn-icon" title="Ganti Tema Gelap/Terang">
-        ☀️
-      </button>
+      <div class="kiosk-header-right">
+        <!-- Live Clock Badge -->
+        <div class="live-clock-badge">
+          <span class="pulse-dot"></span>
+          <span id="kiosk-live-clock">07:00:00 WIB</span>
+        </div>
 
-      <button id="nav-btn-login" class="btn btn-primary" onclick="window.openModal('modal-login-admin')">
-        🔒 Login Admin
-      </button>
-    </div>
-  </header>
+        <button id="btn-toggle-theme-kiosk" class="btn btn-secondary btn-icon" title="Ganti Tema">
+          ☀️
+        </button>
 
-  <!-- ========================================================================
-       MAIN APPLICATION CONTENT AREA
-       ======================================================================== -->
-  <main class="app-content-container">
+        <!-- Tombol Masuk Portal CMS Admin -->
+        <button id="btn-open-login" class="btn btn-primary">
+          🔐 Portal Administrator
+        </button>
+      </div>
+    </header>
 
-    <!-- ----------------------------------------------------------------------
-         VIEW 1: KIOSK SCANNER (Halaman Utama Presensi Siswa)
-         ---------------------------------------------------------------------- -->
-    <section id="view-kiosk-scanner" class="view-section active">
+    <!-- Main Kiosk Body -->
+    <main class="kiosk-main-content">
       <div class="kiosk-grid">
         
         <!-- Left: Live Camera Viewport -->
@@ -94,10 +67,10 @@
           <div class="scanner-header-bar">
             <div class="scanner-title">
               <span class="pulse-dot"></span>
-              <strong>Pemindai Kartu Presensi Siswa</strong>
+              <strong>Stasiun Pemindai Kartu Siswa</strong>
             </div>
             <div>
-              <select id="select-camera" class="form-control" style="font-size: 0.8rem; padding: 0.35rem 0.6rem;">
+              <select id="select-camera" class="form-control camera-select-box">
                 <option value="">Mencari kamera...</option>
               </select>
             </div>
@@ -119,7 +92,7 @@
           <!-- Manual Code Fallback Input -->
           <div class="scanner-controls-bar">
             <div style="flex: 1; display: flex; gap: 0.5rem;">
-              <input type="text" id="input-manual-barcode" class="form-control" placeholder="Ketik NISN atau Kode Barcode manual..." style="flex: 1;">
+              <input type="text" id="input-manual-barcode" class="form-control" placeholder="Ketik NISN atau Kode Barcode kartu siswa..." style="flex: 1;">
               <button id="btn-submit-manual-code" class="btn btn-primary">
                 Kirim Presensi
               </button>
@@ -147,270 +120,369 @@
             <p class="result-timestamp">Sistem akan menyapa nama siswa via audio otomatis.</p>
           </div>
 
-          <!-- Quick Tip Banner -->
-          <div style="margin-top: 1.25rem; background: rgba(5, 150, 105, 0.08); border: 1px dashed rgba(5, 150, 105, 0.3); border-radius: var(--radius-md); padding: 0.85rem; font-size: 0.8rem; color: var(--text-muted);">
+          <!-- Panduan Kiosk -->
+          <div class="kiosk-guide-tip">
             💡 <strong>Panduan Siswa:</strong> Pegang kartu tenang sejajar dengan kotak kamera. Tunggu bunyi <em>beep</em> dan suara konfirmasi sebelum melangkah ke kelas.
           </div>
         </div>
 
       </div>
-    </section>
+    </main>
 
-    <!-- ----------------------------------------------------------------------
-         VIEW 2: ADMIN DASHBOARD (Monitoring & Statistik Kehadiran)
-         ---------------------------------------------------------------------- -->
-    <section id="admin-view-dashboard" class="view-section">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-        <div>
-          <h2>📊 Dashboard Pemantauan Presensi</h2>
-          <p style="color: var(--text-muted); font-size: 0.875rem;">Statistik kehadiran harian siswa MIN 5 Tulungagung secara langsung.</p>
+    <!-- Kiosk Footer -->
+    <footer class="kiosk-footer">
+      <span>Madrasah Ibtidaiyah Negeri 5 Tulungagung • Sistem Presensi Cerdas Terpadu</span>
+      <span id="kiosk-footer-date">Tahun Ajaran 2026/2027</span>
+    </footer>
+  </div>
+
+
+  <!-- ========================================================================
+       2. TAMPILAN CMS / PORTAL ADMINISTRATOR
+       (Tampilan dashboard manajemen lengkap bergaya CMS profesional)
+       ======================================================================== -->
+  <div id="admin-cms-layout" class="app-layout">
+    
+    <!-- CMS Sidebar Navigation -->
+    <aside class="cms-sidebar">
+      <div class="cms-sidebar-header">
+        <div class="brand-logo-icon">M5</div>
+        <div class="cms-sidebar-title">
+          <h2>SIPRESMATA</h2>
+          <p>ADMIN CMS PORTAL</p>
         </div>
-        <button class="btn btn-secondary" onclick="ADMIN.loadDashboard()">
-          🔄 Perbarui Data
+      </div>
+
+      <!-- Current User Profile Pill -->
+      <div class="cms-user-profile-card">
+        <div class="user-avatar" id="cms-user-avatar">AD</div>
+        <div class="user-info">
+          <h4 id="cms-user-name">Administrator</h4>
+          <span class="user-role-badge" id="cms-user-role">SUPER ADMIN</span>
+        </div>
+      </div>
+
+      <!-- CMS Navigation Menu -->
+      <nav class="cms-nav-menu">
+        <div class="cms-nav-section-title">MENU UTAMA</div>
+        
+        <button class="cms-nav-link active" data-target="cms-view-dashboard">
+          <span class="nav-icon">📊</span> Dashboard Analytics
         </button>
-      </div>
+        
+        <button class="cms-nav-link" data-target="cms-view-students">
+          <span class="nav-icon">👥</span> Data Master Siswa
+        </button>
+        
+        <button class="cms-nav-link" data-target="cms-view-rekap">
+          <span class="nav-icon">📑</span> Rekapitulasi & Laporan
+        </button>
+        
+        <button class="cms-nav-link" data-target="cms-view-cards">
+          <span class="nav-icon">🪪</span> Cetak Kartu Barcode
+        </button>
+        
+        <button class="cms-nav-link" data-target="cms-view-manual">
+          <span class="nav-icon">📝</span> Presensi Manual (Izin/Sakit)
+        </button>
 
-      <!-- Metric Cards Grid -->
-      <div id="dashboard-stats-grid" class="stats-cards-grid">
-        <!-- Injected via JavaScript -->
-      </div>
+        <div class="cms-nav-section-title">SISTEM & AKSI</div>
 
-      <!-- Live Monitoring Table -->
-      <div class="card-table-wrapper">
-        <h3 style="margin-bottom: 0.85rem; font-size: 1.05rem;">🔴 Riwayat Scan Terbaru Hari Ini</h3>
-        <table class="custom-data-table">
-          <thead>
-            <tr>
-              <th>Nama Siswa</th>
-              <th>Kelas</th>
-              <th>Waktu Scan</th>
-              <th>Status Kehadiran</th>
-            </tr>
-          </thead>
-          <tbody id="live-scans-feed">
+        <button class="cms-nav-link" data-target="cms-view-settings">
+          <span class="nav-icon">⚙️</span> Pengaturan Sistem
+        </button>
+
+        <button id="btn-cms-switch-kiosk" class="cms-nav-link kiosk-shortcut">
+          <span class="nav-icon">📷</span> Buka Kiosk Scanner
+        </button>
+
+        <button id="btn-cms-logout" class="cms-nav-link logout-link">
+          <span class="nav-icon">🚪</span> Keluar / Logout
+        </button>
+      </nav>
+    </aside>
+
+    <!-- CMS Main Body Wrapper -->
+    <div class="cms-main-wrapper">
+      
+      <!-- CMS Top Header -->
+      <header class="cms-topbar">
+        <div class="cms-breadcrumb">
+          <span id="cms-breadcrumb-main">Portal Admin</span> / <strong id="cms-breadcrumb-sub">Dashboard Analytics</strong>
+        </div>
+
+        <div class="cms-topbar-actions">
+          <div class="live-clock-badge">
+            <span class="pulse-dot"></span>
+            <span id="cms-live-clock">07:00:00 WIB</span>
+          </div>
+
+          <button id="btn-toggle-theme-cms" class="btn btn-secondary btn-icon" title="Ganti Tema">
+            ☀️
+          </button>
+
+          <button class="btn btn-secondary" onclick="document.getElementById('btn-cms-switch-kiosk').click()">
+            📷 Mode Scanner
+          </button>
+        </div>
+      </header>
+
+      <!-- CMS Dynamic Views Container -->
+      <main class="cms-content-area">
+
+        <!-- ------------------------------------------------------------------
+             CMS VIEW 1: DASHBOARD ANALYTICS
+             ------------------------------------------------------------------ -->
+        <section id="cms-view-dashboard" class="cms-view-section active">
+          <div class="cms-page-header">
+            <div>
+              <h2>📊 Dashboard Pemantauan Presensi</h2>
+              <p>Ringkasan kehadiran siswa MIN 5 Tulungagung hari ini secara langsung.</p>
+            </div>
+            <button class="btn btn-secondary" onclick="ADMIN.loadDashboard()">
+              🔄 Perbarui Data
+            </button>
+          </div>
+
+          <!-- Stats Cards Grid -->
+          <div id="dashboard-stats-grid" class="stats-cards-grid">
             <!-- Injected via JavaScript -->
-          </tbody>
-        </table>
-      </div>
-    </section>
+          </div>
 
-    <!-- ----------------------------------------------------------------------
-         VIEW 3: REKAPITULASI PRESENSI & LAPORAN RESMI
-         ---------------------------------------------------------------------- -->
-    <section id="admin-view-rekap" class="view-section">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
-        <div>
-          <h2>📑 Rekapitulasi & Laporan Presensi</h2>
-          <p style="color: var(--text-muted); font-size: 0.875rem;">Filter riwayat kehadiran per rentang tanggal dan rombel kelas.</p>
-        </div>
-        <div style="display: flex; gap: 0.5rem;">
-          <button id="btn-export-csv" class="btn btn-secondary">
-            📥 Ekspor Excel (.csv)
-          </button>
-          <button id="btn-print-report" class="btn btn-primary">
-            🖨️ Cetak Laporan Resmi
-          </button>
-        </div>
-      </div>
+          <!-- Live Monitoring Table -->
+          <div class="card-table-wrapper">
+            <h3 style="margin-bottom: 0.85rem; font-size: 1.05rem;">🔴 Riwayat Scan Terbaru Hari Ini</h3>
+            <table class="custom-data-table">
+              <thead>
+                <tr>
+                  <th>Nama Siswa</th>
+                  <th>Kelas</th>
+                  <th>Waktu Scan</th>
+                  <th>Status Kehadiran</th>
+                </tr>
+              </thead>
+              <tbody id="live-scans-feed">
+                <!-- Injected via JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-      <div class="card-table-wrapper">
-        <form id="form-filter-rekap" class="table-filter-bar">
-          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-            <label style="font-size: 0.85rem; font-weight: 600;">Periode:</label>
-            <input type="date" id="rekap-tgl-mulai" class="form-control">
-            <span>s.d.</span>
-            <input type="date" id="rekap-tgl-akhir" class="form-control">
-            
-            <select id="rekap-filter-kelas" class="form-control select-kelas-rombel" data-include-all="true">
-              <!-- Injected Rombel 1A-D to 6A-D -->
-            </select>
-            
-            <button type="submit" class="btn btn-primary">
-              🔍 Tampilkan Rekap
+        <!-- ------------------------------------------------------------------
+             CMS VIEW 2: DATA MASTER SISWA (CRUD)
+             ------------------------------------------------------------------ -->
+        <section id="cms-view-students" class="cms-view-section">
+          <div class="cms-page-header">
+            <div>
+              <h2>👥 Data Master Siswa MIN 5</h2>
+              <p>Kelola data profil siswa, NISN, dan rombongan belajar (Kelas 1A-D s.d 6A-D).</p>
+            </div>
+            <button class="btn btn-primary" onclick="window.openAddStudentModal()">
+              ➕ Tambah Siswa Baru
             </button>
           </div>
 
-          <div id="rekap-summary-badge" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-            <!-- Summary badges -->
+          <div class="card-table-wrapper">
+            <div class="table-filter-bar">
+              <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 450px;">
+                <input type="text" id="search-student-input" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1;" oninput="ADMIN.loadStudents(document.getElementById('filter-student-class').value, this.value)">
+                <select id="filter-student-class" class="form-control select-kelas-rombel" data-include-all="true" onchange="ADMIN.loadStudents(this.value, document.getElementById('search-student-input').value)">
+                  <!-- Injected -->
+                </select>
+              </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 4%;">No</th>
+                    <th>NISN</th>
+                    <th>Nama Lengkap</th>
+                    <th>Kelas / Rombel</th>
+                    <th>Jenis Kelamin</th>
+                    <th style="width: 15%;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="students-table-body">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
           </div>
-        </form>
+        </section>
 
-        <div style="overflow-x: auto;">
-          <table class="custom-data-table">
-            <thead>
-              <tr>
-                <th style="width: 4%;">No</th>
-                <th>Tanggal</th>
-                <th>NISN</th>
-                <th>Nama Lengkap Siswa</th>
-                <th>Kelas</th>
-                <th>Jam Masuk</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="rekap-table-body">
-              <!-- Injected via JavaScript -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ----------------------------------------------------------------------
-         VIEW 4: MASTER DATA SISWA & KELAS (CRUD)
-         ---------------------------------------------------------------------- -->
-    <section id="admin-view-students" class="view-section">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
-        <div>
-          <h2>👥 Data Master Siswa MIN 5</h2>
-          <p style="color: var(--text-muted); font-size: 0.875rem;">Kelola data profil siswa, NISN, dan rombongan belajar.</p>
-        </div>
-        <button class="btn btn-primary" onclick="window.openAddStudentModal()">
-          ➕ Tambah Siswa Baru
-        </button>
-      </div>
-
-      <div class="card-table-wrapper">
-        <div class="table-filter-bar">
-          <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 450px;">
-            <input type="text" id="search-student-input" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1;" oninput="ADMIN.loadStudents(document.getElementById('filter-student-class').value, this.value)">
-            <select id="filter-student-class" class="form-control select-kelas-rombel" data-include-all="true" onchange="ADMIN.loadStudents(this.value, document.getElementById('search-student-input').value)">
-              <!-- Injected -->
-            </select>
-          </div>
-        </div>
-
-        <div style="overflow-x: auto;">
-          <table class="custom-data-table">
-            <thead>
-              <tr>
-                <th style="width: 4%;">No</th>
-                <th>NISN</th>
-                <th>Nama Lengkap</th>
-                <th>Kelas / Rombel</th>
-                <th>Jenis Kelamin</th>
-                <th style="width: 15%;">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="students-table-body">
-              <!-- Injected via JavaScript -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ----------------------------------------------------------------------
-         VIEW 5: GENERATOR & CETAK KARTU BARCODE (A4 Batch Print)
-         ---------------------------------------------------------------------- -->
-    <section id="admin-view-cards" class="view-section">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
-        <div>
-          <h2>🪪 Generator & Cetak Kartu Siswa</h2>
-          <p style="color: var(--text-muted); font-size: 0.875rem;">Cetak kartu barcode siap pakai untuk seluruh siswa per rombongan belajar.</p>
-        </div>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-          <select id="filter-card-kelas" class="form-control select-kelas-rombel" data-include-all="true">
-            <!-- Injected -->
-          </select>
-          <button id="btn-print-cards" class="btn btn-primary">
-            🖨️ Cetak Seluruh Kartu (A4)
-          </button>
-        </div>
-      </div>
-
-      <!-- Printable Area -->
-      <div id="printable-cards-area" class="id-card-print-container">
-        <!-- Rendered ID Cards in Grid -->
-      </div>
-    </section>
-
-    <!-- ----------------------------------------------------------------------
-         VIEW 6: PRESENSI MANUAL (IZIN / SAKIT / ALPA)
-         ---------------------------------------------------------------------- -->
-    <section id="admin-view-manual" class="view-section">
-      <div style="max-width: 600px; margin: 0 auto;">
-        <div class="card-table-wrapper">
-          <h2 style="margin-bottom: 0.5rem;">📝 Pencatatan Izin, Sakit & Alpa</h2>
-          <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">Gunakan formulir ini untuk mencatat siswa yang tidak dapat hadir atau membawa surat izin.</p>
-
-          <form id="form-manual-absen">
-            <div style="margin-bottom: 1rem;">
-              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Pilih Tanggal:</label>
-              <input type="date" id="manual-absen-tanggal" class="form-control" style="width: 100%;">
+        <!-- ------------------------------------------------------------------
+             CMS VIEW 3: REKAPITULASI & LAPORAN BULANAN
+             ------------------------------------------------------------------ -->
+        <section id="cms-view-rekap" class="cms-view-section">
+          <div class="cms-page-header">
+            <div>
+              <h2>📑 Rekapitulasi Presensi & Laporan</h2>
+              <p>Filter riwayat kehadiran per rentang tanggal dan rombongan belajar.</p>
             </div>
-
-            <div style="margin-bottom: 1rem;">
-              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Nama Siswa:</label>
-              <select id="manual-absen-siswa" class="form-control" style="width: 100%;" required>
-                <option value="">Memuat daftar siswa...</option>
-              </select>
-            </div>
-
-            <div style="margin-bottom: 1rem;">
-              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Status Kehadiran:</label>
-              <select id="manual-absen-status" class="form-control" style="width: 100%;">
-                <option value="IZIN">Izin (Surat / Acara Keluarga)</option>
-                <option value="SAKIT">Sakit (Surat Dokter / Demam)</option>
-                <option value="ALPA">Alpa (Tanpa Keterangan)</option>
-                <option value="HADIR">Hadir Manual (Lupa Bawa Kartu)</option>
-              </select>
-            </div>
-
-            <div style="margin-bottom: 1.5rem;">
-              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Keterangan / Alasan:</label>
-              <textarea id="manual-absen-keterangan" class="form-control" style="width: 100%; height: 80px;" placeholder="Contoh: Izin menghadiri acara keluarga di luar kota..."></textarea>
-            </div>
-
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
-              💾 Simpan Presensi Manual
-            </button>
-          </form>
-        </div>
-      </div>
-    </section>
-
-    <!-- ----------------------------------------------------------------------
-         VIEW 7: PENGATURAN SISTEM
-         ---------------------------------------------------------------------- -->
-    <section id="admin-view-settings" class="view-section">
-      <div style="max-width: 700px; margin: 0 auto;">
-        <div class="card-table-wrapper">
-          <h2 style="margin-bottom: 0.5rem;">⚙️ Pengaturan Aplikasi SIPRESMATA</h2>
-          <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">Konfigurasi koneksi backend Google Apps Script dan parameter sistem.</p>
-
-          <form id="form-settings">
-            <div style="margin-bottom: 1rem;">
-              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Google Spreadsheet ID:</label>
-              <input type="text" class="form-control" value="1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh" readonly style="width: 100%; opacity: 0.8;">
-              <span style="font-size: 0.75rem; color: var(--text-muted);">Tautan: <a href="https://docs.google.com/spreadsheets/d/1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh/edit" target="_blank" style="color: #38bdf8;">Buka Spreadsheet</a></span>
-            </div>
-
-            <div style="margin-bottom: 1rem;">
-              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">URL Google Apps Script Web App (API):</label>
-              <input type="url" id="setting-api-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" style="width: 100%;">
-              <span style="font-size: 0.75rem; color: var(--text-muted);">Masukkan URL hasil deployment Web App dari Apps Script. Jika kosong, aplikasi menggunakan mode demo in-memory.</span>
-            </div>
-
-            <div style="margin-bottom: 1.5rem;">
-              <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Kunci Scanner Kiosk (Client Key):</label>
-              <input type="text" id="setting-client-key" class="form-control" value="MIN5_SIPRESMATA_2026" style="width: 100%;">
-            </div>
-
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <button type="submit" class="btn btn-primary">
-                💾 Simpan Konfigurasi
+            <div style="display: flex; gap: 0.5rem;">
+              <button id="btn-export-csv" class="btn btn-secondary">
+                📥 Ekspor Excel (.csv)
               </button>
-              <button type="button" id="btn-logout" class="btn btn-secondary" style="color: #f87171;">
-                🚪 Logout Admin
+              <button id="btn-print-report" class="btn btn-primary">
+                🖨️ Cetak Laporan Resmi
               </button>
             </div>
-          </form>
-        </div>
-      </div>
-    </section>
+          </div>
 
-  </main>
+          <div class="card-table-wrapper">
+            <form id="form-filter-rekap" class="table-filter-bar">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <label style="font-size: 0.85rem; font-weight: 600;">Periode:</label>
+                <input type="date" id="rekap-tgl-mulai" class="form-control">
+                <span>s.d.</span>
+                <input type="date" id="rekap-tgl-akhir" class="form-control">
+                
+                <select id="rekap-filter-kelas" class="form-control select-kelas-rombel" data-include-all="true">
+                  <!-- Injected Rombel 1A-D to 6A-D -->
+                </select>
+                
+                <button type="submit" class="btn btn-primary">
+                  🔍 Tampilkan Rekap
+                </button>
+              </div>
+
+              <div id="rekap-summary-badge" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                <!-- Summary badges -->
+              </div>
+            </form>
+
+            <div style="overflow-x: auto;">
+              <table class="custom-data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 4%;">No</th>
+                    <th>Tanggal</th>
+                    <th>NISN</th>
+                    <th>Nama Lengkap Siswa</th>
+                    <th>Kelas</th>
+                    <th>Jam Masuk</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="rekap-table-body">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ------------------------------------------------------------------
+             CMS VIEW 4: GENERATOR & CETAK KARTU BARCODE A4
+             ------------------------------------------------------------------ -->
+        <section id="cms-view-cards" class="cms-view-section">
+          <div class="cms-page-header">
+            <div>
+              <h2>🪪 Generator & Cetak Kartu Siswa</h2>
+              <p>Cetak kartu barcode siap pakai untuk seluruh siswa per rombongan belajar.</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <select id="filter-card-kelas" class="form-control select-kelas-rombel" data-include-all="true">
+                <!-- Injected -->
+              </select>
+              <button id="btn-print-cards" class="btn btn-primary">
+                🖨️ Cetak Seluruh Kartu (A4)
+              </button>
+            </div>
+          </div>
+
+          <!-- Printable Area -->
+          <div id="printable-cards-area" class="id-card-print-container">
+            <!-- Rendered ID Cards in Grid -->
+          </div>
+        </section>
+
+        <!-- ------------------------------------------------------------------
+             CMS VIEW 5: PRESENSI MANUAL (IZIN / SAKIT / ALPA)
+             ------------------------------------------------------------------ -->
+        <section id="cms-view-manual" class="cms-view-section">
+          <div style="max-width: 650px; margin: 0 auto;">
+            <div class="card-table-wrapper">
+              <h2 style="margin-bottom: 0.5rem;">📝 Pencatatan Izin, Sakit & Alpa</h2>
+              <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">Gunakan formulir ini untuk mencatat siswa yang berhalangan hadir disertai surat izin/keterangan.</p>
+
+              <form id="form-manual-absen">
+                <div style="margin-bottom: 1rem;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Pilih Tanggal:</label>
+                  <input type="date" id="manual-absen-tanggal" class="form-control" style="width: 100%;">
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Nama Siswa:</label>
+                  <select id="manual-absen-siswa" class="form-control" style="width: 100%;" required>
+                    <option value="">Memuat daftar siswa...</option>
+                  </select>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Status Kehadiran:</label>
+                  <select id="manual-absen-status" class="form-control" style="width: 100%;">
+                    <option value="IZIN">Izin (Surat / Acara Keluarga)</option>
+                    <option value="SAKIT">Sakit (Surat Dokter / Demam)</option>
+                    <option value="ALPA">Alpa (Tanpa Keterangan)</option>
+                    <option value="HADIR">Hadir Manual (Lupa Bawa Kartu)</option>
+                  </select>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Keterangan / Alasan:</label>
+                  <textarea id="manual-absen-keterangan" class="form-control" style="width: 100%; height: 80px;" placeholder="Contoh: Izin menghadiri acara keluarga di luar kota..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                  💾 Simpan Presensi Manual
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- ------------------------------------------------------------------
+             CMS VIEW 6: PENGATURAN SISTEM
+             ------------------------------------------------------------------ -->
+        <section id="cms-view-settings" class="cms-view-section">
+          <div style="max-width: 700px; margin: 0 auto;">
+            <div class="card-table-wrapper">
+              <h2 style="margin-bottom: 0.5rem;">⚙️ Pengaturan Aplikasi SIPRESMATA</h2>
+              <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">Konfigurasi integrasi Google Apps Script dan parameter sistem.</p>
+
+              <form id="form-settings">
+                <div style="margin-bottom: 1rem;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Google Spreadsheet ID:</label>
+                  <input type="text" class="form-control" value="1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh" readonly style="width: 100%; opacity: 0.8;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Tautan Database: <a href="https://docs.google.com/spreadsheets/d/1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh/edit" target="_blank" style="color: #38bdf8;">Buka Spreadsheet</a></span>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">URL Google Apps Script Web App (API):</label>
+                  <input type="url" id="setting-api-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" style="width: 100%;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Tempelkan URL hasil deployment Web App dari Apps Script. Jika kosong, sistem menggunakan mode demo lokal.</span>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Kunci Scanner Kiosk (Client Key):</label>
+                  <input type="text" id="setting-client-key" class="form-control" value="MIN5_SIPRESMATA_2026" style="width: 100%;">
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                  💾 Simpan Konfigurasi
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
 
   <!-- ========================================================================
        MODALS
@@ -420,7 +492,7 @@
   <div id="modal-login-admin" class="modal-overlay">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>🔒 Login Administrator / Guru Piket</h3>
+        <h3>🔐 Login Portal Administrator</h3>
         <button class="btn btn-secondary btn-icon" onclick="window.closeModal('modal-login-admin')">✕</button>
       </div>
 
@@ -436,7 +508,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%;">
-          Masuk ke Portal Admin
+          Masuk ke CMS Administrator
         </button>
 
         <div style="margin-top: 1rem; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
