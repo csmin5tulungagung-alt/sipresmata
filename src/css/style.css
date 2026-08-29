@@ -173,6 +173,20 @@ h1, h2, h3, h4, h5, h6 {
   color: inherit;
 }
 
+.brand-img-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+}
+
+.brand-img-logo-cms {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+}
+
 .brand-logo-icon {
   width: 44px;
   height: 44px;
@@ -185,18 +199,6 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 1.35rem;
   font-weight: 800;
   box-shadow: 0 0 15px var(--primary-glow);
-}
-
-.brand-logo-img {
-  width: 46px;
-  height: 46px;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 8px rgba(5, 150, 105, 0.4));
-  transition: transform 0.2s ease;
-}
-
-.brand-logo-img:hover {
-  transform: scale(1.05);
 }
 
 .brand-details h1 {

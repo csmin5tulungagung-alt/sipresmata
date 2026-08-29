@@ -10,6 +10,7 @@ export const CONFIG = {
   APP_SUBTITLE: "Sistem Informasi Presensi Siswa Madrasah Terpadu",
   SCHOOL_NAME: "MIN 5 TULUNGAGUNG",
   SLOGAN: "MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI",
+  LOGO_URL: "/logo-min5.png",
   SPREADSHEET_ID: "1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh",
   
   // Default GAS API URL (Dapat diubah via menu Pengaturan Sistem atau localStorage)

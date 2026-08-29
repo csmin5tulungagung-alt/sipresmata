@@ -67,8 +67,8 @@ export const CARD_GENERATOR = {
           
           <!-- Logo Resmi MIN 5 Tulungagung -->
           <div class="kemenag-logo-wrapper">
-            <div class="card-official-logo-box" title="MIN 5 Tulungagung">
-              <img src="/public/logo-min5.svg" class="card-min5-logo-img" alt="Logo MIN 5 Tulungagung">
+            <div class="kemenag-badge" title="MIN 5 Tulungagung">
+              <img src="/logo-min5.png" class="kemenag-badge-img" alt="Logo MIN 5 Tulungagung">
             </div>
           </div>
 
