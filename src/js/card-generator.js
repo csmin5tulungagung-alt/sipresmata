@@ -2,7 +2,6 @@
  * ============================================================================
  * SIPRESMATA - VERTICAL ID CARD & QR CODE GENERATOR MODULE
  * Desain Kartu Presensi Vertikal Premium MIN 5 Tulungagung
- * Logo Resmi & Slogan: "MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI"
  * ============================================================================
  */
 
@@ -40,10 +39,8 @@ export const CARD_GENERATOR = {
       if (qrElem && typeof QRCode !== 'undefined') {
         qrElem.innerHTML = ""; // Bersihkan kontainer
         try {
-          // Encode NISN langsung agar barcode dan teks di kartu 100% sama
-          const barcodeValue = String(s.nisn || s.kode_barcode || "").replace(/['"\s]/g, "").trim();
           new QRCode(qrElem, {
-            text: barcodeValue,
+            text: s.kode_barcode || `MIN5-${s.nisn}`,
             width: 82,
             height: 82,
             colorDark: "#022c22",
@@ -60,7 +57,6 @@ export const CARD_GENERATOR = {
   createCardHTML(s) {
     const rawKelas = s.nama_kelas || s.id_kelas || "1-A";
     const shortKelas = rawKelas.replace(/Kelas\s*/i, "").replace("KLS-", "").trim();
-    const cleanNisn = String(s.nisn || "").replace(/['"\s]/g, "").trim();
 
     return `
       <div class="student-card-portrait">
@@ -69,18 +65,16 @@ export const CARD_GENERATOR = {
         <div class="card-top-banner">
           <div class="banner-dots-pattern"></div>
           
-          <!-- Logo Asli MIN 5 Tulungagung dari Google Drive -->
+          <!-- Logo Resmi MIN 5 Tulungagung -->
           <div class="kemenag-logo-wrapper">
-            <div class="min5-badge-logo" title="Logo Resmi MIN 5 Tulungagung">
-              <img src="/public/logo-min5.png" class="min5-logo-card-img" alt="Logo MIN 5 Tulungagung" onerror="this.src='/logo-min5.png'">
+            <div class="card-official-logo-box" title="MIN 5 Tulungagung">
+              <img src="/public/logo-min5.svg" class="card-min5-logo-img" alt="Logo MIN 5 Tulungagung">
             </div>
           </div>
 
           <div class="card-subtitle-small">— KARTU ABSEN SISWA —</div>
           <div class="card-title-main">MIN 5 TULUNGAGUNG</div>
-          <div class="card-motto">
-            MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI
-          </div>
+          <div class="card-motto">MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI</div>
         </div>
 
         <!-- 2. Body Kartu (Foto & Data Siswa) -->

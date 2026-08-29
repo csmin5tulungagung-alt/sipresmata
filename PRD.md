@@ -1,5 +1,8 @@
 # 📋 Dokumen Kebutuhan Produk (PRD)
-## Aplikasi Web Absensi Siswa Berbasis Barcode — MIN 5
+# **SIPRESMATA**
+### *"Pantau Kehadiran, Wujudkan Madrasah Cerdas."*
+> Slogan: *"MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI"*  
+> Institusi: **MIN 5 Tulungagung**
 
 ---
 

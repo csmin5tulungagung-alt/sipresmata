@@ -1,134 +1,169 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
   <defs>
     <!-- Filter Shadow -->
-    <filter id="drop-shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.3"/>
+    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.35"/>
     </filter>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fde047"/>
+      <stop offset="50%" stop-color="#eab308"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+    <linearGradient id="greenBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="flameGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#dc2626"/>
+      <stop offset="60%" stop-color="#ea580c"/>
+      <stop offset="100%" stop-color="#facc15"/>
+    </linearGradient>
   </defs>
 
-  <!-- Outer Yellow Border Shield -->
+  <!-- 1. Outer Golden Shield / Lima Sudut Lengkung -->
+  <path d="M 250,15 
+           C 295,75 425,145 470,175 
+           C 420,285 410,400 250,480 
+           C 90,400 80,285 30,175 
+           C 75,145 205,75 250,15 Z" 
+        fill="url(#goldGrad)" stroke="#000000" stroke-width="6" stroke-linejoin="round" filter="url(#dropShadow)"/>
+
+  <!-- Inner Black Border -->
   <path d="M 250,30 
-           C 310,65 420,130 460,200 
-           C 475,225 435,310 400,390 
-           C 370,445 280,480 250,470 
-           C 220,480 130,445 100,390 
-           C 65,310 25,225 40,200 
-           C 80,130 190,65 250,30 Z" 
-        fill="#bbf7d0" stroke="#a3e635" stroke-width="14" stroke-linejoin="round" />
+           C 290,85 410,150 450,180 
+           C 405,275 395,385 250,460 
+           C 105,385 95,275 50,180 
+           C 90,150 210,85 250,30 Z" 
+        fill="#000000"/>
 
-  <!-- Inner Green Shield -->
-  <path d="M 250,45 
-           C 305,78 405,138 442,204 
-           C 455,227 418,305 386,380 
-           C 358,432 276,462 250,454 
-           C 224,462 142,432 114,380 
-           C 82,305 45,227 58,204 
-           C 95,138 195,78 250,45 Z" 
-        fill="#15803d" stroke="#052e16" stroke-width="4" />
+  <!-- 2. Green Inner Shield Body -->
+  <path d="M 250,38 
+           C 288,90 402,154 440,182 
+           C 396,272 386,378 250,450 
+           C 114,378 104,272 60,182 
+           C 98,154 212,90 250,38 Z" 
+        fill="url(#greenBg)"/>
 
-  <!-- Bintang Kuning Atas -->
-  <polygon points="250,65 258,90 284,90 263,105 271,130 250,115 229,130 237,105 216,90 242,90" 
-           fill="#fde047" stroke="#ca8a04" stroke-width="2"/>
+  <!-- 3. Bintang Emas Sudut Lima di Atas -->
+  <!-- Center top (250, 95) -->
+  <polygon points="250,55 261,85 293,86 268,105 277,135 250,118 223,135 232,105 207,86 239,85" 
+           fill="url(#goldGrad)" stroke="#000000" stroke-width="3" stroke-linejoin="round"/>
 
-  <!-- Api Obor Merah Menyala -->
-  <path d="M 250,125 
-           C 238,150 220,165 228,185 
-           C 232,192 242,190 245,182 
-           C 248,172 252,155 258,162 
-           C 265,170 260,188 272,185 
-           C 280,165 262,150 250,125 Z" 
-        fill="#ef4444" stroke="#b91c1c" stroke-width="2"/>
-  <path d="M 250,145 C 244,160 236,170 242,180 C 246,182 250,178 252,172 C 255,165 258,175 262,175 C 265,168 258,158 250,145 Z" 
-        fill="#facc15"/>
+  <!-- 4. Obor & Api Menyala -->
+  <!-- Kobaran Api -->
+  <path d="M 250,120 
+           C 265,145 285,160 270,195 
+           C 290,175 295,200 275,230 
+           C 255,220 252,205 250,185 
+           C 248,205 245,220 225,230 
+           C 205,200 210,175 230,195 
+           C 215,160 235,145 250,120 Z" 
+        fill="url(#flameGrad)" stroke="#000000" stroke-width="3"/>
 
-  <!-- Mangkuk & Gagang Obor -->
-  <path d="M 220,185 L 280,185 L 270,200 L 230,200 Z" fill="#475569" stroke="#0f172a" stroke-width="2"/>
-  <rect x="242" y="200" width="16" height="150" fill="#4ade80" stroke="#166534" stroke-width="3" rx="3"/>
+  <!-- Dudukan Obor / Bunga Teratai -->
+  <path d="M 220,230 Q 250,215 280,230 L 275,242 Q 250,236 225,242 Z" fill="#ffffff" stroke="#000000" stroke-width="3"/>
+  <path d="M 225,242 L 275,242 L 265,270 L 235,270 Z" fill="#22c55e" stroke="#000000" stroke-width="3"/>
+  <!-- Tangkai Obor Bawah -->
+  <rect x="241" y="270" width="18" height="150" fill="#22c55e" stroke="#000000" stroke-width="3" rx="4"/>
+  <line x1="241" y1="365" x2="259" y2="365" stroke="#000000" stroke-width="3"/>
+  <line x1="241" y1="385" x2="259" y2="385" stroke="#000000" stroke-width="3"/>
 
-  <!-- Tangkai Kapas (Kiri) -->
-  <g stroke="#0f172a" stroke-width="2">
-    <!-- Tangkai melengkung -->
-    <path d="M 120,380 C 100,280 120,170 195,120" fill="none" stroke="#14532d" stroke-width="6"/>
-    <!-- Kuntum Bunga Kapas Putih & Daun -->
-    <circle cx="190" cy="125" r="7" fill="#ffffff"/>
-    <circle cx="170" cy="140" r="8" fill="#ffffff"/>
-    <circle cx="152" cy="160" r="9" fill="#ffffff"/>
-    <circle cx="138" cy="185" r="9.5" fill="#ffffff"/>
-    <circle cx="128" cy="215" r="10" fill="#ffffff"/>
-    <circle cx="122" cy="245" r="10.5" fill="#ffffff"/>
-    <circle cx="120" cy="275" r="11" fill="#ffffff"/>
-    <circle cx="124" cy="305" r="11" fill="#ffffff"/>
-    <circle cx="132" cy="335" r="11" fill="#ffffff"/>
-    <circle cx="145" cy="360" r="10.5" fill="#ffffff"/>
+  <!-- 5. Kapas (Sebelah Kiri) -->
+  <g id="kapas-branch" stroke="#000000" stroke-width="3">
+    <!-- Batang Lengkung -->
+    <path d="M 125,370 C 105,280 110,180 200,120" fill="none" stroke="#000000" stroke-width="5" stroke-linecap="round"/>
     
-    <!-- Kelopak Hitam/Hijau di bunga kapas -->
-    <path d="M 188,125 Q 185,120 182,125 Q 185,130 188,125" fill="#1e293b"/>
-    <path d="M 168,140 Q 165,135 162,140 Q 165,145 168,140" fill="#1e293b"/>
-    <path d="M 150,160 Q 146,155 142,160 Q 146,165 150,160" fill="#1e293b"/>
-    <path d="M 136,185 Q 131,180 127,185 Q 131,190 136,185" fill="#1e293b"/>
-    <path d="M 126,215 Q 120,210 116,215 Q 120,220 126,215" fill="#1e293b"/>
-    <path d="M 120,245 Q 114,240 110,245 Q 114,250 120,245" fill="#1e293b"/>
-    <path d="M 118,275 Q 112,270 108,275 Q 112,280 118,275" fill="#1e293b"/>
-    <path d="M 122,305 Q 116,300 112,305 Q 116,310 122,305" fill="#1e293b"/>
+    <!-- Kuntum Kapas (Putih & Kelopak Hitam) -->
+    <!-- 1 -->
+    <circle cx="190" cy="130" r="11" fill="#ffffff"/>
+    <path d="M 183,137 C 187,143 197,143 200,137 Z" fill="#000000"/>
+    <!-- 2 -->
+    <circle cx="168" cy="148" r="11" fill="#ffffff"/>
+    <path d="M 160,154 C 165,161 175,161 178,154 Z" fill="#000000"/>
+    <!-- 3 -->
+    <circle cx="150" cy="172" r="12" fill="#ffffff"/>
+    <path d="M 141,178 C 146,186 157,186 160,178 Z" fill="#000000"/>
+    <!-- 4 -->
+    <circle cx="135" cy="200" r="12" fill="#ffffff"/>
+    <path d="M 125,206 C 130,214 142,214 145,206 Z" fill="#000000"/>
+    <!-- 5 -->
+    <circle cx="123" cy="230" r="13" fill="#ffffff"/>
+    <path d="M 112,236 C 117,245 130,245 134,236 Z" fill="#000000"/>
+    <!-- 6 -->
+    <circle cx="116" cy="265" r="13" fill="#ffffff"/>
+    <path d="M 105,271 C 110,280 123,280 127,271 Z" fill="#000000"/>
+    <!-- 7 -->
+    <circle cx="112" cy="300" r="13" fill="#ffffff"/>
+    <path d="M 101,306 C 106,315 119,315 123,306 Z" fill="#000000"/>
+    <!-- 8 -->
+    <circle cx="115" cy="335" r="13" fill="#ffffff"/>
+    <path d="M 104,341 C 109,350 122,350 126,341 Z" fill="#000000"/>
   </g>
 
-  <!-- Tangkai Padi Kuning Emas (Kanan) -->
-  <g fill="#facc15" stroke="#854d0e" stroke-width="1.5">
-    <path d="M 380,380 C 400,280 380,170 305,120" fill="none" stroke="#ca8a04" stroke-width="5"/>
-    <!-- Butir-butir Padi -->
-    <ellipse cx="310" cy="125" rx="6" ry="12" transform="rotate(35 310 125)"/>
-    <ellipse cx="328" cy="140" rx="7" ry="13" transform="rotate(30 328 140)"/>
-    <ellipse cx="345" cy="160" rx="7.5" ry="14" transform="rotate(25 345 160)"/>
-    <ellipse cx="360" cy="185" rx="8" ry="15" transform="rotate(20 360 185)"/>
-    <ellipse cx="370" cy="215" rx="8" ry="15" transform="rotate(10 370 215)"/>
-    <ellipse cx="378" cy="245" rx="8" ry="15" transform="rotate(0 378 245)"/>
-    <ellipse cx="380" cy="275" rx="8" ry="15" transform="rotate(-10 380 275)"/>
-    <ellipse cx="376" cy="305" rx="8" ry="15" transform="rotate(-20 376 305)"/>
-    <ellipse cx="368" cy="335" rx="7.5" ry="14" transform="rotate(-30 368 335)"/>
-    <ellipse cx="355" cy="360" rx="7" ry="13" transform="rotate(-40 355 360)"/>
+  <!-- 6. Padi Emas (Sebelah Kanan) -->
+  <g id="padi-branch" fill="url(#goldGrad)" stroke="#000000" stroke-width="3">
+    <!-- Batang Padi -->
+    <path d="M 375,370 C 395,280 390,180 300,120" fill="none" stroke="#000000" stroke-width="5" stroke-linecap="round"/>
+    
+    <!-- Butir Padi Emas -->
+    <ellipse cx="308" cy="128" rx="14" ry="7" transform="rotate(-30 308 128)"/>
+    <ellipse cx="330" cy="142" rx="15" ry="8" transform="rotate(-20 330 142)"/>
+    <ellipse cx="350" cy="162" rx="16" ry="8" transform="rotate(-10 350 162)"/>
+    <ellipse cx="368" cy="188" rx="17" ry="8" transform="rotate(5 368 188)"/>
+    <ellipse cx="380" cy="216" rx="17" ry="8" transform="rotate(18 380 216)"/>
+    <ellipse cx="388" cy="248" rx="17" ry="9" transform="rotate(30 388 248)"/>
+    <ellipse cx="390" cy="280" rx="17" ry="9" transform="rotate(45 390 280)"/>
+    <ellipse cx="385" cy="312" rx="17" ry="9" transform="rotate(60 385 312)"/>
+    <ellipse cx="375" cy="342" rx="17" ry="9" transform="rotate(75 375 342)"/>
+    <ellipse cx="358" cy="368" rx="16" ry="8" transform="rotate(90 358 368)"/>
   </g>
 
-  <!-- Kitab Suci Al-Qur'an Terbuka -->
-  <g id="open-book">
-    <!-- Sayap Kiri Kitab -->
-    <path d="M 250,230 C 230,225 185,220 170,235 L 170,300 C 185,285 230,290 250,295 Z" 
-          fill="#fef08a" stroke="#000000" stroke-width="5" stroke-linejoin="round"/>
-    <path d="M 185,245 L 240,240" stroke="#000000" stroke-width="4"/>
-    <path d="M 185,260 L 240,255" stroke="#000000" stroke-width="4"/>
-    <path d="M 185,275 L 240,270" stroke="#000000" stroke-width="4"/>
+  <!-- 7. Kitab Suci Al-Qur'an Terbuka & Rehal -->
+  <!-- Rehal / Tatakan Hitam -->
+  <polygon points="170,345 250,305 330,345 315,365 250,335 185,365" fill="#000000" stroke="#ffffff" stroke-width="2"/>
+  
+  <!-- Lembaran Kitab Kuning Terbuka -->
+  <!-- Halaman Kiri -->
+  <path d="M 250,305 
+           C 215,240 180,240 170,265 
+           L 185,335 
+           C 195,315 225,315 250,305 Z" 
+        fill="#fef08a" stroke="#000000" stroke-width="4"/>
+  <path d="M 185,280 C 205,268 230,270 245,285" fill="none" stroke="#000000" stroke-width="3"/>
+  <path d="M 190,300 C 210,288 235,290 245,302" fill="none" stroke="#000000" stroke-width="3"/>
+  <path d="M 195,320 C 212,308 235,310 245,318" fill="none" stroke="#000000" stroke-width="3"/>
 
-    <!-- Sayap Kanan Kitab -->
-    <path d="M 250,230 C 270,225 315,220 330,235 L 330,300 C 315,285 270,290 250,295 Z" 
-          fill="#fef08a" stroke="#000000" stroke-width="5" stroke-linejoin="round"/>
-    <path d="M 260,240 L 315,245" stroke="#000000" stroke-width="4"/>
-    <path d="M 260,255 L 315,260" stroke="#000000" stroke-width="4"/>
-    <path d="M 260,270 L 315,275" stroke="#000000" stroke-width="4"/>
-  </g>
+  <!-- Halaman Kanan -->
+  <path d="M 250,305 
+           C 285,240 320,240 330,265 
+           L 315,335 
+           C 305,315 275,315 250,305 Z" 
+        fill="#facc15" stroke="#000000" stroke-width="4"/>
+  <path d="M 315,280 C 295,268 270,270 255,285" fill="none" stroke="#000000" stroke-width="3"/>
+  <path d="M 310,300 C 290,288 265,290 255,302" fill="none" stroke="#000000" stroke-width="3"/>
+  <path d="M 305,320 C 288,308 265,310 255,318" fill="none" stroke="#000000" stroke-width="3"/>
 
-  <!-- Rehal / Meja Silang Al-Qur'an -->
-  <g id="rehal-stand" stroke="#000000" stroke-width="4" stroke-linejoin="round">
-    <polygon points="170,295 330,365 315,375 155,305" fill="#0f172a"/>
-    <polygon points="330,295 170,365 185,375 345,305" fill="#1e293b"/>
-    <line x1="170" y1="295" x2="330" y2="365" stroke="#ffffff" stroke-width="2"/>
-    <line x1="330" y1="295" x2="170" y2="365" stroke="#ffffff" stroke-width="2"/>
-  </g>
+  <!-- 8. Pita Putih Bawah (MIN 5 TULUNGAGUNG) -->
+  <!-- Sayap Kiri Pita -->
+  <polygon points="120,400 160,375 160,425 110,435" fill="#e2e8f0" stroke="#000000" stroke-width="3"/>
+  <polygon points="110,435 120,400 95,415" fill="#94a3b8" stroke="#000000" stroke-width="3"/>
 
-  <!-- Pita Putih Bawah "MIN 5 TULUNGAGUNG" -->
-  <g id="banner-ribbon">
-    <!-- Lipatan Belakang Pita Kiri & Kanan -->
-    <polygon points="100,380 135,355 135,405 100,415 115,395" fill="#e2e8f0" stroke="#000000" stroke-width="3"/>
-    <polygon points="400,380 365,355 365,405 400,415 385,395" fill="#e2e8f0" stroke="#000000" stroke-width="3"/>
+  <!-- Sayap Kanan Pita -->
+  <polygon points="380,400 340,375 340,425 390,435" fill="#e2e8f0" stroke="#000000" stroke-width="3"/>
+  <polygon points="390,435 380,400 405,415" fill="#94a3b8" stroke="#000000" stroke-width="3"/>
 
-    <!-- Pita Depan Utama Melengkung -->
-    <path d="M 120,385 C 190,440 310,440 380,385 L 365,355 C 300,405 200,405 135,355 Z" 
-          fill="#ffffff" stroke="#000000" stroke-width="4"/>
+  <!-- Badan Tengah Pita Lengkung -->
+  <path d="M 140,390 
+           Q 250,450 360,390 
+           L 350,435 
+           Q 250,490 150,435 Z" 
+        fill="#ffffff" stroke="#000000" stroke-width="4" stroke-linejoin="round"/>
 
-    <!-- Teks Pita -->
-    <path id="ribbon-text-path" d="M 130,378 C 200,422 300,422 370,378" fill="none"/>
-    <text font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="21" fill="#000000" letter-spacing="1.5">
-      <textPath href="#ribbon-text-path" startOffset="50%" text-anchor="middle">
-        MIN 5 TULUNGAGUNG
-      </textPath>
-    </text>
-  </g>
+  <!-- Teks Lengkung Pada Pita: MIN 5 TULUNGAGUNG -->
+  <path id="textPathRibbon" d="M 155,425 Q 250,470 345,425" fill="none"/>
+  <text font-family="'Arial Black', 'Impact', sans-serif" font-weight="900" font-size="23" fill="#000000">
+    <textPath href="#textPathRibbon" startOffset="50%" text-anchor="middle">
+      MIN 5 TULUNGAGUNG
+    </textPath>
+  </text>
 </svg>

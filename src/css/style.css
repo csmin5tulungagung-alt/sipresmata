@@ -187,6 +187,18 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 0 15px var(--primary-glow);
 }
 
+.brand-logo-img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(5, 150, 105, 0.4));
+  transition: transform 0.2s ease;
+}
+
+.brand-logo-img:hover {
+  transform: scale(1.05);
+}
+
 .brand-details h1 {
   font-size: 1.25rem;
   font-weight: 800;

@@ -1,7 +1,7 @@
 # 📌 Rencana Pengerjaan & Task Breakdown Proyek
 # **SIPRESMATA**
 ### *"Pantau Kehadiran, Wujudkan Madrasah Cerdas."*
-> Slogan: *"Presensi Tepat, Masa Depan Hebat."*
+> Slogan: *"MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI"*
 
 ---
 
