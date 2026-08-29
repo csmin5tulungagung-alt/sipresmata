@@ -1,7 +1,7 @@
 # 🏫 SIPRESMATA
 ### *Sistem Informasi Presensi Siswa Madrasah Terpadu — MIN 5 Tulungagung*
 > **"Pantau Kehadiran, Wujudkan Madrasah Cerdas."**  
-> *Slogan: "Presensi Tepat, Masa Depan Hebat."*
+> *Slogan: "MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI"*
 
 ---
 

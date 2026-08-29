@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Filter Shadow -->
+    <filter id="drop-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Yellow Border Shield -->
+  <path d="M 250,30 
+           C 310,65 420,130 460,200 
+           C 475,225 435,310 400,390 
+           C 370,445 280,480 250,470 
+           C 220,480 130,445 100,390 
+           C 65,310 25,225 40,200 
+           C 80,130 190,65 250,30 Z" 
+        fill="#bbf7d0" stroke="#a3e635" stroke-width="14" stroke-linejoin="round" />
+
+  <!-- Inner Green Shield -->
+  <path d="M 250,45 
+           C 305,78 405,138 442,204 
+           C 455,227 418,305 386,380 
+           C 358,432 276,462 250,454 
+           C 224,462 142,432 114,380 
+           C 82,305 45,227 58,204 
+           C 95,138 195,78 250,45 Z" 
+        fill="#15803d" stroke="#052e16" stroke-width="4" />
+
+  <!-- Bintang Kuning Atas -->
+  <polygon points="250,65 258,90 284,90 263,105 271,130 250,115 229,130 237,105 216,90 242,90" 
+           fill="#fde047" stroke="#ca8a04" stroke-width="2"/>
+
+  <!-- Api Obor Merah Menyala -->
+  <path d="M 250,125 
+           C 238,150 220,165 228,185 
+           C 232,192 242,190 245,182 
+           C 248,172 252,155 258,162 
+           C 265,170 260,188 272,185 
+           C 280,165 262,150 250,125 Z" 
+        fill="#ef4444" stroke="#b91c1c" stroke-width="2"/>
+  <path d="M 250,145 C 244,160 236,170 242,180 C 246,182 250,178 252,172 C 255,165 258,175 262,175 C 265,168 258,158 250,145 Z" 
+        fill="#facc15"/>
+
+  <!-- Mangkuk & Gagang Obor -->
+  <path d="M 220,185 L 280,185 L 270,200 L 230,200 Z" fill="#475569" stroke="#0f172a" stroke-width="2"/>
+  <rect x="242" y="200" width="16" height="150" fill="#4ade80" stroke="#166534" stroke-width="3" rx="3"/>
+
+  <!-- Tangkai Kapas (Kiri) -->
+  <g stroke="#0f172a" stroke-width="2">
+    <!-- Tangkai melengkung -->
+    <path d="M 120,380 C 100,280 120,170 195,120" fill="none" stroke="#14532d" stroke-width="6"/>
+    <!-- Kuntum Bunga Kapas Putih & Daun -->
+    <circle cx="190" cy="125" r="7" fill="#ffffff"/>
+    <circle cx="170" cy="140" r="8" fill="#ffffff"/>
+    <circle cx="152" cy="160" r="9" fill="#ffffff"/>
+    <circle cx="138" cy="185" r="9.5" fill="#ffffff"/>
+    <circle cx="128" cy="215" r="10" fill="#ffffff"/>
+    <circle cx="122" cy="245" r="10.5" fill="#ffffff"/>
+    <circle cx="120" cy="275" r="11" fill="#ffffff"/>
+    <circle cx="124" cy="305" r="11" fill="#ffffff"/>
+    <circle cx="132" cy="335" r="11" fill="#ffffff"/>
+    <circle cx="145" cy="360" r="10.5" fill="#ffffff"/>
+    
+    <!-- Kelopak Hitam/Hijau di bunga kapas -->
+    <path d="M 188,125 Q 185,120 182,125 Q 185,130 188,125" fill="#1e293b"/>
+    <path d="M 168,140 Q 165,135 162,140 Q 165,145 168,140" fill="#1e293b"/>
+    <path d="M 150,160 Q 146,155 142,160 Q 146,165 150,160" fill="#1e293b"/>
+    <path d="M 136,185 Q 131,180 127,185 Q 131,190 136,185" fill="#1e293b"/>
+    <path d="M 126,215 Q 120,210 116,215 Q 120,220 126,215" fill="#1e293b"/>
+    <path d="M 120,245 Q 114,240 110,245 Q 114,250 120,245" fill="#1e293b"/>
+    <path d="M 118,275 Q 112,270 108,275 Q 112,280 118,275" fill="#1e293b"/>
+    <path d="M 122,305 Q 116,300 112,305 Q 116,310 122,305" fill="#1e293b"/>
+  </g>
+
+  <!-- Tangkai Padi Kuning Emas (Kanan) -->
+  <g fill="#facc15" stroke="#854d0e" stroke-width="1.5">
+    <path d="M 380,380 C 400,280 380,170 305,120" fill="none" stroke="#ca8a04" stroke-width="5"/>
+    <!-- Butir-butir Padi -->
+    <ellipse cx="310" cy="125" rx="6" ry="12" transform="rotate(35 310 125)"/>
+    <ellipse cx="328" cy="140" rx="7" ry="13" transform="rotate(30 328 140)"/>
+    <ellipse cx="345" cy="160" rx="7.5" ry="14" transform="rotate(25 345 160)"/>
+    <ellipse cx="360" cy="185" rx="8" ry="15" transform="rotate(20 360 185)"/>
+    <ellipse cx="370" cy="215" rx="8" ry="15" transform="rotate(10 370 215)"/>
+    <ellipse cx="378" cy="245" rx="8" ry="15" transform="rotate(0 378 245)"/>
+    <ellipse cx="380" cy="275" rx="8" ry="15" transform="rotate(-10 380 275)"/>
+    <ellipse cx="376" cy="305" rx="8" ry="15" transform="rotate(-20 376 305)"/>
+    <ellipse cx="368" cy="335" rx="7.5" ry="14" transform="rotate(-30 368 335)"/>
+    <ellipse cx="355" cy="360" rx="7" ry="13" transform="rotate(-40 355 360)"/>
+  </g>
+
+  <!-- Kitab Suci Al-Qur'an Terbuka -->
+  <g id="open-book">
+    <!-- Sayap Kiri Kitab -->
+    <path d="M 250,230 C 230,225 185,220 170,235 L 170,300 C 185,285 230,290 250,295 Z" 
+          fill="#fef08a" stroke="#000000" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M 185,245 L 240,240" stroke="#000000" stroke-width="4"/>
+    <path d="M 185,260 L 240,255" stroke="#000000" stroke-width="4"/>
+    <path d="M 185,275 L 240,270" stroke="#000000" stroke-width="4"/>
+
+    <!-- Sayap Kanan Kitab -->
+    <path d="M 250,230 C 270,225 315,220 330,235 L 330,300 C 315,285 270,290 250,295 Z" 
+          fill="#fef08a" stroke="#000000" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M 260,240 L 315,245" stroke="#000000" stroke-width="4"/>
+    <path d="M 260,255 L 315,260" stroke="#000000" stroke-width="4"/>
+    <path d="M 260,270 L 315,275" stroke="#000000" stroke-width="4"/>
+  </g>
+
+  <!-- Rehal / Meja Silang Al-Qur'an -->
+  <g id="rehal-stand" stroke="#000000" stroke-width="4" stroke-linejoin="round">
+    <polygon points="170,295 330,365 315,375 155,305" fill="#0f172a"/>
+    <polygon points="330,295 170,365 185,375 345,305" fill="#1e293b"/>
+    <line x1="170" y1="295" x2="330" y2="365" stroke="#ffffff" stroke-width="2"/>
+    <line x1="330" y1="295" x2="170" y2="365" stroke="#ffffff" stroke-width="2"/>
+  </g>
+
+  <!-- Pita Putih Bawah "MIN 5 TULUNGAGUNG" -->
+  <g id="banner-ribbon">
+    <!-- Lipatan Belakang Pita Kiri & Kanan -->
+    <polygon points="100,380 135,355 135,405 100,415 115,395" fill="#e2e8f0" stroke="#000000" stroke-width="3"/>
+    <polygon points="400,380 365,355 365,405 400,415 385,395" fill="#e2e8f0" stroke="#000000" stroke-width="3"/>
+
+    <!-- Pita Depan Utama Melengkung -->
+    <path d="M 120,385 C 190,440 310,440 380,385 L 365,355 C 300,405 200,405 135,355 Z" 
+          fill="#ffffff" stroke="#000000" stroke-width="4"/>
+
+    <!-- Teks Pita -->
+    <path id="ribbon-text-path" d="M 130,378 C 200,422 300,422 370,378" fill="none"/>
+    <text font-family="'Plus Jakarta Sans', Arial, sans-serif" font-weight="900" font-size="21" fill="#000000" letter-spacing="1.5">
+      <textPath href="#ribbon-text-path" startOffset="50%" text-anchor="middle">
+        MIN 5 TULUNGAGUNG
+      </textPath>
+    </text>
+  </g>
+</svg>

@@ -92,34 +92,36 @@
   pointer-events: none;
 }
 
-/* Logo Kemenag / Ikhlas Beramal Badge */
+/* Logo Resmi MIN 5 Badge */
 .kemenag-logo-wrapper {
   display: flex;
   justify-content: center;
   margin-bottom: 4px;
 }
 
-.kemenag-badge {
-  width: 32px;
-  height: 32px;
-  background: #022c22;
-  border: 1.5px solid #fbbf24;
+.min5-badge-logo {
+  width: 44px;
+  height: 44px;
+  background: #ffffff;
+  border: 2px solid #fbbf24;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.45);
+  padding: 2px;
 }
 
-.kemenag-svg-icon {
-  width: 22px;
-  height: 22px;
+.min5-logo-card-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
 }
 
 /* Teks Header Madrasah */
 .card-subtitle-small {
-  font-size: 7pt;
-  font-weight: 700;
+  font-size: 6.8pt;
+  font-weight: 800;
   color: #fef08a;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -136,15 +138,17 @@
 }
 
 .card-motto {
-  font-size: 5.8pt;
-  font-weight: 700;
+  font-size: 4.8pt;
+  font-weight: 800;
   color: #a7f3d0;
-  letter-spacing: 0.08em;
-  margin-top: 3px;
-  display: inline-block;
+  letter-spacing: 0.03em;
+  margin-top: 4px;
+  display: block;
   border-top: 1px solid rgba(251, 191, 36, 0.4);
   border-bottom: 1px solid rgba(251, 191, 36, 0.4);
-  padding: 1px 8px;
+  padding: 2px 4px;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 /* 2. Body Kartu (Foto & Data Siswa) */

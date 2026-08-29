@@ -2,6 +2,7 @@
  * ============================================================================
  * SIPRESMATA - VERTICAL ID CARD & QR CODE GENERATOR MODULE
  * Desain Kartu Presensi Vertikal Premium MIN 5 Tulungagung
+ * Logo Resmi & Slogan: "MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI"
  * ============================================================================
  */
 
@@ -65,23 +66,18 @@ export const CARD_GENERATOR = {
         <div class="card-top-banner">
           <div class="banner-dots-pattern"></div>
           
-          <!-- Logo Kemenag Ikhlas Beramal -->
+          <!-- Logo Resmi MIN 5 Tulungagung -->
           <div class="kemenag-logo-wrapper">
-            <div class="kemenag-badge" title="Kementerian Agama RI">
-              <svg class="kemenag-svg-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <polygon points="50,4 92,26 92,74 50,96 8,74 8,26" fill="#047857" stroke="#fbbf24" stroke-width="4"/>
-                <circle cx="50" cy="50" r="30" fill="#064e3b" stroke="#fef08a" stroke-width="2"/>
-                <path d="M50 24 L53 33 L62 33 L55 38 L58 47 L50 42 L42 47 L45 38 L38 33 L47 33 Z" fill="#fbbf24"/>
-                <path d="M35 56 Q50 48 65 56 Q50 64 35 56 Z" fill="#ffffff"/>
-                <path d="M38 60 Q50 54 62 60 Q50 68 38 60 Z" fill="#fbbf24"/>
-                <circle cx="50" cy="74" r="4" fill="#fbbf24"/>
-              </svg>
+            <div class="min5-badge-logo" title="Logo Resmi MIN 5 Tulungagung">
+              <img src="/public/logo-min5.svg" class="min5-logo-card-img" alt="Logo MIN 5 Tulungagung" onerror="this.src='/logo-min5.svg'">
             </div>
           </div>
 
           <div class="card-subtitle-small">— KARTU ABSEN SISWA —</div>
           <div class="card-title-main">MIN 5 TULUNGAGUNG</div>
-          <div class="card-motto">MADRASAH HEBAT BERMARTABAT</div>
+          <div class="card-motto">
+            MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI
+          </div>
         </div>
 
         <!-- 2. Body Kartu (Foto & Data Siswa) -->
