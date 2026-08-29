@@ -69,6 +69,9 @@ function handleRequest(e, method) {
       case "save_siswa":
         result = handleSaveSiswa(requestData);
         break;
+      case "batch_import_siswa":
+        result = handleBatchImportSiswa(requestData);
+        break;
       case "delete_siswa":
         result = handleDeleteSiswa(requestData);
         break;
@@ -573,6 +576,67 @@ function handleSaveSiswa(req) {
     status: "success",
     message: "Siswa baru " + nama + " berhasil ditambahkan.",
     data: { id_siswa: newId, kode_barcode: kodeBarcode }
+  };
+}
+
+function handleBatchImportSiswa(req) {
+  var students = req.students || [];
+  if (!Array.isArray(students) || students.length === 0) {
+    return { status: "error", code: "EMPTY_DATA", message: "Data siswa yang diimpor tidak boleh kosong." };
+  }
+
+  var db = getDB();
+  var sheet = db.getSheetByName("master_siswa");
+  var data = sheet.getDataRange().getValues();
+  var existingNisns = {};
+
+  for (var i = 1; i < data.length; i++) {
+    var existingNisn = String(data[i][1]).trim();
+    if (existingNisn) existingNisns[existingNisn] = true;
+  }
+
+  var nowStr = Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
+  var newRows = [];
+  var importedCount = 0;
+  var skippedCount = 0;
+
+  for (var j = 0; j < students.length; j++) {
+    var s = students[j];
+    var nisn = String(s.nisn || "").replace(/['"\s]/g, "").trim();
+    var nama = String(s.nama_lengkap || "").trim();
+    var idKelas = String(s.id_kelas || "KLS-1A").trim();
+    var jk = (s.jenis_kelamin === "P" || s.jenis_kelamin === "Perempuan") ? "P" : "L";
+    var noHp = String(s.no_hp_ortu || "").replace(/['"\s]/g, "").trim();
+
+    if (!nisn || !nama) {
+      skippedCount++;
+      continue;
+    }
+
+    if (existingNisns[nisn]) {
+      skippedCount++;
+      continue; // Skip jika duplikat
+    }
+
+    existingNisns[nisn] = true;
+    var newId = "SISWA-" + Utilities.formatString("%03d", (data.length + newRows.length));
+    var kodeBarcode = "MIN5-" + nisn;
+
+    newRows.push([newId, nisn, nama, idKelas, jk, kodeBarcode, noHp, true, nowStr]);
+    importedCount++;
+  }
+
+  if (newRows.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, 9).setValues(newRows);
+    clearCache();
+  }
+
+  catatLog(db, req.aktor || "ADMIN", "BATCH_IMPORT_SISWA", JSON.stringify({ imported: importedCount, skipped: skippedCount }));
+
+  return {
+    status: "success",
+    message: "Berhasil mengimpor " + importedCount + " siswa baru (" + skippedCount + " dilewati/duplikat).",
+    data: { imported: importedCount, skipped: skippedCount }
   };
 }
 

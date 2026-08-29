@@ -339,6 +339,60 @@ export const API = {
     }
   },
 
+  async batchImportSiswa(students) {
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=batch_import_siswa`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ students })
+        });
+        return await res.json();
+      } catch (err) {}
+    }
+
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    students.forEach(s => {
+      const cleanNisn = String(s.nisn || "").replace(/['"\s]/g, "").trim();
+      const cleanNama = String(s.nama_lengkap || "").trim();
+      if (!cleanNisn || !cleanNama) {
+        skippedCount++;
+        return;
+      }
+
+      const exists = localStudents.some(item => item.nisn === cleanNisn);
+      if (exists) {
+        skippedCount++;
+        return;
+      }
+
+      const rombel = CONFIG.ROMBEL_LIST.find(r => r.id === s.id_kelas) || { nama: s.id_kelas || "Kelas 1A", id: "KLS-1A" };
+      const barcode = "MIN5-" + cleanNisn;
+
+      localStudents.push({
+        id_siswa: `SISWA-${String(localStudents.length + 1).padStart(3, '0')}`,
+        nisn: cleanNisn,
+        nama_lengkap: cleanNama,
+        id_kelas: rombel.id,
+        nama_kelas: rombel.nama,
+        jenis_kelamin: (s.jenis_kelamin === 'P' || s.jenis_kelamin === 'Perempuan') ? 'P' : 'L',
+        kode_barcode: barcode,
+        no_hp_ortu: String(s.no_hp_ortu || "").replace(/['"\s]/g, ""),
+        status_aktif: true
+      });
+      addedCount++;
+    });
+
+    saveLocalState();
+    return {
+      status: "success",
+      message: `Berhasil mengimpor ${addedCount} siswa baru (${skippedCount} duplikat/dilewati).`,
+      data: { imported: addedCount, skipped: skippedCount }
+    };
+  },
+
   async deleteSiswa(idSiswa) {
     localStudents = localStudents.filter(s => s.id_siswa !== idSiswa);
     saveLocalState();

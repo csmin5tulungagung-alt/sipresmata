@@ -18,9 +18,10 @@
   <link rel="stylesheet" href="/src/css/style.css">
   <link rel="stylesheet" href="/src/css/print-card.css">
 
-  <!-- Barcode & QR Scanner CDN Libraries -->
+  <!-- Barcode, QR, & Excel CDN Libraries -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="mode-kiosk">
 
@@ -277,9 +278,14 @@
               <h2>👥 Data Master Siswa MIN 5</h2>
               <p>Kelola data profil siswa, NISN, dan rombongan belajar (Kelas 1A-D s.d 6A-D).</p>
             </div>
-            <button class="btn btn-primary" onclick="window.openAddStudentModal()">
-              ➕ Tambah Siswa Baru
-            </button>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-secondary" onclick="window.openImportModal()">
+                📥 Import Excel (Format EMIS)
+              </button>
+              <button class="btn btn-primary" onclick="window.openAddStudentModal()">
+                ➕ Tambah Siswa Baru
+              </button>
+            </div>
           </div>
 
           <div class="card-table-wrapper">
@@ -563,6 +569,75 @@
           💾 Simpan Data Siswa
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Import Siswa Excel (Format EMIS / Madrasah) -->
+  <div id="modal-import-siswa" class="modal-overlay">
+    <div class="modal-card" style="max-width: 780px;">
+      <div class="modal-header">
+        <div>
+          <h3>📥 Import Data Siswa (Format Excel EMIS)</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">Mendukung format file Excel (.xlsx / .xls) dan .csv resmi EMIS Kemenag</p>
+        </div>
+        <button class="btn btn-secondary btn-icon" onclick="window.closeModal('modal-import-siswa')">✕</button>
+      </div>
+
+      <!-- Download Template Card -->
+      <div style="background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.25); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <strong style="color: #34d399; font-size: 0.9rem;">Format Kolom Sesuai EMIS / Simpatika:</strong>
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+            No, Nama Lengkap, NISN, NIK, Tempat, Tanggal, Tingkat - Rombel, Umur, Status, Jenis Kelamin, Alamat, No Telepon, dll.
+          </p>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="window.downloadEmisTemplate()" style="font-size: 0.8rem;">
+          📄 Download Template Excel (.csv)
+        </button>
+      </div>
+
+      <!-- Dropzone File Upload -->
+      <div id="dropzone-excel" style="border: 2px dashed rgba(255, 255, 255, 0.2); border-radius: var(--radius-md); padding: 2rem 1.5rem; text-align: center; background: rgba(0, 0, 0, 0.2); cursor: pointer; transition: var(--transition); margin-bottom: 1.25rem;">
+        <input type="file" id="file-input-excel" accept=".xlsx, .xls, .csv" style="display: none;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📊</div>
+        <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">Pilih atau Tarik File Excel (.xlsx / .csv) ke sini</h4>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Sistem otomatis memetakan NISN, Nama, Rombel/Kelas, Jenis Kelamin, dan No HP</p>
+      </div>
+
+      <!-- Preview Table Container -->
+      <div id="import-preview-container" style="display: none; margin-bottom: 1.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <h4 style="font-size: 0.9rem;">Pratinjau Data yang Terdeteksi (<span id="preview-count">0</span> Siswa):</h4>
+          <span id="preview-valid-badge" class="badge badge-success">Siap Diimpor</span>
+        </div>
+        <div style="max-height: 240px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+          <table class="custom-data-table" style="font-size: 0.8rem;">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>NISN</th>
+                <th>Nama Lengkap</th>
+                <th>Rombel Terdeteksi</th>
+                <th>L/P</th>
+                <th>No. Telepon</th>
+              </tr>
+            </thead>
+            <tbody id="preview-table-body">
+              <!-- Injected dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button type="button" class="btn btn-secondary" onclick="window.closeModal('modal-import-siswa')">
+          Batal
+        </button>
+        <button type="button" id="btn-confirm-import" class="btn btn-primary" style="display: none;">
+          💾 Simpan & Impor Semua Siswa
+        </button>
+      </div>
     </div>
   </div>
 

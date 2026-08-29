@@ -369,7 +369,144 @@ function initAdminForms() {
       }
     });
   }
+
+  // Setup Excel Dropzone & File Input
+  initExcelImport();
 }
+
+let parsedImportData = [];
+
+function initExcelImport() {
+  const dropzone = document.getElementById("dropzone-excel");
+  const fileInput = document.getElementById("file-input-excel");
+  const btnConfirm = document.getElementById("btn-confirm-import");
+
+  if (!dropzone || !fileInput) return;
+
+  dropzone.addEventListener("click", () => fileInput.click());
+
+  dropzone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = "var(--primary)";
+    dropzone.style.background = "rgba(5, 150, 105, 0.15)";
+  });
+
+  dropzone.addEventListener("dragleave", () => {
+    dropzone.style.borderColor = "rgba(255, 255, 255, 0.2)";
+    dropzone.style.background = "rgba(0, 0, 0, 0.2)";
+  });
+
+  dropzone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropzone.style.borderColor = "rgba(255, 255, 255, 0.2)";
+    dropzone.style.background = "rgba(0, 0, 0, 0.2)";
+    if (e.dataTransfer.files.length > 0) {
+      processExcelFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  fileInput.addEventListener("change", (e) => {
+    if (e.target.files.length > 0) {
+      processExcelFile(e.target.files[0]);
+    }
+  });
+
+  if (btnConfirm) {
+    btnConfirm.addEventListener("click", async () => {
+      if (parsedImportData.length === 0) return;
+
+      btnConfirm.disabled = true;
+      btnConfirm.textContent = "⏳ Mengimpor ke Database...";
+
+      try {
+        const res = await API.batchImportSiswa(parsedImportData);
+        if (res.status === "success") {
+          showToast(res.message, "success");
+          closeModal("modal-import-siswa");
+          ADMIN.loadStudents();
+        } else {
+          showToast(res.message, "danger");
+        }
+      } catch (err) {
+        showToast("Terjadi kesalahan saat mengimpor data.", "danger");
+      } finally {
+        btnConfirm.disabled = false;
+        btnConfirm.textContent = "💾 Simpan & Impor Semua Siswa";
+      }
+    });
+  }
+}
+
+function processExcelFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      parsedImportData = ADMIN.parseEmisWorkbook(workbook);
+
+      renderImportPreview(parsedImportData);
+    } catch (err) {
+      console.error("Excel Read Error:", err);
+      showToast("Gagal membaca file: " + err.message, "danger");
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderImportPreview(students) {
+  const container = document.getElementById("import-preview-container");
+  const tbody = document.getElementById("preview-table-body");
+  const countElem = document.getElementById("preview-count");
+  const btnConfirm = document.getElementById("btn-confirm-import");
+
+  if (!container || !tbody) return;
+
+  if (students.length === 0) {
+    showToast("Tidak ada data siswa yang dapat dikenali dari file ini.", "warning");
+    return;
+  }
+
+  countElem.textContent = students.length;
+  tbody.innerHTML = students.map((s, idx) => `
+    <tr>
+      <td>${idx + 1}</td>
+      <td><code>${s.nisn}</code></td>
+      <td><strong>${s.nama_lengkap}</strong></td>
+      <td><span class="badge badge-info">${s.nama_kelas}</span></td>
+      <td>${s.jenis_kelamin === 'P' ? '👧 P' : '👦 L'}</td>
+      <td>${s.no_hp_ortu || '-'}</td>
+    </tr>
+  `).join("");
+
+  container.style.display = "block";
+  if (btnConfirm) btnConfirm.style.display = "inline-flex";
+  showToast(`Berhasil membaca ${students.length} data siswa dari file.`, "info");
+}
+
+window.openImportModal = function() {
+  parsedImportData = [];
+  const container = document.getElementById("import-preview-container");
+  const btnConfirm = document.getElementById("btn-confirm-import");
+  const fileInput = document.getElementById("file-input-excel");
+
+  if (container) container.style.display = "none";
+  if (btnConfirm) btnConfirm.style.display = "none";
+  if (fileInput) fileInput.value = "";
+
+  openModal("modal-import-siswa");
+};
+
+window.downloadEmisTemplate = function() {
+  // Download file template CSV langsung
+  const link = document.createElement("a");
+  link.href = "/public/template_import_siswa_emis.csv";
+  link.download = "template_import_siswa_emis_min5.csv";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast("Template Excel/CSV berhasil diunduh.", "success");
+};
 
 // 6. Global Window Bridges for Table Actions
 window.editStudent = async function(idSiswa) {

@@ -176,6 +176,101 @@ export const ADMIN = {
     this.populateStudentSelect();
   },
 
+  // 5. Intelligent EMIS Excel / CSV Parser
+  parseEmisWorkbook(workbook) {
+    const firstSheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[firstSheetName];
+    const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+
+    if (!rawRows || rawRows.length < 2) {
+      throw new Error("File Excel kosong atau tidak memiliki baris data.");
+    }
+
+    // Cari baris header (biasanya baris ke-0 atau baris yang mengandung 'Nama' / 'NISN')
+    let headerRowIdx = 0;
+    for (let r = 0; r < Math.min(5, rawRows.length); r++) {
+      const rowStr = rawRows[r].join(" ").toLowerCase();
+      if (rowStr.includes("nama") || rowStr.includes("nisn")) {
+        headerRowIdx = r;
+        break;
+      }
+    }
+
+    const headers = rawRows[headerRowIdx].map(h => String(h).trim().toLowerCase());
+    
+    // Temukan index kolom
+    let idxNama = headers.findIndex(h => h.includes("nama lengkap") || h.includes("nama"));
+    let idxNisn = headers.findIndex(h => h.includes("nisn"));
+    let idxRombel = headers.findIndex(h => h.includes("tingkat") || h.includes("rombel") || h.includes("kelas"));
+    let idxJk = headers.findIndex(h => h.includes("jenis kelamin") || h.includes("jk"));
+    let idxTelp = headers.findIndex(h => h.includes("telepon") || h.includes("telp") || h.includes("hp") || h.includes("wa"));
+
+    // Fallback index jika header tidak bernama standar (sesuai template screenshot kolom A=0 s.d R=17)
+    if (idxNama === -1) idxNama = 1;  // Kolom B
+    if (idxNisn === -1) idxNisn = 2;  // Kolom C
+    if (idxRombel === -1) idxRombel = 6; // Kolom G
+    if (idxJk === -1) idxJk = 9;      // Kolom J
+    if (idxTelp === -1) idxTelp = 11;  // Kolom L
+
+    const parsedStudents = [];
+
+    for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
+      const row = rawRows[i];
+      if (!row || row.length === 0) continue;
+
+      const rawNama = String(row[idxNama] || "").trim();
+      const rawNisn = String(row[idxNisn] || "").replace(/['"\s]/g, "").trim();
+      const rawRombel = String(row[idxRombel] || "").trim();
+      const rawJk = String(row[idxJk] || "").trim();
+      const rawTelp = String(row[idxTelp] || "").replace(/['"\s]/g, "").trim();
+
+      if (!rawNama && !rawNisn) continue;
+
+      // Normalisasi Rombel (Contoh: 'Kelas 5 - Kelas 5 A' -> 'KLS-5A', '5A' -> 'KLS-5A')
+      const matchedRombel = this.normalizeRombel(rawRombel);
+
+      // Normalisasi Jenis Kelamin
+      const jk = (rawJk.toLowerCase().startsWith("p") || rawJk.toLowerCase().includes("perempuan")) ? "P" : "L";
+
+      parsedStudents.push({
+        nama_lengkap: rawNama,
+        nisn: rawNisn,
+        id_kelas: matchedRombel.id,
+        nama_kelas: matchedRombel.nama,
+        jenis_kelamin: jk,
+        no_hp_ortu: rawTelp
+      });
+    }
+
+    return parsedStudents;
+  },
+
+  normalizeRombel(raw) {
+    if (!raw) return { id: "KLS-1A", nama: "Kelas 1A" };
+    
+    // Ekstrak angka tingkat (1-6) dan huruf (A-D)
+    const clean = raw.toUpperCase().replace(/\s+/g, "");
+    
+    for (const r of CONFIG.ROMBEL_LIST) {
+      const code = r.id.replace("KLS-", ""); // '1A', '5A', dll
+      if (clean.includes(code) || clean.includes(`KELAS${code}`) || clean.includes(`KELAS${code[0]}-KELAS${code[0]}${code[1]}`)) {
+        return r;
+      }
+    }
+
+    // Regex fallback
+    const match = raw.match(/(\d)\s*[-–]?\s*(?:Kelas\s*)?(\d)?\s*([A-Da-d])/);
+    if (match) {
+      const tingkat = match[1];
+      const huruf = match[3].toUpperCase();
+      const targetId = `KLS-${tingkat}${huruf}`;
+      const found = CONFIG.ROMBEL_LIST.find(r => r.id === targetId);
+      if (found) return found;
+    }
+
+    return { id: "KLS-1A", nama: "Kelas 1A" };
+  },
+
   async populateStudentSelect(idKelas = "") {
     const select = document.getElementById("manual-absen-siswa");
     if (!select) return;
