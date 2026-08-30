@@ -447,17 +447,26 @@ export const API = {
 
   async deleteSiswa(idSiswa) {
     this.invalidateSiswaCache();
+    const cleanId = String(idSiswa || "").trim().toUpperCase();
+
+    // 1. Hapus dari state lokal seketika
+    localStudents = localStudents.filter(s => 
+      String(s.id_siswa || "").trim().toUpperCase() !== cleanId && 
+      String(s.nisn || "").trim().toUpperCase() !== cleanId
+    );
+    saveLocalState();
+    this.invalidateSiswaCache();
+
+    // 2. Kirim ke backend Google Apps Script
     if (CONFIG.DEFAULT_API_URL) {
       try {
         const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=delete_siswa`, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ id_siswa: idSiswa })
+          body: JSON.stringify({ action: "delete_siswa", id_siswa: idSiswa })
         });
         const json = await res.json();
         if (json.status === "success") {
-          localStudents = localStudents.filter(s => s.id_siswa !== idSiswa);
-          saveLocalState();
           return json;
         }
       } catch (err) {
@@ -465,9 +474,7 @@ export const API = {
       }
     }
 
-    localStudents = localStudents.filter(s => s.id_siswa !== idSiswa);
-    saveLocalState();
-    return { status: "success", message: "Siswa berhasil dihapus." };
+    return { status: "success", message: "Data siswa berhasil dihapus." };
   },
 
   async deleteMultipleSiswa(idSiswaList) {
@@ -476,18 +483,26 @@ export const API = {
       return { status: "error", message: "Tidak ada siswa yang dipilih." };
     }
 
+    const idSet = new Set(idSiswaList.map(id => String(id || "").trim().toUpperCase()));
+
+    // 1. Hapus dari state lokal seketika
+    localStudents = localStudents.filter(s => 
+      !idSet.has(String(s.id_siswa || "").trim().toUpperCase()) && 
+      !idSet.has(String(s.nisn || "").trim().toUpperCase())
+    );
+    saveLocalState();
+    this.invalidateSiswaCache();
+
+    // 2. Kirim ke backend Google Apps Script
     if (CONFIG.DEFAULT_API_URL) {
       try {
         const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=delete_siswa`, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ id_siswa_list: idSiswaList })
+          body: JSON.stringify({ action: "delete_siswa", id_siswa_list: idSiswaList })
         });
         const json = await res.json();
         if (json.status === "success") {
-          const idSet = new Set(idSiswaList);
-          localStudents = localStudents.filter(s => !idSet.has(s.id_siswa));
-          saveLocalState();
           return json;
         }
       } catch (err) {
@@ -495,10 +510,7 @@ export const API = {
       }
     }
 
-    const idSet = new Set(idSiswaList);
-    localStudents = localStudents.filter(s => !idSet.has(s.id_siswa));
-    saveLocalState();
-    return { status: "success", message: `${idSiswaList.length} siswa berhasil dihapus.` };
+    return { status: "success", message: `${idSiswaList.length} data siswa berhasil dihapus.` };
   },
 
   // 6. Manual Absen

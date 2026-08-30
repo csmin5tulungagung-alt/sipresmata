@@ -651,10 +651,10 @@ function handleDeleteSiswa(req) {
   }
 
   var targets = {};
-  if (idSiswa) targets[idSiswa] = true;
+  if (idSiswa) targets[String(idSiswa).trim().toUpperCase()] = true;
   if (Array.isArray(idList)) {
     for (var k = 0; k < idList.length; k++) {
-      targets[idList[k]] = true;
+      targets[String(idList[k]).trim().toUpperCase()] = true;
     }
   }
 
@@ -663,7 +663,7 @@ function handleDeleteSiswa(req) {
   var data = sheet.getDataRange().getValues();
 
   if (data.length <= 1) {
-    return { status: "success", message: "Tidak ada data siswa untuk dihapus.", deleted_count: 0 };
+    return { status: "success", message: "Tidak ada data siswa.", deleted_count: 0 };
   }
 
   var statusRange = sheet.getRange(2, 8, data.length - 1, 1);
@@ -671,18 +671,19 @@ function handleDeleteSiswa(req) {
   var deletedCount = 0;
 
   for (var i = 1; i < data.length; i++) {
-    var curId = data[i][0];
-    var curKelas = data[i][3];
-    var isMatch = deleteAll ? (!idKelas || curKelas === idKelas) : targets[curId];
+    var curId = String(data[i][0] || "").trim().toUpperCase();
+    var curNisn = String(data[i][1] || "").trim().toUpperCase();
+    var curKelas = String(data[i][3] || "").trim().toUpperCase();
+    var isMatch = deleteAll ? (!idKelas || curKelas === String(idKelas).trim().toUpperCase()) : (targets[curId] || targets[curNisn]);
 
-    if (isMatch && (statusValues[i - 1][0] === true || statusValues[i - 1][0] === "TRUE" || statusValues[i - 1][0] === 1)) {
+    if (isMatch) {
       statusValues[i - 1][0] = false;
       deletedCount++;
     }
   }
 
   if (deletedCount > 0) {
-    statusRange.setValues(statusValues); // Single batch write instan
+    statusRange.setValues(statusValues);
   }
 
   clearCache();
