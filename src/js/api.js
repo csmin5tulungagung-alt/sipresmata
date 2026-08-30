@@ -63,11 +63,26 @@ export const API = {
       };
     }
 
-    // Cek double scan
+    const masukMulai = CONFIG.SCHEDULE.MASUK_MULAI || "06:00:00";
+    const masukMaksimal = CONFIG.SCHEDULE.MASUK_MAKSIMAL || "08:30:00";
+    const masukBatas = CONFIG.SCHEDULE.MASUK_BATAS || "07:15:00";
+    const pulangMulai = CONFIG.SCHEDULE.PULANG_MULAI || "12:30:00";
+    const pulangBatas = CONFIG.SCHEDULE.PULANG_BATAS || "16:00:00";
+
+    const isSesiMasuk = timeStr >= masukMulai && timeStr <= masukMaksimal;
+    const isSesiPulang = timeStr >= pulangMulai && timeStr <= pulangBatas;
+
+    // 1. Validasi Jadwal Operasional Terlebih Dahulu (OUT_OF_SCHEDULE)
+    if (!isSesiMasuk && !isSesiPulang) {
+      return {
+        status: "error",
+        code: "OUT_OF_SCHEDULE",
+        message: `Saat ini di luar jam operasional presensi (${timeStr} WIB). Sesi Masuk: ${masukMulai.slice(0, 5)}–${masukMaksimal.slice(0, 5)} WIB. Sesi Pulang: ${pulangMulai.slice(0, 5)}–${pulangBatas.slice(0, 5)} WIB.`
+      };
+    }
+
+    // 2. Cek apakah siswa sudah pernah scan pada sesi aktif hari ini (ALREADY_SCANNED)
     const existing = localAttendance.find(a => a.tanggal === todayStr && a.id_siswa === siswa.id_siswa);
-    
-    // Tentukan sesi (Jika jam < 12.00 = Masuk, >= 12.00 = Pulang)
-    const isSesiMasuk = now.getHours() < 12;
 
     if (isSesiMasuk) {
       if (existing && existing.jam_masuk) {
@@ -78,7 +93,7 @@ export const API = {
         };
       }
 
-      const isTerlambat = timeStr > CONFIG.SCHEDULE.MASUK_BATAS;
+      const isTerlambat = timeStr > masukBatas;
       const keterlambatanMenit = isTerlambat ? 12 : 0;
       const statusKehadiran = isTerlambat ? "TERLAMBAT" : "HADIR";
 
@@ -120,7 +135,7 @@ export const API = {
             : `Selamat pagi ${siswa.nama_lengkap}. Absen masuk berhasil, tepat waktu.`
         }
       };
-    } else {
+    } else if (isSesiPulang) {
       // Sesi Pulang
       if (existing && existing.jam_pulang) {
         return {
