@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLiveClock();
   initLayoutSwitching();
   initCmsNavigation();
+  initFullscreenToggle();
   initScannerView();
   initAdminForms();
   initSettingsView();
@@ -667,4 +668,53 @@ function updateCmsUserUI() {
   }
 }
 
+// 10. Fullscreen Mode Controller
+function initFullscreenToggle() {
+  const btnKiosk = document.getElementById("btn-fullscreen-kiosk");
+  const btnCms = document.getElementById("btn-fullscreen-cms");
 
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.warn("Fullscreen error:", err);
+        });
+      } else if (document.documentElement.webkitRequestFullscreen) {
+        document.documentElement.webkitRequestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(err => {
+          console.warn("Exit fullscreen error:", err);
+        });
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    }
+  }
+
+  function updateFullscreenIcons() {
+    const isFull = !!document.fullscreenElement;
+    const icon = isFull ? "🗗" : "⛶";
+    const title = isFull ? "Keluar Layar Penuh (Esc)" : "Mode Layar Penuh (Fullscreen)";
+
+    if (btnKiosk) {
+      btnKiosk.textContent = icon;
+      btnKiosk.title = title;
+      btnKiosk.style.background = isFull ? "rgba(16, 185, 129, 0.2)" : "";
+      btnKiosk.style.borderColor = isFull ? "rgba(16, 185, 129, 0.5)" : "";
+    }
+    if (btnCms) {
+      btnCms.textContent = icon;
+      btnCms.title = title;
+      btnCms.style.background = isFull ? "rgba(16, 185, 129, 0.2)" : "";
+      btnCms.style.borderColor = isFull ? "rgba(16, 185, 129, 0.5)" : "";
+    }
+  }
+
+  if (btnKiosk) btnKiosk.addEventListener("click", toggleFullscreen);
+  if (btnCms) btnCms.addEventListener("click", toggleFullscreen);
+
+  document.addEventListener("fullscreenchange", updateFullscreenIcons);
+  document.addEventListener("webkitfullscreenchange", updateFullscreenIcons);
+}
