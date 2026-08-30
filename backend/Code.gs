@@ -643,8 +643,10 @@ function handleBatchImportSiswa(req) {
 function handleDeleteSiswa(req) {
   var idSiswa = req.id_siswa;
   var idList = req.id_siswa_list;
+  var deleteAll = req.delete_all === true || req.delete_all === "true" || idList === "ALL";
+  var idKelas = req.id_kelas || "";
 
-  if (!idSiswa && (!idList || idList.length === 0)) {
+  if (!deleteAll && !idSiswa && (!idList || idList.length === 0)) {
     return { status: "error", code: "MISSING_ID", message: "ID Siswa atau daftar ID wajib disertakan." };
   }
 
@@ -659,24 +661,37 @@ function handleDeleteSiswa(req) {
   var db = getDB();
   var sheet = db.getSheetByName("master_siswa");
   var data = sheet.getDataRange().getValues();
+
+  if (data.length <= 1) {
+    return { status: "success", message: "Tidak ada data siswa untuk dihapus.", deleted_count: 0 };
+  }
+
+  var statusRange = sheet.getRange(2, 8, data.length - 1, 1);
+  var statusValues = statusRange.getValues();
   var deletedCount = 0;
 
   for (var i = 1; i < data.length; i++) {
     var curId = data[i][0];
-    if (targets[curId]) {
-      // Set status_aktif = FALSE (Soft delete)
-      sheet.getRange(i + 1, 8).setValue(false);
+    var curKelas = data[i][3];
+    var isMatch = deleteAll ? (!idKelas || curKelas === idKelas) : targets[curId];
+
+    if (isMatch && (statusValues[i - 1][0] === true || statusValues[i - 1][0] === "TRUE" || statusValues[i - 1][0] === 1)) {
+      statusValues[i - 1][0] = false;
       deletedCount++;
     }
   }
 
-  clearCache();
-
   if (deletedCount > 0) {
-    return { status: "success", message: deletedCount + " data siswa berhasil dihapus.", deleted_count: deletedCount };
+    statusRange.setValues(statusValues); // Single batch write instan
   }
 
-  return { status: "error", code: "NOT_FOUND", message: "Data siswa tidak ditemukan." };
+  clearCache();
+
+  return {
+    status: "success",
+    message: deletedCount + " data siswa berhasil dihapus.",
+    deleted_count: deletedCount
+  };
 }
 
 function handleGetKelas(req) {

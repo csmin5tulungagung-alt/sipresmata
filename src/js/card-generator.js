@@ -276,24 +276,19 @@ export const CARD_GENERATOR = {
   },
 
   toggleSelectAllVisible() {
-    const list = this.state.filteredStudents;
-    const pageSize = this.state.pageSize;
-    const isAll = pageSize === "ALL";
-    const effectivePageSize = isAll ? list.length : parseInt(pageSize, 10);
-    const currentPage = this.state.currentPage;
-    const start = isAll ? 0 : (currentPage - 1) * effectivePageSize;
-    const pageItems = isAll ? list : list.slice(start, start + effectivePageSize);
-    const visibleIds = pageItems.map(s => s.id_siswa);
+    const list = this.state.filteredList || [];
+    if (list.length === 0) return;
 
-    const allChecked = visibleIds.length > 0 && visibleIds.every(id => this.state.selectedIds.has(id));
+    // Cek apakah seluruh siswa pada kelas ini (seluruh halaman) sudah terpilih
+    const allChecked = list.every(s => this.state.selectedIds.has(s.id_siswa));
 
-    visibleIds.forEach(id => {
-      if (allChecked) {
-        this.state.selectedIds.delete(id);
-      } else {
-        this.state.selectedIds.add(id);
-      }
-    });
+    if (allChecked) {
+      // Batalkan semua
+      list.forEach(s => this.state.selectedIds.delete(s.id_siswa));
+    } else {
+      // Pilih semua siswa pada kelas ini
+      list.forEach(s => this.state.selectedIds.add(s.id_siswa));
+    }
 
     this.renderCardsTable();
   },
@@ -326,13 +321,18 @@ export const CARD_GENERATOR = {
   updateBulkBar() {
     const bulkBar = document.getElementById("cards-bulk-bar");
     const countBadge = document.getElementById("cards-bulk-count");
+    const selectAllText = document.getElementById("btn-cards-select-all-text");
     const selectedCount = this.state.selectedIds.size;
+    const totalFiltered = (this.state.filteredList || []).length;
 
     if (!bulkBar) return;
 
     if (this.state.isSelectionMode) {
       bulkBar.classList.add("active");
       if (countBadge) countBadge.textContent = selectedCount;
+      if (selectAllText) {
+        selectAllText.textContent = (selectedCount > 0 && selectedCount === totalFiltered) ? "Batalkan Semua" : "Pilih Semua";
+      }
     } else {
       bulkBar.classList.remove("active");
     }
@@ -340,23 +340,39 @@ export const CARD_GENERATOR = {
 
   async deleteSelectedStudents() {
     const count = this.state.selectedIds.size;
-    if (count === 0) return;
+    if (count === 0) {
+      showToast("Pilih minimal 1 siswa untuk dihapus.", "warning");
+      return;
+    }
 
-    if (confirm(`Apakah Anda yakin ingin menghapus ${count} data siswa yang dipilih?`)) {
+    if (confirm(`Apakah Anda yakin ingin menghapus ${count} data siswa yang dipilih? Tindakan ini tidak dapat dibatalkan.`)) {
       const ids = Array.from(this.state.selectedIds);
-      const res = await API.deleteMultipleSiswa(ids);
-      
-      if (res.status === "success") {
-        if (typeof showToast === 'function') {
+      const btnDelete = document.querySelector("#cards-bulk-bar .btn-danger-bulk");
+      if (btnDelete) {
+        btnDelete.disabled = true;
+        btnDelete.innerHTML = "⏳ Menghapus data...";
+      }
+
+      try {
+        const res = await API.deleteMultipleSiswa(ids);
+        
+        if (res.status === "success") {
           showToast(res.message || `${count} siswa berhasil dihapus.`, "success");
+          this.clearSelection();
+          // Force refresh data dari database
+          const refreshRes = await API.getSiswa("", true);
+          this.state.allStudents = refreshRes.data || [];
+          this.openClassFolder(this.state.selectedClassId, this.state.selectedClassName);
+        } else {
+          showToast(res.message || "Gagal menghapus siswa.", "danger");
         }
-        this.clearSelection();
-        // Refresh data
-        const refreshRes = await API.getSiswa();
-        this.state.allStudents = refreshRes.data || [];
-        this.openClassFolder(this.state.selectedClassId, this.state.selectedClassName);
-      } else {
-        alert(res.message || "Gagal menghapus siswa.");
+      } catch (err) {
+        showToast("Terjadi kesalahan saat menghapus: " + err.message, "danger");
+      } finally {
+        if (btnDelete) {
+          btnDelete.disabled = false;
+          btnDelete.innerHTML = `🗑️ Hapus Siswa Terpilih`;
+        }
       }
     }
   },
