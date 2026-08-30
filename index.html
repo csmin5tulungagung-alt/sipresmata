@@ -56,6 +56,11 @@
           ⛶
         </button>
 
+        <!-- Tombol Form Izin Siswa (Tab Baru) -->
+        <button id="btn-kiosk-izin" class="btn btn-secondary" onclick="window.openIzinPortal()" title="Formulir Pengajuan Izin Siswa Mandiri">
+          📝 Form Izin Siswa
+        </button>
+
         <!-- Tombol Masuk Portal CMS Admin -->
         <button id="btn-open-login" class="btn btn-primary">
           🔐 Portal Administrator
@@ -186,10 +191,6 @@
         <button class="cms-nav-link" data-target="cms-view-cards">
           <span class="nav-icon">🪪</span> Cetak Kartu Barcode
         </button>
-        
-        <button class="cms-nav-link" data-target="cms-view-manual">
-          <span class="nav-icon">📝</span> Presensi Manual (Izin/Sakit)
-        </button>
 
         <div class="cms-nav-section-title">SISTEM & AKSI</div>
 
@@ -245,9 +246,17 @@
               <h2>📊 Dashboard Pemantauan Presensi</h2>
               <p>Ringkasan kehadiran siswa MIN 5 Tulungagung hari ini secara langsung.</p>
             </div>
-            <button class="btn btn-secondary" onclick="ADMIN.loadDashboard()">
-              🔄 Perbarui Data
-            </button>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary" onclick="window.openIzinPortal()" title="Buka Formulir Izin di Tab Baru">
+                📝 Form Izin Siswa
+              </button>
+              <button class="btn btn-secondary" onclick="window.copyIzinLink()" title="Salin Tautan Form Izin untuk Dibagikan">
+                📋 Salin Link Izin
+              </button>
+              <button class="btn btn-secondary" onclick="ADMIN.loadDashboard()">
+                🔄 Perbarui Data
+              </button>
+            </div>
           </div>
 
           <!-- Stats Cards Grid -->
@@ -538,50 +547,7 @@
           <div id="printable-cards-area" class="id-card-print-container" style="display: none;"></div>
         </section>
 
-        <!-- ------------------------------------------------------------------
-             CMS VIEW 5: PRESENSI MANUAL (IZIN / SAKIT / ALPA)
-             ------------------------------------------------------------------ -->
-        <section id="cms-view-manual" class="cms-view-section">
-          <div style="max-width: 650px; margin: 0 auto;">
-            <div class="card-table-wrapper">
-              <h2 style="margin-bottom: 0.5rem;">📝 Pencatatan Izin, Sakit & Alpa</h2>
-              <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;">Gunakan formulir ini untuk mencatat siswa yang berhalangan hadir disertai surat izin/keterangan.</p>
 
-              <form id="form-manual-absen">
-                <div style="margin-bottom: 1rem;">
-                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Pilih Tanggal:</label>
-                  <input type="date" id="manual-absen-tanggal" class="form-control" style="width: 100%;">
-                </div>
-
-                <div style="margin-bottom: 1rem;">
-                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Nama Siswa:</label>
-                  <select id="manual-absen-siswa" class="form-control" style="width: 100%;" required>
-                    <option value="">Memuat daftar siswa...</option>
-                  </select>
-                </div>
-
-                <div style="margin-bottom: 1rem;">
-                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Status Kehadiran:</label>
-                  <select id="manual-absen-status" class="form-control" style="width: 100%;">
-                    <option value="IZIN">Izin (Surat / Acara Keluarga)</option>
-                    <option value="SAKIT">Sakit (Surat Dokter / Demam)</option>
-                    <option value="ALPA">Alpa (Tanpa Keterangan)</option>
-                    <option value="HADIR">Hadir Manual (Lupa Bawa Kartu)</option>
-                  </select>
-                </div>
-
-                <div style="margin-bottom: 1.5rem;">
-                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Keterangan / Alasan:</label>
-                  <textarea id="manual-absen-keterangan" class="form-control" style="width: 100%; height: 80px;" placeholder="Contoh: Izin menghadiri acara keluarga di luar kota..."></textarea>
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="width: 100%;">
-                  💾 Simpan Presensi Manual
-                </button>
-              </form>
-            </div>
-          </div>
-        </section>
 
         <!-- ------------------------------------------------------------------
              CMS VIEW 6: PENGATURAN SISTEM
@@ -697,6 +663,134 @@
         </section>
 
       </main>
+    </div>
+  </div>
+
+
+  <!-- ========================================================================
+       3. PUBLIC VIEW: FORMULIR PENGAJUAN IZIN & SAKIT SISWA MANDIRI
+       ======================================================================== -->
+  <div id="public-izin-layout" class="app-layout" style="display: none; min-height: 100vh; background: var(--bg-main); padding: 2rem 1rem;">
+    <div style="max-width: 560px; margin: 0 auto;">
+      
+      <!-- Header Madrasah -->
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <img src="/logo-min5.png" alt="Logo MIN 5 Tulungagung" style="width: 76px; height: 76px; margin-bottom: 0.75rem; filter: drop-shadow(0 4px 15px rgba(16, 185, 129, 0.4));">
+        <h1 style="font-size: 1.35rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.2rem;">MIN 5 TULUNGAGUNG</h1>
+        <p style="font-size: 0.85rem; color: #34d399; font-weight: 700; margin-bottom: 0.2rem;">SIPRESMATA • PRESENSI SISWA TERPADU</p>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Formulir Resmi Pengajuan Izin & Sakit Siswa Online</p>
+      </div>
+
+      <!-- Card Form Izin -->
+      <div class="card-table-wrapper" style="box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-lg); padding: 1.75rem 1.5rem;">
+        
+        <div id="izin-form-header" style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+          <div>
+            <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.15rem;">📝 Form Izin / Sakit</h2>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">Isi data siswa dan lampirkan bukti foto surat</span>
+          </div>
+          <span class="badge badge-success" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">Online Portal</span>
+        </div>
+
+        <form id="form-public-izin">
+          <!-- 1. Pilih Rombel / Kelas -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 0.35rem;">1. Rombongan Belajar (Kelas): <span style="color: #f87171;">*</span></label>
+            <select id="izin-select-kelas" class="form-control select-kelas-rombel" required style="width: 100%; font-size: 0.9rem;">
+              <!-- Injected dynamically -->
+            </select>
+          </div>
+
+          <!-- 2. Pilih Nama Siswa -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 0.35rem;">2. Nama Lengkap Siswa: <span style="color: #f87171;">*</span></label>
+            <select id="izin-select-siswa" class="form-control" required style="width: 100%; font-size: 0.9rem;">
+              <option value="">Pilih kelas terlebih dahulu...</option>
+            </select>
+          </div>
+
+          <!-- 3. Tanggal Izin -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 0.35rem;">3. Tanggal Berhalangan: <span style="color: #f87171;">*</span></label>
+            <input type="date" id="izin-input-tanggal" class="form-control" required style="width: 100%; font-size: 0.9rem;">
+          </div>
+
+          <!-- 4. Jenis Izin -->
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 0.35rem;">4. Kategori Izin: <span style="color: #f87171;">*</span></label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+              <label style="display: flex; align-items: center; gap: 0.5rem; background: rgba(236, 72, 153, 0.08); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(236, 72, 153, 0.3); cursor: pointer;">
+                <input type="radio" name="public_jenis_izin" value="SAKIT" checked style="accent-color: #ec4899; width: 18px; height: 18px;">
+                <div>
+                  <strong style="color: #ec4899; font-size: 0.9rem;">🏥 Sakit</strong>
+                  <div style="font-size: 0.7rem; color: var(--text-muted);">Demam / Dokter</div>
+                </div>
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 0.5rem; background: rgba(56, 189, 248, 0.08); padding: 0.65rem 0.85rem; border-radius: var(--radius-sm); border: 1px solid rgba(56, 189, 248, 0.3); cursor: pointer;">
+                <input type="radio" name="public_jenis_izin" value="IZIN" style="accent-color: #38bdf8; width: 18px; height: 18px;">
+                <div>
+                  <strong style="color: #38bdf8; font-size: 0.9rem;">📑 Izin</strong>
+                  <div style="font-size: 0.7rem; color: var(--text-muted);">Acara Keluarga</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 5. Keterangan Alasan -->
+          <div style="margin-bottom: 1.25rem;">
+            <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 0.35rem;">5. Alasan / Keterangan: <span style="color: #f87171;">*</span></label>
+            <textarea id="izin-input-keterangan" class="form-control" rows="3" placeholder="Tuliskan alasan izin (misal: Sakit demam beristirahat di rumah, atau izin keperluan keluarga di luar kota)..." required style="width: 100%; font-size: 0.88rem;"></textarea>
+          </div>
+
+          <!-- 6. Upload Bukti Surat / Foto -->
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 0.35rem;">6. Lampiran Bukti Foto (Surat Dokter / Izin):</label>
+            <div style="border: 2px dashed rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 1.25rem; text-align: center; background: rgba(16, 185, 129, 0.03);">
+              <input type="file" id="izin-input-bukti" accept="image/*" style="display: none;">
+              <button type="button" class="btn btn-secondary" onclick="document.getElementById('izin-input-bukti').click()" style="margin-bottom: 0.35rem; font-weight: 600;">
+                📷 Pilih / Jepret Foto Surat
+              </button>
+              <div id="izin-bukti-preview-container" style="display: none; margin-top: 0.75rem;">
+                <img id="izin-bukti-preview-img" src="" alt="Pratinjau Bukti" style="max-width: 100%; max-height: 180px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain;">
+                <div style="margin-top: 0.4rem;">
+                  <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; color: #f87171;" onclick="window.clearIzinBukti()">✕ Hapus Foto</button>
+                </div>
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.35rem;">Format: JPG, PNG, atau Foto Kamera Handphone (Maks. 5MB)</div>
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="btn-submit-public-izin" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 700; box-shadow: 0 4px 15px var(--primary-glow);">
+            📤 Kirim Permohonan Izin
+          </button>
+        </form>
+
+        <!-- Success Screen -->
+        <div id="izin-success-screen" style="display: none; text-align: center; padding: 2rem 1rem;">
+          <div style="font-size: 3.5rem; margin-bottom: 0.75rem;">🎉</div>
+          <h3 style="font-size: 1.25rem; font-weight: 800; color: #34d399; margin-bottom: 0.5rem;">Izin Berhasil Diajukan!</h3>
+          <p id="izin-success-desc" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.5rem;">
+            Data kehadiran siswa telah tercatat ke dalam sistem Rekapitulasi Presensi MIN 5 Tulungagung.
+          </p>
+          <div style="display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" onclick="window.resetIzinForm()">
+              📝 Ajukan Izin Siswa Lain
+            </button>
+            <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
+              🏠 Menuju Halaman Utama
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Footer Info -->
+      <div style="text-align: center; margin-top: 1.5rem; font-size: 0.75rem; color: var(--text-muted);">
+        © 2026 SIPRESMATA • MIN 5 Tulungagung
+      </div>
+
     </div>
   </div>
 

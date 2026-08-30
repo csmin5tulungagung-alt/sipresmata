@@ -545,6 +545,68 @@ export const API = {
     return { status: "success", message: `Presensi manual berhasil dicatat (${data.status_kehadiran}).` };
   },
 
+  // 6b. Pengajuan Izin Siswa Mandiri Online (Form Publik)
+  async submitIzinOnline(data) {
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=manual_absen`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            id_siswa: data.id_siswa,
+            tanggal: data.tanggal,
+            status_kehadiran: data.status_kehadiran,
+            keterangan: data.keterangan + (data.bukti_foto ? " (Ada Bukti Surat/Foto)" : ""),
+            metode_absen: "FORM_IZIN_ONLINE"
+          })
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+          this._recordLocalIzin(data);
+          return json;
+        }
+      } catch (err) {
+        console.warn("GAS submitIzinOnline error, using local fallback:", err);
+      }
+    }
+
+    this._recordLocalIzin(data);
+    return { status: "success", message: `Permohonan izin ${data.status_kehadiran} berhasil dikirim dan dicatat.` };
+  },
+
+  _recordLocalIzin(data) {
+    const todayStr = data.tanggal || new Date().toISOString().split("T")[0];
+    const siswa = localStudents.find(s => s.id_siswa === data.id_siswa);
+    const namaSiswa = data.nama_lengkap || (siswa ? siswa.nama_lengkap : "Siswa");
+    const idKelas = data.id_kelas || (siswa ? siswa.id_kelas : "");
+    const namaKelas = data.nama_kelas || (siswa ? siswa.nama_kelas : "");
+
+    const idx = localAttendance.findIndex(a => a.tanggal === todayStr && a.id_siswa === data.id_siswa);
+    if (idx !== -1) {
+      localAttendance[idx].status_kehadiran = data.status_kehadiran;
+      localAttendance[idx].keterangan = data.keterangan;
+      localAttendance[idx].metode_absen = "FORM_IZIN_ONLINE";
+    } else {
+      localAttendance.unshift({
+        id_absensi: `ABS-${todayStr.replace(/-/g, "")}-${localAttendance.length + 1}`,
+        tanggal: todayStr,
+        id_siswa: data.id_siswa,
+        nisn: siswa ? siswa.nisn : "-",
+        nama_lengkap: namaSiswa,
+        id_kelas: idKelas,
+        nama_kelas: namaKelas,
+        jam_masuk: "",
+        jam_pulang: "",
+        status_kehadiran: data.status_kehadiran,
+        keterlambatan_menit: 0,
+        metode_absen: "FORM_IZIN_ONLINE",
+        keterangan: data.keterangan,
+        created_at: new Date().toISOString()
+      });
+    }
+    saveLocalState();
+  },
+
   // 7. Pengaturan Sistem & Jadwal Operasional
   async getPengaturan() {
     if (CONFIG.DEFAULT_API_URL) {

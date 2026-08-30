@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initLayoutSwitching();
   initCmsNavigation();
   initFullscreenToggle();
+  initIzinPublicView();
   initScannerView();
   initAdminForms();
   initSettingsView();
@@ -299,37 +300,6 @@ function initAdminForms() {
         EXPORT.printFormalReport(periode, idKelas, summary, items);
       } else {
         showToast("Tampilkan data rekap terlebih dahulu.", "warning");
-      }
-    });
-  }
-
-  // Manual Absen Form
-  const formManualAbsen = document.getElementById("form-manual-absen");
-  if (formManualAbsen) {
-    formManualAbsen.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const idSiswa = document.getElementById("manual-absen-siswa").value;
-      const status = document.getElementById("manual-absen-status").value;
-      const keterangan = document.getElementById("manual-absen-keterangan").value;
-      const tanggal = document.getElementById("manual-absen-tanggal").value || new Date().toISOString().split("T")[0];
-
-      if (!idSiswa) {
-        showToast("Pilih siswa terlebih dahulu.", "warning");
-        return;
-      }
-
-      const res = await API.submitManualAbsen({
-        id_siswa: idSiswa,
-        status_kehadiran: status,
-        keterangan: keterangan,
-        tanggal: tanggal
-      });
-
-      if (res.status === "success") {
-        showToast(res.message, "success");
-        formManualAbsen.reset();
-      } else {
-        showToast(res.message, "danger");
       }
     });
   }
@@ -721,3 +691,208 @@ function initFullscreenToggle() {
   document.addEventListener("fullscreenchange", updateFullscreenIcons);
   document.addEventListener("webkitfullscreenchange", updateFullscreenIcons);
 }
+
+// 11. Public Student Leave Request Controller (Form Izin Mandiri Online)
+let uploadedBuktiBase64 = "";
+
+function initIzinPublicView() {
+  const izinLayout = document.getElementById("public-izin-layout");
+  const kioskLayout = document.getElementById("public-kiosk-layout");
+  const cmsLayout = document.getElementById("admin-cms-layout");
+  const selectKelas = document.getElementById("izin-select-kelas");
+  const selectSiswa = document.getElementById("izin-select-siswa");
+  const inputTanggal = document.getElementById("izin-input-tanggal");
+  const inputBukti = document.getElementById("izin-input-bukti");
+  const formIzin = document.getElementById("form-public-izin");
+  const btnSubmit = document.getElementById("btn-submit-public-izin");
+
+  // Deteksi rute URL (?mode=izin atau #izin)
+  const isIzinMode = window.location.search.includes("mode=izin") || window.location.hash === "#izin";
+
+  if (isIzinMode) {
+    if (kioskLayout) kioskLayout.style.display = "none";
+    if (cmsLayout) cmsLayout.style.display = "none";
+    if (izinLayout) {
+      izinLayout.style.display = "block";
+      izinLayout.classList.add("active");
+    }
+    document.body.className = "mode-izin";
+  }
+
+  // Populate Default Tanggal Hari Ini
+  if (inputTanggal) {
+    inputTanggal.value = new Date().toISOString().split("T")[0];
+  }
+
+  // Populate Dropdown Kelas
+  if (selectKelas) {
+    selectKelas.innerHTML = `<option value="">-- Pilih Kelas Siswa --</option>` + 
+      CONFIG.ROMBEL_LIST.map(r => `<option value="${r.id}">${r.nama}</option>`).join("");
+
+    selectKelas.addEventListener("change", async () => {
+      const idKelas = selectKelas.value;
+      if (!selectSiswa) return;
+
+      if (!idKelas) {
+        selectSiswa.innerHTML = `<option value="">Pilih kelas terlebih dahulu...</option>`;
+        return;
+      }
+
+      selectSiswa.innerHTML = `<option value="">Memuat daftar siswa kelas...</option>`;
+      const res = await API.getSiswa(idKelas);
+      const students = res.data || [];
+
+      if (students.length === 0) {
+        selectSiswa.innerHTML = `<option value="">Belum ada siswa di kelas ini</option>`;
+        return;
+      }
+
+      selectSiswa.innerHTML = `<option value="">-- Pilih Nama Siswa --</option>` +
+        students.map(s => `<option value="${s.id_siswa}" data-nama="${s.nama_lengkap}" data-nisn="${s.nisn}">${s.nama_lengkap} (NISN: ${s.nisn})</option>`).join("");
+    });
+  }
+
+  // Handle Upload Foto Bukti dengan Image Compression (Canvas)
+  if (inputBukti) {
+    inputBukti.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1024;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          uploadedBuktiBase64 = canvas.toDataURL("image/jpeg", 0.75);
+
+          const previewContainer = document.getElementById("izin-bukti-preview-container");
+          const previewImg = document.getElementById("izin-bukti-preview-img");
+          if (previewImg) previewImg.src = uploadedBuktiBase64;
+          if (previewContainer) previewContainer.style.display = "block";
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Handle Form Submission
+  if (formIzin) {
+    formIzin.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const idSiswa = selectSiswa ? selectSiswa.value : "";
+      if (!idSiswa) {
+        alert("Silakan pilih nama siswa terlebih dahulu.");
+        return;
+      }
+
+      const selectedOpt = selectSiswa.options[selectSiswa.selectedIndex];
+      const namaSiswa = selectedOpt ? selectedOpt.getAttribute("data-nama") : "";
+      const selectedRombel = CONFIG.ROMBEL_LIST.find(r => r.id === selectKelas.value) || { nama: selectKelas.value, id: selectKelas.value };
+      const tanggal = inputTanggal.value || new Date().toISOString().split("T")[0];
+      const jenisIzin = document.querySelector('input[name="public_jenis_izin"]:checked')?.value || "IZIN";
+      const keterangan = document.getElementById("izin-input-keterangan")?.value || "";
+
+      if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = "⏳ Mengirimkan Permohonan Izin...";
+      }
+
+      try {
+        const payload = {
+          id_siswa: idSiswa,
+          id_kelas: selectedRombel.id,
+          nama_kelas: selectedRombel.nama,
+          nama_lengkap: namaSiswa,
+          tanggal: tanggal,
+          status_kehadiran: jenisIzin,
+          keterangan: keterangan,
+          bukti_foto: uploadedBuktiBase64
+        };
+
+        await API.submitIzinOnline(payload);
+        
+        // Show Success Screen
+        const successScreen = document.getElementById("izin-success-screen");
+        const successDesc = document.getElementById("izin-success-desc");
+        const formHeader = document.getElementById("izin-form-header");
+
+        if (formIzin) formIzin.style.display = "none";
+        if (formHeader) formHeader.style.display = "none";
+        if (successScreen) successScreen.style.display = "block";
+        if (successDesc) {
+          successDesc.innerHTML = `Permohonan izin untuk <strong>${namaSiswa}</strong> (${selectedRombel.nama}) pada tanggal <strong>${tanggal}</strong> telah berhasil dicatat.`;
+        }
+
+      } catch (err) {
+        alert("Gagal mengirim permohonan izin: " + err.message);
+      } finally {
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = "📤 Kirim Permohonan Izin";
+        }
+      }
+    });
+  }
+}
+
+// Window Global Bridges untuk Fitur Izin
+window.openIzinPortal = function() {
+  const url = window.location.origin + window.location.pathname + "?mode=izin";
+  window.open(url, "_blank");
+};
+
+window.copyIzinLink = function() {
+  const url = window.location.origin + window.location.pathname + "?mode=izin";
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => {
+      showToast("Tautan Form Izin berhasil disalin! Siap dibagikan ke WhatsApp wali murid.", "success");
+    }).catch(() => {
+      prompt("Salin tautan formulir izin berikut:", url);
+    });
+  } else {
+    prompt("Salin tautan formulir izin berikut:", url);
+  }
+};
+
+window.clearIzinBukti = function() {
+  uploadedBuktiBase64 = "";
+  const inputBukti = document.getElementById("izin-input-bukti");
+  const previewContainer = document.getElementById("izin-bukti-preview-container");
+  const previewImg = document.getElementById("izin-bukti-preview-img");
+  if (inputBukti) inputBukti.value = "";
+  if (previewImg) previewImg.src = "";
+  if (previewContainer) previewContainer.style.display = "none";
+};
+
+window.resetIzinForm = function() {
+  const formIzin = document.getElementById("form-public-izin");
+  const formHeader = document.getElementById("izin-form-header");
+  const successScreen = document.getElementById("izin-success-screen");
+  if (formIzin) {
+    formIzin.reset();
+    formIzin.style.display = "block";
+  }
+  if (formHeader) formHeader.style.display = "flex";
+  if (successScreen) successScreen.style.display = "none";
+  window.clearIzinBukti();
+};
