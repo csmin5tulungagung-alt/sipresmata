@@ -642,21 +642,38 @@ function handleBatchImportSiswa(req) {
 
 function handleDeleteSiswa(req) {
   var idSiswa = req.id_siswa;
-  if (!idSiswa) {
-    return { status: "error", code: "MISSING_ID", message: "ID Siswa wajib disertakan." };
+  var idList = req.id_siswa_list;
+
+  if (!idSiswa && (!idList || idList.length === 0)) {
+    return { status: "error", code: "MISSING_ID", message: "ID Siswa atau daftar ID wajib disertakan." };
+  }
+
+  var targets = {};
+  if (idSiswa) targets[idSiswa] = true;
+  if (Array.isArray(idList)) {
+    for (var k = 0; k < idList.length; k++) {
+      targets[idList[k]] = true;
+    }
   }
 
   var db = getDB();
   var sheet = db.getSheetByName("master_siswa");
   var data = sheet.getDataRange().getValues();
+  var deletedCount = 0;
 
   for (var i = 1; i < data.length; i++) {
-    if (data[i][0] === idSiswa) {
+    var curId = data[i][0];
+    if (targets[curId]) {
       // Set status_aktif = FALSE (Soft delete)
       sheet.getRange(i + 1, 8).setValue(false);
-      clearCache();
-      return { status: "success", message: "Siswa berhasil dinonaktifkan." };
+      deletedCount++;
     }
+  }
+
+  clearCache();
+
+  if (deletedCount > 0) {
+    return { status: "success", message: deletedCount + " data siswa berhasil dihapus.", deleted_count: deletedCount };
   }
 
   return { status: "error", code: "NOT_FOUND", message: "Data siswa tidak ditemukan." };

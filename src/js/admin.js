@@ -10,10 +10,147 @@ import { CONFIG } from './config.js';
 import { EXPORT } from './export.js';
 
 export const ADMIN = {
-  // 1. Dashboard Metrics & Live Monitoring
+  // ==========================================================================
+  // STATE MANAGEMENT
+  // ==========================================================================
+  studentsState: {
+    allList: [],
+    filteredList: [],
+    currentPage: 1,
+    pageSize: 10,
+    selectedIds: new Set(),
+    currentClass: "",
+    currentSearch: ""
+  },
+
+  rekapState: {
+    items: [],
+    currentPage: 1,
+    pageSize: 10,
+    periode: {},
+    idKelas: "",
+    summary: {}
+  },
+
+  dashboardState: {
+    scans: [],
+    currentPage: 1,
+    pageSize: 10
+  },
+
+  // ==========================================================================
+  // 1. REUSABLE PAGINATION GENERATOR
+  // ==========================================================================
+  renderPagination(containerId, totalItems, currentPage, pageSize, onPageChange, onPageSizeChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (totalItems <= 0) {
+      container.innerHTML = "";
+      container.style.display = "none";
+      return;
+    }
+
+    container.style.display = "flex";
+
+    const isAll = pageSize === "ALL" || pageSize >= totalItems;
+    const effectivePageSize = isAll ? totalItems : parseInt(pageSize, 10);
+    const totalPages = isAll ? 1 : Math.ceil(totalItems / effectivePageSize);
+    const safeCurrentPage = Math.max(1, Math.min(currentPage, totalPages));
+
+    const startIdx = totalItems === 0 ? 0 : isAll ? 1 : (safeCurrentPage - 1) * effectivePageSize + 1;
+    const endIdx = isAll ? totalItems : Math.min(safeCurrentPage * effectivePageSize, totalItems);
+
+    // Generate Buttons
+    let navButtonsHTML = "";
+    if (totalPages > 1) {
+      // Prev Button
+      navButtonsHTML += `
+        <button type="button" class="pagination-btn" ${safeCurrentPage <= 1 ? 'disabled' : ''} data-page="${safeCurrentPage - 1}">
+          ◀ Sebelumnya
+        </button>
+      `;
+
+      // Page Number Pills
+      const maxVisiblePages = 5;
+      let startPage = Math.max(1, safeCurrentPage - Math.floor(maxVisiblePages / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+      if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+      }
+
+      if (startPage > 1) {
+        navButtonsHTML += `<button type="button" class="pagination-btn" data-page="1">1</button>`;
+        if (startPage > 2) navButtonsHTML += `<span class="pagination-ellipsis">...</span>`;
+      }
+
+      for (let p = startPage; p <= endPage; p++) {
+        navButtonsHTML += `
+          <button type="button" class="pagination-btn ${p === safeCurrentPage ? 'active' : ''}" data-page="${p}">
+            ${p}
+          </button>
+        `;
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) navButtonsHTML += `<span class="pagination-ellipsis">...</span>`;
+        navButtonsHTML += `<button type="button" class="pagination-btn" data-page="${totalPages}">${totalPages}</button>`;
+      }
+
+      // Next Button
+      navButtonsHTML += `
+        <button type="button" class="pagination-btn" ${safeCurrentPage >= totalPages ? 'disabled' : ''} data-page="${safeCurrentPage + 1}">
+          Berikutnya ▶
+        </button>
+      `;
+    }
+
+    container.innerHTML = `
+      <div class="pagination-left-group">
+        <div class="pagination-size-selector">
+          <span>Tampilkan:</span>
+          <select class="pagination-select-size" id="${containerId}-select-size">
+            <option value="10" ${String(pageSize) === '10' ? 'selected' : ''}>10 data</option>
+            <option value="25" ${String(pageSize) === '25' ? 'selected' : ''}>25 data</option>
+            <option value="50" ${String(pageSize) === '50' ? 'selected' : ''}>50 data</option>
+            <option value="100" ${String(pageSize) === '100' ? 'selected' : ''}>100 data</option>
+            <option value="ALL" ${String(pageSize) === 'ALL' ? 'selected' : ''}>Semua data</option>
+          </select>
+        </div>
+        <div class="pagination-summary-info">
+          Menampilkan <strong>${startIdx} – ${endIdx}</strong> dari <strong>${totalItems}</strong> data
+        </div>
+      </div>
+      <div class="pagination-nav-group">
+        ${navButtonsHTML}
+      </div>
+    `;
+
+    // Event Listener for Size Dropdown
+    const selectSize = document.getElementById(`${containerId}-select-size`);
+    if (selectSize) {
+      selectSize.addEventListener("change", (e) => {
+        onPageSizeChange(e.target.value);
+      });
+    }
+
+    // Event Listeners for Page Buttons
+    const pageButtons = container.querySelectorAll(".pagination-btn[data-page]");
+    pageButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetPage = parseInt(btn.getAttribute("data-page"), 10);
+        if (!isNaN(targetPage) && targetPage >= 1 && targetPage <= totalPages) {
+          onPageChange(targetPage);
+        }
+      });
+    });
+  },
+
+  // ==========================================================================
+  // 2. DASHBOARD METRICS & LIVE MONITORING
+  // ==========================================================================
   async loadDashboard() {
     const statsContainer = document.getElementById("dashboard-stats-grid");
-    const feedContainer = document.getElementById("live-scans-feed");
     if (!statsContainer) return;
 
     try {
@@ -47,69 +184,253 @@ export const ADMIN = {
         </div>
       `;
 
-      if (feedContainer) {
-        if (data.recent_scans && data.recent_scans.length > 0) {
-          feedContainer.innerHTML = data.recent_scans.map(s => `
-            <tr>
-              <td><strong>${s.nama_lengkap}</strong></td>
-              <td>${s.kelas || '-'}</td>
-              <td>${s.jam_masuk || '-'}</td>
-              <td>
-                <span class="badge ${s.status_kehadiran === 'HADIR' ? 'badge-success' : s.status_kehadiran === 'TERLAMBAT' ? 'badge-warning' : 'badge-danger'}">
-                  ${s.status_kehadiran}
-                </span>
-              </td>
-            </tr>
-          `).join("");
-        } else {
-          feedContainer.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data scan presensi hari ini.</td></tr>`;
-        }
-      }
+      this.dashboardState.scans = data.recent_scans || [];
+      this.dashboardState.currentPage = 1;
+      this.renderDashboardFeed();
+
     } catch (e) {
       console.error("Dashboard error:", e);
     }
   },
 
-  // 2. Data Siswa CRUD
+  renderDashboardFeed() {
+    const feedContainer = document.getElementById("live-scans-feed");
+    if (!feedContainer) return;
+
+    const scans = this.dashboardState.scans;
+    if (scans.length === 0) {
+      feedContainer.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data scan presensi hari ini.</td></tr>`;
+      this.renderPagination("dashboard-feed-pagination", 0, 1, 10, () => {}, () => {});
+      return;
+    }
+
+    const pageSize = this.dashboardState.pageSize;
+    const isAll = pageSize === "ALL";
+    const effectivePageSize = isAll ? scans.length : parseInt(pageSize, 10);
+    const currentPage = this.dashboardState.currentPage;
+
+    const pageItems = isAll ? scans : scans.slice((currentPage - 1) * effectivePageSize, currentPage * effectivePageSize);
+
+    feedContainer.innerHTML = pageItems.map(s => `
+      <tr>
+        <td><strong>${s.nama_lengkap}</strong></td>
+        <td>${s.kelas || '-'}</td>
+        <td>${s.jam_masuk || '-'}</td>
+        <td>
+          <span class="badge ${s.status_kehadiran === 'HADIR' ? 'badge-success' : s.status_kehadiran === 'TERLAMBAT' ? 'badge-warning' : 'badge-danger'}">
+            ${s.status_kehadiran}
+          </span>
+        </td>
+      </tr>
+    `).join("");
+
+    this.renderPagination(
+      "dashboard-feed-pagination",
+      scans.length,
+      currentPage,
+      pageSize,
+      (newPage) => {
+        this.dashboardState.currentPage = newPage;
+        this.renderDashboardFeed();
+      },
+      (newSize) => {
+        this.dashboardState.pageSize = newSize;
+        this.dashboardState.currentPage = 1;
+        this.renderDashboardFeed();
+      }
+    );
+  },
+
+  // ==========================================================================
+  // 3. DATA MASTER SISWA CRUD & BULK ACTIONS
+  // ==========================================================================
   async loadStudents(idKelas = "", searchTerm = "") {
     const tableBody = document.getElementById("students-table-body");
     if (!tableBody) return;
 
-    tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Memuat data siswa...</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Memuat data siswa...</td></tr>`;
+
+    this.studentsState.currentClass = idKelas;
+    this.studentsState.currentSearch = searchTerm;
 
     const res = await API.getSiswa(idKelas);
-    let list = res.data || [];
+    this.studentsState.allList = res.data || [];
 
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      list = list.filter(s => s.nama_lengkap.toLowerCase().includes(term) || s.nisn.includes(term));
+    this.applyStudentFilters();
+  },
+
+  handleStudentSearch(term) {
+    this.studentsState.currentSearch = term;
+    this.applyStudentFilters();
+  },
+
+  handleStudentClassFilter(idKelas) {
+    this.studentsState.currentClass = idKelas;
+    this.loadStudents(idKelas, this.studentsState.currentSearch);
+  },
+
+  applyStudentFilters() {
+    let list = this.studentsState.allList;
+    const term = (this.studentsState.currentSearch || "").toLowerCase();
+
+    if (term) {
+      list = list.filter(s => 
+        (s.nama_lengkap && s.nama_lengkap.toLowerCase().includes(term)) || 
+        (s.nisn && s.nisn.includes(term))
+      );
     }
 
-    if (list.length === 0) {
-      tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Tidak ada data siswa yang cocok.</td></tr>`;
+    this.studentsState.filteredList = list;
+    this.studentsState.currentPage = 1;
+    this.renderStudentsTable();
+  },
+
+  renderStudentsTable() {
+    const tableBody = document.getElementById("students-table-body");
+    if (!tableBody) return;
+
+    const list = this.studentsState.filteredList;
+    const total = list.length;
+
+    if (total === 0) {
+      tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Tidak ada data siswa yang cocok.</td></tr>`;
+      this.updateBulkActionBar();
+      this.renderPagination("students-pagination", 0, 1, 10, () => {}, () => {});
       return;
     }
 
-    tableBody.innerHTML = list.map((s, idx) => `
-      <tr>
-        <td>${idx + 1}</td>
-        <td><code>${s.nisn}</code></td>
-        <td><strong>${s.nama_lengkap}</strong></td>
-        <td><span class="badge badge-info">${s.nama_kelas || s.id_kelas}</span></td>
-        <td>${s.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</td>
-        <td style="display: flex; gap: 0.4rem;">
-          <button class="btn btn-secondary btn-icon" onclick="window.editStudent('${s.id_siswa}')" title="Edit Siswa">
-            ✏️
-          </button>
-          <button class="btn btn-secondary btn-icon" onclick="window.deleteStudent('${s.id_siswa}', '${s.nama_lengkap}')" title="Hapus Siswa" style="color: #f87171;">
-            🗑️
-          </button>
-        </td>
-      </tr>
-    `).join("");
+    const pageSize = this.studentsState.pageSize;
+    const isAll = pageSize === "ALL";
+    const effectivePageSize = isAll ? total : parseInt(pageSize, 10);
+    const currentPage = this.studentsState.currentPage;
+
+    const start = isAll ? 0 : (currentPage - 1) * effectivePageSize;
+    const pageItems = isAll ? list : list.slice(start, start + effectivePageSize);
+
+    tableBody.innerHTML = pageItems.map((s, idx) => {
+      const isChecked = this.studentsState.selectedIds.has(s.id_siswa);
+      const rowNumber = start + idx + 1;
+
+      return `
+        <tr style="${isChecked ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
+          <td style="text-align: center;">
+            <input type="checkbox" class="table-checkbox student-row-check" value="${s.id_siswa}" ${isChecked ? 'checked' : ''} onchange="ADMIN.toggleStudentSelection('${s.id_siswa}', this.checked)">
+          </td>
+          <td>${rowNumber}</td>
+          <td><code>${s.nisn}</code></td>
+          <td><strong>${s.nama_lengkap}</strong></td>
+          <td><span class="badge badge-info">${s.nama_kelas || s.id_kelas}</span></td>
+          <td>${s.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</td>
+          <td style="display: flex; gap: 0.4rem;">
+            <button class="btn btn-secondary btn-icon" onclick="window.editStudent('${s.id_siswa}')" title="Edit Siswa">
+              ✏️
+            </button>
+            <button class="btn btn-secondary btn-icon" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap)}')" title="Hapus Siswa" style="color: #f87171;">
+              🗑️
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    // Update Header Checkbox
+    const headerCheck = document.getElementById("check-all-students");
+    if (headerCheck) {
+      const visibleIds = pageItems.map(s => s.id_siswa);
+      const allVisibleChecked = visibleIds.length > 0 && visibleIds.every(id => this.studentsState.selectedIds.has(id));
+      headerCheck.checked = allVisibleChecked;
+      headerCheck.onchange = (e) => this.toggleSelectAllVisibleStudents(visibleIds, e.target.checked);
+    }
+
+    this.updateBulkActionBar();
+
+    // Render Pagination Controls
+    this.renderPagination(
+      "students-pagination",
+      total,
+      currentPage,
+      pageSize,
+      (newPage) => {
+        this.studentsState.currentPage = newPage;
+        this.renderStudentsTable();
+      },
+      (newSize) => {
+        this.studentsState.pageSize = newSize;
+        this.studentsState.currentPage = 1;
+        this.renderStudentsTable();
+      }
+    );
   },
 
-  // 3. Rekapitulasi Presensi
+  toggleStudentSelection(idSiswa, isChecked) {
+    if (isChecked) {
+      this.studentsState.selectedIds.add(idSiswa);
+    } else {
+      this.studentsState.selectedIds.delete(idSiswa);
+    }
+    this.renderStudentsTable();
+  },
+
+  toggleSelectAllVisibleStudents(visibleIds, isChecked) {
+    visibleIds.forEach(id => {
+      if (isChecked) {
+        this.studentsState.selectedIds.add(id);
+      } else {
+        this.studentsState.selectedIds.delete(id);
+      }
+    });
+    this.renderStudentsTable();
+  },
+
+  clearStudentSelection() {
+    this.studentsState.selectedIds.clear();
+    this.renderStudentsTable();
+  },
+
+  updateBulkActionBar() {
+    const bulkBar = document.getElementById("students-bulk-bar");
+    const countBadge = document.getElementById("bulk-selected-count");
+    const selectedCount = this.studentsState.selectedIds.size;
+
+    if (!bulkBar) return;
+
+    if (selectedCount > 0) {
+      bulkBar.classList.add("active");
+      if (countBadge) countBadge.textContent = selectedCount;
+    } else {
+      bulkBar.classList.remove("active");
+    }
+  },
+
+  async deleteSelectedStudents() {
+    const count = this.studentsState.selectedIds.size;
+    if (count === 0) return;
+
+    if (confirm(`Apakah Anda yakin ingin menghapus ${count} data siswa yang dipilih? Tindakan ini tidak dapat dibatalkan.`)) {
+      const ids = Array.from(this.studentsState.selectedIds);
+      const res = await API.deleteMultipleSiswa(ids);
+      
+      if (res.status === "success") {
+        if (typeof showToast === 'function') {
+          showToast(res.message || `${count} siswa berhasil dihapus.`, "success");
+        } else {
+          alert(res.message || `${count} siswa berhasil dihapus.`);
+        }
+        this.clearStudentSelection();
+        this.loadStudents(this.studentsState.currentClass, this.studentsState.currentSearch);
+      } else {
+        if (typeof showToast === 'function') {
+          showToast(res.message || "Gagal menghapus siswa.", "danger");
+        } else {
+          alert(res.message || "Gagal menghapus siswa.");
+        }
+      }
+    }
+  },
+
+  // ==========================================================================
+  // 4. REKAPITULASI PRESENSI & PAGINATION
+  // ==========================================================================
   async loadRekap(tglMulai, tglAkhir, idKelas = "") {
     const tableBody = document.getElementById("rekap-table-body");
     const summaryBox = document.getElementById("rekap-summary-badge");
@@ -118,7 +439,7 @@ export const ADMIN = {
     tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Mengambil data rekap...</td></tr>`;
 
     const res = await API.getRekapAbsensi(tglMulai, tglAkhir, idKelas);
-    const data = res.data;
+    const data = res.data || {};
     const items = data.items || [];
     const sum = data.summary || { hadir: 0, terlambat: 0, izin: 0, sakit: 0, alpa: 0 };
 
@@ -132,14 +453,41 @@ export const ADMIN = {
       `;
     }
 
-    if (items.length === 0) {
+    this.rekapState.items = items;
+    this.rekapState.periode = data.periode || { mulai: tglMulai, akhir: tglAkhir };
+    this.rekapState.idKelas = idKelas;
+    this.rekapState.summary = sum;
+    this.rekapState.currentPage = 1;
+
+    window.currentRekapData = { periode: this.rekapState.periode, idKelas, summary: sum, items };
+
+    this.renderRekapTable();
+  },
+
+  renderRekapTable() {
+    const tableBody = document.getElementById("rekap-table-body");
+    if (!tableBody) return;
+
+    const items = this.rekapState.items;
+    const total = items.length;
+
+    if (total === 0) {
       tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Tidak ada riwayat presensi pada rentang tanggal tersebut.</td></tr>`;
+      this.renderPagination("rekap-pagination", 0, 1, 10, () => {}, () => {});
       return;
     }
 
-    tableBody.innerHTML = items.map((item, idx) => `
+    const pageSize = this.rekapState.pageSize;
+    const isAll = pageSize === "ALL";
+    const effectivePageSize = isAll ? total : parseInt(pageSize, 10);
+    const currentPage = this.rekapState.currentPage;
+
+    const start = isAll ? 0 : (currentPage - 1) * effectivePageSize;
+    const pageItems = isAll ? items : items.slice(start, start + effectivePageSize);
+
+    tableBody.innerHTML = pageItems.map((item, idx) => `
       <tr>
-        <td>${idx + 1}</td>
+        <td>${start + idx + 1}</td>
         <td>${item.tanggal}</td>
         <td><code>${item.nisn}</code></td>
         <td><strong>${item.nama_lengkap}</strong></td>
@@ -158,11 +506,26 @@ export const ADMIN = {
       </tr>
     `).join("");
 
-    // Setup Export Action Buttons
-    window.currentRekapData = { periode: data.periode, idKelas, summary: sum, items };
+    this.renderPagination(
+      "rekap-pagination",
+      total,
+      currentPage,
+      pageSize,
+      (newPage) => {
+        this.rekapState.currentPage = newPage;
+        this.renderRekapTable();
+      },
+      (newSize) => {
+        this.rekapState.pageSize = newSize;
+        this.rekapState.currentPage = 1;
+        this.renderRekapTable();
+      }
+    );
   },
 
-  // 4. Populate Rombel Dropdowns
+  // ==========================================================================
+  // 5. HELPER DROPDOWNS & EMIS PARSER
+  // ==========================================================================
   populateClassSelects() {
     const selects = document.querySelectorAll(".select-kelas-rombel");
     selects.forEach(select => {
@@ -172,11 +535,9 @@ export const ADMIN = {
       select.innerHTML = optionsHTML;
     });
 
-    // Populate Student dropdown for manual attendance
     this.populateStudentSelect();
   },
 
-  // 5. Intelligent EMIS Excel / CSV Parser
   parseEmisWorkbook(workbook) {
     const firstSheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[firstSheetName];
@@ -186,7 +547,6 @@ export const ADMIN = {
       throw new Error("File Excel kosong atau tidak memiliki baris data.");
     }
 
-    // Cari baris header (biasanya baris ke-0 atau baris yang mengandung 'Nama' / 'NISN')
     let headerRowIdx = 0;
     for (let r = 0; r < Math.min(5, rawRows.length); r++) {
       const rowStr = rawRows[r].join(" ").toLowerCase();
@@ -198,19 +558,17 @@ export const ADMIN = {
 
     const headers = rawRows[headerRowIdx].map(h => String(h).trim().toLowerCase());
     
-    // Temukan index kolom
     let idxNama = headers.findIndex(h => h.includes("nama lengkap") || h.includes("nama"));
     let idxNisn = headers.findIndex(h => h.includes("nisn"));
     let idxRombel = headers.findIndex(h => h.includes("tingkat") || h.includes("rombel") || h.includes("kelas"));
     let idxJk = headers.findIndex(h => h.includes("jenis kelamin") || h.includes("jk"));
     let idxTelp = headers.findIndex(h => h.includes("telepon") || h.includes("telp") || h.includes("hp") || h.includes("wa"));
 
-    // Fallback index jika header tidak bernama standar (sesuai template screenshot kolom A=0 s.d R=17)
-    if (idxNama === -1) idxNama = 1;  // Kolom B
-    if (idxNisn === -1) idxNisn = 2;  // Kolom C
-    if (idxRombel === -1) idxRombel = 6; // Kolom G
-    if (idxJk === -1) idxJk = 9;      // Kolom J
-    if (idxTelp === -1) idxTelp = 11;  // Kolom L
+    if (idxNama === -1) idxNama = 1;
+    if (idxNisn === -1) idxNisn = 2;
+    if (idxRombel === -1) idxRombel = 6;
+    if (idxJk === -1) idxJk = 9;
+    if (idxTelp === -1) idxTelp = 11;
 
     const parsedStudents = [];
 
@@ -226,10 +584,7 @@ export const ADMIN = {
 
       if (!rawNama && !rawNisn) continue;
 
-      // Normalisasi Rombel (Contoh: 'Kelas 5 - Kelas 5 A' -> 'KLS-5A', '5A' -> 'KLS-5A')
       const matchedRombel = this.normalizeRombel(rawRombel);
-
-      // Normalisasi Jenis Kelamin
       const jk = (rawJk.toLowerCase().startsWith("p") || rawJk.toLowerCase().includes("perempuan")) ? "P" : "L";
 
       parsedStudents.push({
@@ -248,17 +603,15 @@ export const ADMIN = {
   normalizeRombel(raw) {
     if (!raw) return { id: "KLS-1A", nama: "Kelas 1A" };
     
-    // Ekstrak angka tingkat (1-6) dan huruf (A-D)
     const clean = raw.toUpperCase().replace(/\s+/g, "");
     
     for (const r of CONFIG.ROMBEL_LIST) {
-      const code = r.id.replace("KLS-", ""); // '1A', '5A', dll
+      const code = r.id.replace("KLS-", "");
       if (clean.includes(code) || clean.includes(`KELAS${code}`) || clean.includes(`KELAS${code[0]}-KELAS${code[0]}${code[1]}`)) {
         return r;
       }
     }
 
-    // Regex fallback
     const match = raw.match(/(\d)\s*[-–]?\s*(?:Kelas\s*)?(\d)?\s*([A-Da-d])/);
     if (match) {
       const tingkat = match[1];
@@ -282,3 +635,6 @@ export const ADMIN = {
     `).join("");
   }
 };
+
+window.ADMIN = ADMIN;
+

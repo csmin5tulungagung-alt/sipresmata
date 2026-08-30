@@ -569,12 +569,15 @@ window.editStudent = async function(idSiswa) {
   openModal("modal-student-form");
 };
 
-window.deleteStudent = async function(idSiswa, nama) {
+window.deleteStudent = async function(idSiswa, encodedNama) {
+  const nama = decodeURIComponent(encodedNama || "ini");
   if (confirm(`Apakah Anda yakin ingin menghapus data siswa ${nama}?`)) {
     const res = await API.deleteSiswa(idSiswa);
     if (res.status === "success") {
-      showToast(res.message, "success");
-      ADMIN.loadStudents();
+      showToast(res.message || "Siswa berhasil dihapus.", "success");
+      ADMIN.loadStudents(ADMIN.studentsState.currentClass, ADMIN.studentsState.currentSearch);
+    } else {
+      showToast(res.message || "Gagal menghapus siswa.", "danger");
     }
   }
 };

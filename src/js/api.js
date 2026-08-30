@@ -394,9 +394,57 @@ export const API = {
   },
 
   async deleteSiswa(idSiswa) {
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=delete_siswa`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ id_siswa: idSiswa })
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+          localStudents = localStudents.filter(s => s.id_siswa !== idSiswa);
+          saveLocalState();
+          return json;
+        }
+      } catch (err) {
+        console.warn("GAS Delete Siswa error:", err);
+      }
+    }
+
     localStudents = localStudents.filter(s => s.id_siswa !== idSiswa);
     saveLocalState();
     return { status: "success", message: "Siswa berhasil dihapus." };
+  },
+
+  async deleteMultipleSiswa(idSiswaList) {
+    if (!idSiswaList || idSiswaList.length === 0) {
+      return { status: "error", message: "Tidak ada siswa yang dipilih." };
+    }
+
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=delete_siswa`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ id_siswa_list: idSiswaList })
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+          const idSet = new Set(idSiswaList);
+          localStudents = localStudents.filter(s => !idSet.has(s.id_siswa));
+          saveLocalState();
+          return json;
+        }
+      } catch (err) {
+        console.warn("GAS Batch Delete Siswa error:", err);
+      }
+    }
+
+    const idSet = new Set(idSiswaList);
+    localStudents = localStudents.filter(s => !idSet.has(s.id_siswa));
+    saveLocalState();
+    return { status: "success", message: `${idSiswaList.length} siswa berhasil dihapus.` };
   },
 
   // 6. Manual Absen

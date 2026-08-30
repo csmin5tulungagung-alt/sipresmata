@@ -256,19 +256,23 @@
           <!-- Live Monitoring Table -->
           <div class="card-table-wrapper">
             <h3 style="margin-bottom: 0.85rem; font-size: 1.05rem;">🔴 Riwayat Scan Terbaru Hari Ini</h3>
-            <table class="custom-data-table">
-              <thead>
-                <tr>
-                  <th>Nama Siswa</th>
-                  <th>Kelas</th>
-                  <th>Waktu Scan</th>
-                  <th>Status Kehadiran</th>
-                </tr>
-              </thead>
-              <tbody id="live-scans-feed">
-                <!-- Injected via JavaScript -->
-              </tbody>
-            </table>
+            <div style="overflow-x: auto;">
+              <table class="custom-data-table">
+                <thead>
+                  <tr>
+                    <th>Nama Siswa</th>
+                    <th>Kelas</th>
+                    <th>Waktu Scan</th>
+                    <th>Status Kehadiran</th>
+                  </tr>
+                </thead>
+                <tbody id="live-scans-feed">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+            <!-- Pagination Dashboard Feed -->
+            <div id="dashboard-feed-pagination" class="table-pagination-container" style="display: none;"></div>
           </div>
         </section>
 
@@ -281,7 +285,7 @@
               <h2>👥 Data Master Siswa MIN 5</h2>
               <p>Kelola data profil siswa, NISN, dan rombongan belajar (Kelas 1A-D s.d 6A-D).</p>
             </div>
-            <div style="display: flex; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button class="btn btn-secondary" onclick="window.openImportModal()">
                 📥 Import Excel (Format EMIS)
               </button>
@@ -292,10 +296,26 @@
           </div>
 
           <div class="card-table-wrapper">
+            <!-- Bulk Action Bar -->
+            <div id="students-bulk-bar" class="bulk-action-bar">
+              <div class="bulk-selection-info">
+                <span class="bulk-selection-badge" id="bulk-selected-count">0</span>
+                <span>Siswa dipilih</span>
+              </div>
+              <div class="bulk-action-buttons">
+                <button type="button" class="btn-danger-bulk" onclick="ADMIN.deleteSelectedStudents()">
+                  🗑️ Hapus Siswa Terpilih
+                </button>
+                <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="ADMIN.clearStudentSelection()">
+                  ✕ Batal
+                </button>
+              </div>
+            </div>
+
             <div class="table-filter-bar">
               <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 450px;">
-                <input type="text" id="search-student-input" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1;" oninput="ADMIN.loadStudents(document.getElementById('filter-student-class').value, this.value)">
-                <select id="filter-student-class" class="form-control select-kelas-rombel" data-include-all="true" onchange="ADMIN.loadStudents(this.value, document.getElementById('search-student-input').value)">
+                <input type="text" id="search-student-input" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1;" oninput="ADMIN.handleStudentSearch(this.value)">
+                <select id="filter-student-class" class="form-control select-kelas-rombel" data-include-all="true" onchange="ADMIN.handleStudentClassFilter(this.value)">
                   <!-- Injected -->
                 </select>
               </div>
@@ -305,7 +325,10 @@
               <table class="custom-data-table">
                 <thead>
                   <tr>
-                    <th style="width: 4%;">No</th>
+                    <th style="width: 4%; text-align: center;">
+                      <input type="checkbox" id="check-all-students" class="table-checkbox" title="Pilih Semua Siswa">
+                    </th>
+                    <th style="width: 5%;">No</th>
                     <th>NISN</th>
                     <th>Nama Lengkap</th>
                     <th>Kelas / Rombel</th>
@@ -318,6 +341,9 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Pagination Data Master Siswa -->
+            <div id="students-pagination" class="table-pagination-container"></div>
           </div>
         </section>
 
@@ -330,7 +356,7 @@
               <h2>📑 Rekapitulasi Presensi & Laporan</h2>
               <p>Filter riwayat kehadiran per rentang tanggal dan rombongan belajar.</p>
             </div>
-            <div style="display: flex; gap: 0.5rem;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
               <button id="btn-export-csv" class="btn btn-secondary">
                 📥 Ekspor Excel (.csv)
               </button>
@@ -380,6 +406,9 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Pagination Rekap Presensi -->
+            <div id="rekap-pagination" class="table-pagination-container"></div>
           </div>
         </section>
 
