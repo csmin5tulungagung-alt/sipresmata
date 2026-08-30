@@ -57,10 +57,18 @@ export const CARD_GENERATOR = {
   createCardHTML(s) {
     const rawKelas = s.nama_kelas || s.id_kelas || "1-A";
     const shortKelas = rawKelas.replace(/Kelas\s*/i, "").replace("KLS-", "").trim();
+    const encodedNama = encodeURIComponent(s.nama_lengkap);
 
     return `
-      <div class="student-card-portrait">
+      <div class="student-card-portrait" id="card-item-${s.id_siswa}" data-student-id="${s.id_siswa}" data-nisn="${s.nisn}" data-nama="${s.nama_lengkap}" data-kelas="${shortKelas}">
         
+        <!-- Tombol Aksi Cepat: Unduh Kartu Tunggal (No-Print) -->
+        <div class="card-actions-quick no-print">
+          <button type="button" class="btn-card-quick-download" onclick="window.downloadSingleCard('${s.id_siswa}', '${s.nisn}', '${encodedNama}')" title="Download Gambar Kartu Ini (PNG)">
+            📥 Unduh PNG
+          </button>
+        </div>
+
         <!-- 1. Header Banner Atas -->
         <div class="card-top-banner">
           <div class="banner-dots-pattern"></div>
@@ -137,6 +145,108 @@ export const CARD_GENERATOR = {
 
       </div>
     `;
+  },
+
+  // 1. Ekspor seluruh kartu per anak ke file .ZIP
+  async exportCardsToZip(idKelas = "", onProgress = null) {
+    if (typeof JSZip === 'undefined' || typeof html2canvas === 'undefined') {
+      throw new Error("Pustaka JSZip atau html2canvas belum termuat dengan benar.");
+    }
+
+    const cardElements = document.querySelectorAll("#printable-cards-area .student-card-portrait");
+    if (!cardElements || cardElements.length === 0) {
+      throw new Error("Tidak ada kartu siswa yang dapat diekspor.");
+    }
+
+    const zip = new JSZip();
+    const total = cardElements.length;
+
+    for (let i = 0; i < total; i++) {
+      const cardEl = cardElements[i];
+      const nisn = cardEl.getAttribute("data-nisn") || `siswa_${i + 1}`;
+      const nama = cardEl.getAttribute("data-nama") || `Siswa ${i + 1}`;
+      const kelas = cardEl.getAttribute("data-kelas") || "Umum";
+
+      if (onProgress) {
+        onProgress({
+          current: i + 1,
+          total: total,
+          studentName: nama,
+          percent: Math.round(((i + 1) / total) * 100)
+        });
+      }
+
+      // Render kartu dengan resolusi tinggi (skala 3x untuk hasil cetak tajam 300 DPI)
+      const canvas = await html2canvas(cardEl, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        ignoreElements: (element) => element.classList.contains("no-print")
+      });
+
+      const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+      
+      const cleanNama = nama.replace(/[\\/:*?"<>|]/g, "_").trim();
+      const cleanKelas = `Kelas ${kelas}`.replace(/[\\/:*?"<>|]/g, "_").trim();
+      const fileName = `${nisn}_${cleanNama}.png`;
+
+      // Masukkan ke subfolder kelas masing-masing
+      zip.folder(cleanKelas).file(fileName, base64Data, { base64: true });
+    }
+
+    // Generate file ZIP
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    
+    // Trigger download
+    const dateStr = new Date().toISOString().split("T")[0];
+    const zipFileName = `Kartu_Presensi_MIN5_${idKelas || 'Semua_Rombel'}_${dateStr}.zip`;
+
+    const downloadUrl = URL.createObjectURL(zipBlob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = zipFileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(downloadUrl);
+
+    return { total, fileName: zipFileName };
+  },
+
+  // 2. Unduh 1 Kartu Tunggal (PNG)
+  async downloadSingleCard(idSiswa, nisn, encodedNama) {
+    const nama = decodeURIComponent(encodedNama);
+    const cardEl = document.getElementById(`card-item-${idSiswa}`);
+    if (!cardEl || typeof html2canvas === 'undefined') {
+      alert("Kartu tidak ditemukan atau pustaka canvas belum siap.");
+      return;
+    }
+
+    try {
+      const canvas = await html2canvas(cardEl, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        ignoreElements: (element) => element.classList.contains("no-print")
+      });
+
+      const cleanNama = nama.replace(/[\\/:*?"<>|]/g, "_").trim();
+      const fileName = `Kartu_${nisn}_${cleanNama}.png`;
+
+      const link = document.createElement("a");
+      link.download = fileName;
+      link.href = canvas.toDataURL("image/png");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error("Gagal mengunduh kartu satuan:", err);
+      alert("Gagal mengunduh kartu: " + err.message);
+    }
   },
 
   printCards() {

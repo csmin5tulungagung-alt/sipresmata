@@ -401,4 +401,52 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+  .card-actions-quick, .no-print {
+    display: none !important;
+  }
 }
+
+/* Quick Card Download Overlay (Screen View) */
+.student-card-portrait {
+  position: relative;
+}
+
+.card-actions-quick {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 20;
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.student-card-portrait:hover .card-actions-quick {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.btn-card-quick-download {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.btn-card-quick-download:hover {
+  background: #0284c7;
+  border-color: #38bdf8;
+  transform: scale(1.05);
+}
+

@@ -23,6 +23,8 @@
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body class="mode-kiosk">
 
@@ -390,10 +392,13 @@
               <h2>🪪 Generator & Cetak Kartu Siswa</h2>
               <p>Cetak kartu barcode siap pakai untuk seluruh siswa per rombongan belajar.</p>
             </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
               <select id="filter-card-kelas" class="form-control select-kelas-rombel" data-include-all="true">
                 <!-- Injected -->
               </select>
+              <button id="btn-export-zip-cards" class="btn btn-secondary" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-weight: 600; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
+                📦 Download ZIP (Per Siswa)
+              </button>
               <button id="btn-print-cards" class="btn btn-primary">
                 🖨️ Cetak Seluruh Kartu (A4)
               </button>
@@ -638,6 +643,27 @@
         <button type="button" id="btn-confirm-import" class="btn btn-primary" style="display: none;">
           💾 Simpan & Impor Semua Siswa
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Progress Ekspor ZIP -->
+  <div id="modal-zip-progress" class="modal-overlay">
+    <div class="modal-card" style="max-width: 440px; text-align: center; padding: 2rem 1.5rem;">
+      <div style="font-size: 2.8rem; margin-bottom: 0.75rem;">📦</div>
+      <h3 id="zip-progress-title" style="margin-bottom: 0.35rem; font-size: 1.2rem;">Mengemas Kartu Siswa ke ZIP</h3>
+      <p id="zip-progress-subtitle" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+        Sedang merender gambar kartu resolusi tinggi (300 DPI)...
+      </p>
+
+      <!-- Progress bar container -->
+      <div style="width: 100%; height: 12px; background: rgba(255, 255, 255, 0.1); border-radius: 999px; overflow: hidden; margin-bottom: 0.75rem; position: relative;">
+        <div id="zip-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #06b6d4); border-radius: 999px; transition: width 0.25s ease;"></div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
+        <span id="zip-progress-status">Memulai perenderan...</span>
+        <strong id="zip-progress-percent" style="color: #34d399;">0%</strong>
       </div>
     </div>
   </div>

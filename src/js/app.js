@@ -338,12 +338,56 @@ function initAdminForms() {
     });
   }
 
+  // Cetak Kartu A4 (Print)
   const btnPrintAllCards = document.getElementById("btn-print-cards");
   if (btnPrintAllCards) {
     btnPrintAllCards.addEventListener("click", () => {
       CARD_GENERATOR.printCards();
     });
   }
+
+  // Export Kartu ke ZIP (Gambar PNG per Siswa)
+  const btnExportZip = document.getElementById("btn-export-zip-cards");
+  if (btnExportZip) {
+    btnExportZip.addEventListener("click", async () => {
+      const filterClass = document.getElementById("filter-card-kelas")?.value || "";
+      const progressBar = document.getElementById("zip-progress-bar");
+      const progressStatus = document.getElementById("zip-progress-status");
+      const progressPercent = document.getElementById("zip-progress-percent");
+
+      // Buka modal progress
+      openModal("modal-zip-progress");
+      if (progressBar) progressBar.style.width = "0%";
+      if (progressStatus) progressStatus.textContent = "Menyiapkan elemen kartu...";
+      if (progressPercent) progressPercent.textContent = "0%";
+
+      btnExportZip.disabled = true;
+
+      try {
+        const result = await CARD_GENERATOR.exportCardsToZip(filterClass, (p) => {
+          if (progressBar) progressBar.style.width = `${p.percent}%`;
+          if (progressStatus) progressStatus.textContent = `Merender ${p.current}/${p.total}: ${p.studentName}`;
+          if (progressPercent) progressPercent.textContent = `${p.percent}%`;
+        });
+
+        setTimeout(() => {
+          closeModal("modal-zip-progress");
+          showToast(`Berhasil mengunduh ${result.total} kartu siswa ke file ZIP.`, "success");
+        }, 500);
+      } catch (err) {
+        console.error("ZIP Export Error:", err);
+        closeModal("modal-zip-progress");
+        showToast("Gagal membuat file ZIP: " + err.message, "danger");
+      } finally {
+        btnExportZip.disabled = false;
+      }
+    });
+  }
+
+  // Global Bridge untuk Unduh Satuan Kartu Siswa
+  window.downloadSingleCard = function(idSiswa, nisn, encodedNama) {
+    CARD_GENERATOR.downloadSingleCard(idSiswa, nisn, encodedNama);
+  };
 
   // Student Form Modal Add/Edit
   const formStudent = document.getElementById("form-student-modal");
