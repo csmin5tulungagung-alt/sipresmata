@@ -19,7 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
   initLiveClock();
   initLayoutSwitching();
   initCmsNavigation();
-  initThemeToggle();
   initScannerView();
   initAdminForms();
   initSettingsView();
@@ -668,18 +667,4 @@ function updateCmsUserUI() {
   }
 }
 
-// 10. Theme Toggle
-function initThemeToggle() {
-  const btnKiosk = document.getElementById("btn-toggle-theme-kiosk");
-  const btnCms = document.getElementById("btn-toggle-theme-cms");
 
-  function toggle() {
-    document.body.classList.toggle("light-theme");
-    const isLight = document.body.classList.contains("light-theme");
-    if (btnKiosk) btnKiosk.textContent = isLight ? "🌙" : "☀️";
-    if (btnCms) btnCms.textContent = isLight ? "🌙" : "☀️";
-  }
-
-  if (btnKiosk) btnKiosk.addEventListener("click", toggle);
-  if (btnCms) btnCms.addEventListener("click", toggle);
-}
