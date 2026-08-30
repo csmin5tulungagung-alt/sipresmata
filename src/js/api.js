@@ -489,5 +489,54 @@ export const API = {
     saveLocalState();
 
     return { status: "success", message: `Presensi manual berhasil dicatat (${data.status_kehadiran}).` };
+  },
+
+  // 7. Pengaturan Sistem & Jadwal Operasional
+  async getPengaturan() {
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=get_pengaturan`);
+        const json = await res.json();
+        if (json.status === "success") {
+          return json;
+        }
+      } catch (err) {
+        console.warn("GAS get_pengaturan error:", err);
+      }
+    }
+
+    return {
+      status: "success",
+      data: {
+        nama_madrasah: CONFIG.SCHOOL_NAME,
+        slogan_aplikasi: CONFIG.SLOGAN,
+        jam_masuk_mulai: CONFIG.SCHEDULE.MASUK_MULAI,
+        jam_masuk_batas: CONFIG.SCHEDULE.MASUK_BATAS,
+        jam_masuk_maksimal: CONFIG.SCHEDULE.MASUK_MAKSIMAL,
+        jam_pulang_mulai: CONFIG.SCHEDULE.PULANG_MULAI,
+        jam_pulang_batas: CONFIG.SCHEDULE.PULANG_BATAS,
+        client_key: CONFIG.CLIENT_KEY
+      }
+    };
+  },
+
+  async updatePengaturan(settingsData) {
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=update_pengaturan`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(settingsData)
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+          return json;
+        }
+      } catch (err) {
+        console.warn("GAS update_pengaturan error:", err);
+      }
+    }
+
+    return { status: "success", message: "Pengaturan berhasil disimpan di sistem lokal." };
   }
 };

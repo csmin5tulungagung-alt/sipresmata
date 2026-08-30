@@ -8,8 +8,8 @@
 export const CONFIG = {
   APP_NAME: "SIPRESMATA",
   APP_SUBTITLE: "Sistem Informasi Presensi Siswa Madrasah Terpadu",
-  SCHOOL_NAME: "MIN 5 TULUNGAGUNG",
-  SLOGAN: "MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI",
+  SCHOOL_NAME: localStorage.getItem("SIPRESMATA_SCHOOL_NAME") || "MIN 5 TULUNGAGUNG",
+  SLOGAN: localStorage.getItem("SIPRESMATA_SLOGAN") || "MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI",
   LOGO_URL: "/logo-min5.png",
   SPREADSHEET_ID: "1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh",
   
@@ -17,13 +17,13 @@ export const CONFIG = {
   DEFAULT_API_URL: localStorage.getItem("SIPRESMATA_API_URL") || "https://script.google.com/macros/s/AKfycbywpbbkTu7vdckRTDZpCmUiv0UzeRsca70OFCeCp6rDzBtOx3T3aIG_9KSD6RCFJi9m9A/exec",
   CLIENT_KEY: localStorage.getItem("SIPRESMATA_CLIENT_KEY") || "MIN5_SIPRESMATA_2026",
   
-  // Jam Operasional Default (WIB)
+  // Jam Operasional Presensi (WIB)
   SCHEDULE: {
-    MASUK_MULAI: "06:00:00",
-    MASUK_BATAS: "07:15:00", // > 07:15 = Terlambat
-    MASUK_MAKSIMAL: "08:30:00",
-    PULANG_MULAI: "12:30:00",
-    PULANG_BATAS: "16:00:00"
+    MASUK_MULAI: localStorage.getItem("SIPRESMATA_JAM_MASUK_MULAI") || "06:00:00",
+    MASUK_BATAS: localStorage.getItem("SIPRESMATA_JAM_MASUK_BATAS") || "07:15:00", // > 07:15 = Terlambat
+    MASUK_MAKSIMAL: localStorage.getItem("SIPRESMATA_JAM_MASUK_MAKSIMAL") || "08:30:00",
+    PULANG_MULAI: localStorage.getItem("SIPRESMATA_JAM_PULANG_MULAI") || "12:30:00",
+    PULANG_BATAS: localStorage.getItem("SIPRESMATA_JAM_PULANG_BATAS") || "16:00:00"
   },
   
   // Daftar 24 Rombel (Kelas 1A-D s.d 6A-D)
@@ -63,4 +63,34 @@ export function saveApiUrl(url) {
 export function saveClientKey(key) {
   CONFIG.CLIENT_KEY = key.trim();
   localStorage.setItem("SIPRESMATA_CLIENT_KEY", key.trim());
+}
+
+export function saveSchedule(schedule) {
+  if (schedule.MASUK_MULAI) {
+    CONFIG.SCHEDULE.MASUK_MULAI = formatTimeWithSeconds(schedule.MASUK_MULAI);
+    localStorage.setItem("SIPRESMATA_JAM_MASUK_MULAI", CONFIG.SCHEDULE.MASUK_MULAI);
+  }
+  if (schedule.MASUK_BATAS) {
+    CONFIG.SCHEDULE.MASUK_BATAS = formatTimeWithSeconds(schedule.MASUK_BATAS);
+    localStorage.setItem("SIPRESMATA_JAM_MASUK_BATAS", CONFIG.SCHEDULE.MASUK_BATAS);
+  }
+  if (schedule.MASUK_MAKSIMAL) {
+    CONFIG.SCHEDULE.MASUK_MAKSIMAL = formatTimeWithSeconds(schedule.MASUK_MAKSIMAL);
+    localStorage.setItem("SIPRESMATA_JAM_MASUK_MAKSIMAL", CONFIG.SCHEDULE.MASUK_MAKSIMAL);
+  }
+  if (schedule.PULANG_MULAI) {
+    CONFIG.SCHEDULE.PULANG_MULAI = formatTimeWithSeconds(schedule.PULANG_MULAI);
+    localStorage.setItem("SIPRESMATA_JAM_PULANG_MULAI", CONFIG.SCHEDULE.PULANG_MULAI);
+  }
+  if (schedule.PULANG_BATAS) {
+    CONFIG.SCHEDULE.PULANG_BATAS = formatTimeWithSeconds(schedule.PULANG_BATAS);
+    localStorage.setItem("SIPRESMATA_JAM_PULANG_BATAS", CONFIG.SCHEDULE.PULANG_BATAS);
+  }
+}
+
+function formatTimeWithSeconds(val) {
+  if (!val) return "00:00:00";
+  const parts = val.split(":");
+  if (parts.length === 2) return `${val}:00`;
+  return val;
 }

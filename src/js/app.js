@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-import { CONFIG, saveApiUrl, saveClientKey } from './config.js';
+import { CONFIG, saveApiUrl, saveClientKey, saveSchedule } from './config.js';
 import { API } from './api.js';
 import { SCANNER, playAudioBeep } from './scanner.js';
 import { ADMIN } from './admin.js';
@@ -159,6 +159,7 @@ function initCmsNavigation() {
         const tglAkhir = document.getElementById("rekap-tgl-akhir").value || new Date().toISOString().split("T")[0];
         ADMIN.loadRekap(tglMulai, tglAkhir);
       }
+      if (targetViewId === "cms-view-settings") initSettingsView();
     });
   });
 }
@@ -535,20 +536,87 @@ window.openAddStudentModal = function() {
 };
 
 // 7. Settings View
-function initSettingsView() {
+let isSettingsFormBound = false;
+
+async function initSettingsView() {
+  const inputMasukMulai = document.getElementById("setting-jam-masuk-mulai");
+  const inputMasukBatas = document.getElementById("setting-jam-masuk-batas");
+  const inputMasukMaks = document.getElementById("setting-jam-masuk-maks");
+  const inputPulangMulai = document.getElementById("setting-jam-pulang-mulai");
+  const inputPulangBatas = document.getElementById("setting-jam-pulang-batas");
   const inputUrl = document.getElementById("setting-api-url");
   const inputKey = document.getElementById("setting-client-key");
   const formSettings = document.getElementById("form-settings");
+  const btnSave = document.getElementById("btn-save-settings");
 
+  // Isi form dari config lokal saat ini
+  if (inputMasukMulai) inputMasukMulai.value = (CONFIG.SCHEDULE.MASUK_MULAI || "06:00:00").substring(0, 5);
+  if (inputMasukBatas) inputMasukBatas.value = (CONFIG.SCHEDULE.MASUK_BATAS || "07:15:00").substring(0, 5);
+  if (inputMasukMaks) inputMasukMaks.value = (CONFIG.SCHEDULE.MASUK_MAKSIMAL || "08:30:00").substring(0, 5);
+  if (inputPulangMulai) inputPulangMulai.value = (CONFIG.SCHEDULE.PULANG_MULAI || "12:30:00").substring(0, 5);
+  if (inputPulangBatas) inputPulangBatas.value = (CONFIG.SCHEDULE.PULANG_BATAS || "16:00:00").substring(0, 5);
   if (inputUrl) inputUrl.value = CONFIG.DEFAULT_API_URL;
   if (inputKey) inputKey.value = CONFIG.CLIENT_KEY;
 
-  if (formSettings) {
-    formSettings.addEventListener("submit", (e) => {
+  // Coba ambil pengaturan terbaru dari backend Google Apps Script / Spreadsheet
+  try {
+    const res = await API.getPengaturan();
+    if (res && res.data) {
+      const d = res.data;
+      if (d.jam_masuk_mulai && inputMasukMulai) inputMasukMulai.value = d.jam_masuk_mulai.substring(0, 5);
+      if (d.jam_masuk_batas && inputMasukBatas) inputMasukBatas.value = d.jam_masuk_batas.substring(0, 5);
+      if (d.jam_masuk_maksimal && inputMasukMaks) inputMasukMaks.value = d.jam_masuk_maksimal.substring(0, 5);
+      if (d.jam_pulang_mulai && inputPulangMulai) inputPulangMulai.value = d.jam_pulang_mulai.substring(0, 5);
+      if (d.jam_pulang_batas && inputPulangBatas) inputPulangBatas.value = d.jam_pulang_batas.substring(0, 5);
+      if (d.client_key && inputKey) inputKey.value = d.client_key;
+    }
+  } catch (e) {
+    console.warn("Gagal sinkronisasi server settings, menggunakan cache lokal:", e);
+  }
+
+  if (formSettings && !isSettingsFormBound) {
+    isSettingsFormBound = true;
+    formSettings.addEventListener("submit", async (e) => {
       e.preventDefault();
-      saveApiUrl(inputUrl.value);
-      saveClientKey(inputKey.value);
-      showToast("Konfigurasi API berhasil disimpan.", "success");
+      if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.textContent = "⏳ Menyimpan Pengaturan...";
+      }
+
+      const scheduleData = {
+        MASUK_MULAI: inputMasukMulai ? inputMasukMulai.value : "06:00",
+        MASUK_BATAS: inputMasukBatas ? inputMasukBatas.value : "07:15",
+        MASUK_MAKSIMAL: inputMasukMaks ? inputMasukMaks.value : "08:30",
+        PULANG_MULAI: inputPulangMulai ? inputPulangMulai.value : "12:30",
+        PULANG_BATAS: inputPulangBatas ? inputPulangBatas.value : "16:00"
+      };
+
+      // Simpan ke local config
+      saveSchedule(scheduleData);
+      if (inputUrl) saveApiUrl(inputUrl.value);
+      if (inputKey) saveClientKey(inputKey.value);
+
+      // Siapkan payload untuk Spreadsheet tab pengaturan_sekolah
+      const serverPayload = {
+        jam_masuk_mulai: `${scheduleData.MASUK_MULAI}:00`,
+        jam_masuk_batas: `${scheduleData.MASUK_BATAS}:00`,
+        jam_masuk_maksimal: `${scheduleData.MASUK_MAKSIMAL}:00`,
+        jam_pulang_mulai: `${scheduleData.PULANG_MULAI}:00`,
+        jam_pulang_batas: `${scheduleData.PULANG_BATAS}:00`,
+        client_key: inputKey ? inputKey.value : CONFIG.CLIENT_KEY
+      };
+
+      try {
+        const res = await API.updatePengaturan(serverPayload);
+        showToast(res.message || "Jadwal presensi dan pengaturan berhasil disimpan.", "success");
+      } catch (err) {
+        showToast("Pengaturan jam berhasil disimpan secara lokal.", "success");
+      } finally {
+        if (btnSave) {
+          btnSave.disabled = false;
+          btnSave.textContent = "💾 Simpan Seluruh Pengaturan";
+        }
+      }
     });
   }
 }
