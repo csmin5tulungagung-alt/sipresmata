@@ -14,7 +14,7 @@ export const CONFIG = {
   SPREADSHEET_ID: "1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh",
   
   // Default GAS API URL (Dapat diubah via menu Pengaturan Sistem atau localStorage)
-  DEFAULT_API_URL: localStorage.getItem("SIPRESMATA_API_URL") || "",
+  DEFAULT_API_URL: localStorage.getItem("SIPRESMATA_API_URL") || "https://script.google.com/macros/s/AKfycbywpbbkTu7vdckRTDZpCmUiv0UzeRsca70OFCeCp6rDzBtOx3T3aIG_9KSD6RCFJi9m9A/exec",
   CLIENT_KEY: localStorage.getItem("SIPRESMATA_CLIENT_KEY") || "MIN5_SIPRESMATA_2026",
   
   // Jam Operasional Default (WIB)
