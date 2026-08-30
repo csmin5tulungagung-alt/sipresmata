@@ -413,31 +413,111 @@
         </section>
 
         <!-- ------------------------------------------------------------------
-             CMS VIEW 4: GENERATOR & CETAK KARTU BARCODE A4
+             CMS VIEW 4: GENERATOR & CETAK KARTU BARCODE (FOLDER & LIST VIEW)
              ------------------------------------------------------------------ -->
         <section id="cms-view-cards" class="cms-view-section">
-          <div class="cms-page-header">
-            <div>
-              <h2>🪪 Generator & Cetak Kartu Siswa</h2>
-              <p>Cetak kartu barcode siap pakai untuk seluruh siswa per rombongan belajar.</p>
+          
+          <!-- 1. TAMPILAN FOLDER VIEW (DAFTAR 24 ROMBEL) -->
+          <div id="cards-folders-view">
+            <div class="cms-page-header">
+              <div>
+                <h2>🪪 Generator & Cetak Kartu Barcode Siswa</h2>
+                <p>Pilih folder rombongan belajar (Kelas 1A-D s.d 6A-D) untuk melihat, mencetak, atau mengunduh kartu siswa.</p>
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button id="btn-export-all-zip" class="btn btn-secondary" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-weight: 600;" onclick="CARD_GENERATOR.exportAllZip()">
+                  📦 Download ZIP Seluruh Siswa
+                </button>
+                <button id="btn-print-all-classes" class="btn btn-primary" onclick="CARD_GENERATOR.printAllCards()">
+                  🖨️ Cetak Seluruh Siswa (A4)
+                </button>
+              </div>
             </div>
-            <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
-              <select id="filter-card-kelas" class="form-control select-kelas-rombel" data-include-all="true">
-                <!-- Injected -->
-              </select>
-              <button id="btn-export-zip-cards" class="btn btn-secondary" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-weight: 600; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);">
-                📦 Download ZIP (Per Siswa)
-              </button>
-              <button id="btn-print-cards" class="btn btn-primary">
-                🖨️ Cetak Seluruh Kartu (A4)
-              </button>
+
+            <!-- Grid 24 Folder Rombel -->
+            <div id="class-folders-grid" class="folder-grid">
+              <!-- Injected via JavaScript -->
             </div>
           </div>
 
-          <!-- Printable Area -->
-          <div id="printable-cards-area" class="id-card-print-container">
-            <!-- Rendered ID Cards in Grid -->
+          <!-- 2. TAMPILAN LIST VIEW SISWA DI DALAM FOLDER KELAS -->
+          <div id="cards-list-view" style="display: none;">
+            <div class="cms-page-header">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary btn-icon" onclick="CARD_GENERATOR.backToFolders()" title="Kembali ke Daftar Folder">
+                  ⬅
+                </button>
+                <div>
+                  <h2 id="card-list-class-title">📁 Folder Kelas 1A</h2>
+                  <p id="card-list-class-subtitle">Daftar siswa dan kartu barcode presensi.</p>
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button id="btn-class-export-zip" class="btn btn-secondary" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-weight: 600;" onclick="CARD_GENERATOR.exportClassZip()">
+                  📦 Unduh ZIP Kelas Ini
+                </button>
+                <button id="btn-class-print-a4" class="btn btn-primary" onclick="CARD_GENERATOR.printClassCards()">
+                  🖨️ Cetak Kelas Ini (A4)
+                </button>
+              </div>
+            </div>
+
+            <div class="card-table-wrapper">
+              <!-- Bulk Action Bar -->
+              <div id="cards-bulk-bar" class="bulk-action-bar">
+                <div class="bulk-selection-info">
+                  <span class="bulk-selection-badge" id="cards-bulk-count">0</span>
+                  <span>Siswa dipilih</span>
+                </div>
+                <div class="bulk-action-buttons">
+                  <button type="button" class="btn-danger-bulk" onclick="CARD_GENERATOR.deleteSelectedStudents()">
+                    🗑️ Hapus Siswa Terpilih
+                  </button>
+                  <button type="button" class="btn btn-secondary" style="background: rgba(2, 132, 199, 0.2); border-color: #0284c7; color: #38bdf8; padding: 0.45rem 0.85rem; font-size: 0.85rem; font-weight: 700;" onclick="CARD_GENERATOR.exportSelectedZip()">
+                    📦 Unduh ZIP Terpilih
+                  </button>
+                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="CARD_GENERATOR.clearSelection()">
+                    ✕ Batal
+                  </button>
+                </div>
+              </div>
+
+              <!-- Search Bar -->
+              <div class="table-filter-bar">
+                <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 450px;">
+                  <input type="text" id="search-card-student" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1;" oninput="CARD_GENERATOR.handleSearch(this.value)">
+                </div>
+              </div>
+
+              <!-- Student Table -->
+              <div style="overflow-x: auto;">
+                <table class="custom-data-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 4%; text-align: center;">
+                        <input type="checkbox" id="check-all-card-students" class="table-checkbox" title="Pilih Semua Siswa">
+                      </th>
+                      <th style="width: 5%;">No</th>
+                      <th>NISN</th>
+                      <th>Nama Lengkap</th>
+                      <th>Kelas</th>
+                      <th>Kode Barcode</th>
+                      <th style="width: 25%;">Aksi Kartu</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cards-table-body">
+                    <!-- Injected via JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination Container -->
+              <div id="cards-pagination" class="table-pagination-container"></div>
+            </div>
           </div>
+
+          <!-- Hidden Offscreen Container for A4 Print Engine -->
+          <div id="printable-cards-area" class="id-card-print-container" style="display: none;"></div>
         </section>
 
         <!-- ------------------------------------------------------------------
@@ -671,6 +751,37 @@
         </button>
         <button type="button" id="btn-confirm-import" class="btn btn-primary" style="display: none;">
           💾 Simpan & Impor Semua Siswa
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Preview Kartu Siswa HD -->
+  <div id="modal-card-preview" class="modal-overlay">
+    <div class="modal-card" style="max-width: 440px; text-align: center; padding: 1.5rem; background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
+      <div class="modal-header" style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+        <div>
+          <h3 id="preview-modal-student-name" style="font-size: 1.1rem; margin-bottom: 0.2rem;">Kartu Presensi Siswa</h3>
+          <p id="preview-modal-student-meta" style="font-size: 0.8rem; color: var(--text-muted);">Pratinjau Kualitas Tinggi (HD 300 DPI)</p>
+        </div>
+        <button class="btn btn-secondary btn-icon" onclick="window.closeModal('modal-card-preview')">✕</button>
+      </div>
+
+      <!-- Preview Card Wrapper -->
+      <div id="preview-card-container" style="display: flex; justify-content: center; margin-bottom: 1.25rem; overflow: hidden; padding: 0.5rem 0;">
+        <!-- Single Card Rendered Here -->
+      </div>
+
+      <!-- Modal Action Buttons -->
+      <div style="display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap;">
+        <button type="button" id="btn-modal-download-card" class="btn btn-primary" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none;">
+          📥 Unduh Gambar (PNG)
+        </button>
+        <button type="button" id="btn-modal-print-card" class="btn btn-secondary">
+          🖨️ Cetak Kartu Ini
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="window.closeModal('modal-card-preview')">
+          ✕ Tutup
         </button>
       </div>
     </div>

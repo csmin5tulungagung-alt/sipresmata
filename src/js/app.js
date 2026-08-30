@@ -153,7 +153,7 @@ function initCmsNavigation() {
       // Lifecycle hooks on CMS view enter
       if (targetViewId === "cms-view-dashboard") ADMIN.loadDashboard();
       if (targetViewId === "cms-view-students") ADMIN.loadStudents();
-      if (targetViewId === "cms-view-cards") CARD_GENERATOR.renderCards(document.getElementById("printable-cards-area"));
+      if (targetViewId === "cms-view-cards") CARD_GENERATOR.renderFolderView();
       if (targetViewId === "cms-view-rekap") {
         const tglMulai = document.getElementById("rekap-tgl-mulai").value || new Date().toISOString().split("T")[0];
         const tglAkhir = document.getElementById("rekap-tgl-akhir").value || new Date().toISOString().split("T")[0];
@@ -330,64 +330,9 @@ function initAdminForms() {
     });
   }
 
-  // Filter Cards by Class
-  const filterCardClass = document.getElementById("filter-card-kelas");
-  if (filterCardClass) {
-    filterCardClass.addEventListener("change", () => {
-      CARD_GENERATOR.renderCards(document.getElementById("printable-cards-area"), filterCardClass.value);
-    });
-  }
-
-  // Cetak Kartu A4 (Print)
-  const btnPrintAllCards = document.getElementById("btn-print-cards");
-  if (btnPrintAllCards) {
-    btnPrintAllCards.addEventListener("click", () => {
-      CARD_GENERATOR.printCards();
-    });
-  }
-
-  // Export Kartu ke ZIP (Gambar PNG per Siswa)
-  const btnExportZip = document.getElementById("btn-export-zip-cards");
-  if (btnExportZip) {
-    btnExportZip.addEventListener("click", async () => {
-      const filterClass = document.getElementById("filter-card-kelas")?.value || "";
-      const progressBar = document.getElementById("zip-progress-bar");
-      const progressStatus = document.getElementById("zip-progress-status");
-      const progressPercent = document.getElementById("zip-progress-percent");
-
-      // Buka modal progress
-      openModal("modal-zip-progress");
-      if (progressBar) progressBar.style.width = "0%";
-      if (progressStatus) progressStatus.textContent = "Menyiapkan elemen kartu...";
-      if (progressPercent) progressPercent.textContent = "0%";
-
-      btnExportZip.disabled = true;
-
-      try {
-        const result = await CARD_GENERATOR.exportCardsToZip(filterClass, (p) => {
-          if (progressBar) progressBar.style.width = `${p.percent}%`;
-          if (progressStatus) progressStatus.textContent = `Merender ${p.current}/${p.total}: ${p.studentName}`;
-          if (progressPercent) progressPercent.textContent = `${p.percent}%`;
-        });
-
-        setTimeout(() => {
-          closeModal("modal-zip-progress");
-          showToast(`Berhasil mengunduh ${result.total} kartu siswa ke file ZIP.`, "success");
-        }, 500);
-      } catch (err) {
-        console.error("ZIP Export Error:", err);
-        closeModal("modal-zip-progress");
-        showToast("Gagal membuat file ZIP: " + err.message, "danger");
-      } finally {
-        btnExportZip.disabled = false;
-      }
-    });
-  }
-
-  // Global Bridge untuk Unduh Satuan Kartu Siswa
-  window.downloadSingleCard = function(idSiswa, nisn, encodedNama) {
-    CARD_GENERATOR.downloadSingleCard(idSiswa, nisn, encodedNama);
-  };
+  // Global Bridges
+  window.ADMIN = ADMIN;
+  window.CARD_GENERATOR = CARD_GENERATOR;
 
   // Student Form Modal Add/Edit
   const formStudent = document.getElementById("form-student-modal");
