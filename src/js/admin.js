@@ -245,18 +245,23 @@ export const ADMIN = {
   // ==========================================================================
   // 3. DATA MASTER SISWA CRUD & BULK ACTIONS
   // ==========================================================================
-  async loadStudents(idKelas = "", searchTerm = "") {
-    const tableBody = document.getElementById("students-table-body");
-    if (!tableBody) return;
-
-    tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center;">Memuat data siswa...</td></tr>`;
-
+  async loadStudents(idKelas = "", searchTerm = "", forceRefresh = false) {
     this.studentsState.currentClass = idKelas;
     this.studentsState.currentSearch = searchTerm;
 
-    const res = await API.getSiswa(idKelas);
-    this.studentsState.allList = res.data || [];
+    // 1. Jika data sudah ada di memory, render instan tanpa jeda (< 1ms)!
+    if (this.studentsState.allList && this.studentsState.allList.length > 0 && !forceRefresh) {
+      this.applyStudentFilters();
+    } else {
+      const tableBody = document.getElementById("students-table-body");
+      if (tableBody && (!this.studentsState.allList || this.studentsState.allList.length === 0)) {
+        tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Memuat data siswa...</td></tr>`;
+      }
+    }
 
+    // 2. Fetch/revalidate dari API (jika cache masih fresh, API akan return instan)
+    const res = await API.getSiswa(idKelas, forceRefresh);
+    this.studentsState.allList = res.data || [];
     this.applyStudentFilters();
   },
 

@@ -26,6 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   ADMIN.populateClassSelects();
 
+  // Prefetch data siswa di background agar navigasi CMS instan (0ms)
+  API.getSiswa().catch(() => {});
+
   // Jika sudah login sebelumnya, bisa langsung aktifkan CMS atau default Kiosk
   if (currentSessionUser) {
     updateCmsUserUI();

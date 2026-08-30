@@ -284,21 +284,68 @@ export const API = {
     };
   },
 
-  // 5. Data Siswa CRUD
-  async getSiswa(idKelas = "") {
-    if (CONFIG.DEFAULT_API_URL) {
-      try {
-        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=get_siswa&id_kelas=${idKelas}`);
-        return await res.json();
-      } catch (err) {}
+  // Cache Memory untuk Data Siswa
+  _cachedStudents: null,
+  _cachedStudentsTime: 0,
+
+  invalidateSiswaCache() {
+    this._cachedStudents = null;
+    this._cachedStudentsTime = 0;
+  },
+
+  // 5. Data Siswa CRUD (High Performance Cache-First)
+  async getSiswa(idKelas = "", forceRefresh = false) {
+    const now = Date.now();
+    const isCacheValid = this._cachedStudents && (now - this._cachedStudentsTime < 60000); // 60s cache
+
+    // 1. Jika data ada di memory dan tidak force refresh, return instan (< 1ms)!
+    if (isCacheValid && !forceRefresh) {
+      let list = this._cachedStudents;
+      if (idKelas) list = list.filter(s => s.id_kelas === idKelas);
+      return { status: "success", total: list.length, data: list, fromCache: true };
     }
 
+    // 2. Jika ada cache tapi sudah lebih dari 10s, return cache dulu sambil fetch di background
+    if (this._cachedStudents && !forceRefresh) {
+      const staleList = idKelas ? this._cachedStudents.filter(s => s.id_kelas === idKelas) : this._cachedStudents;
+      // Background revalidation
+      this._fetchSiswaFromBackend().catch(() => {});
+      return { status: "success", total: staleList.length, data: staleList, fromCache: true };
+    }
+
+    // 3. Fetch langsung dari backend
+    return await this._fetchSiswaFromBackend(idKelas);
+  },
+
+  async _fetchSiswaFromBackend(idKelas = "") {
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=get_siswa`);
+        const json = await res.json();
+        if (json.status === "success" && Array.isArray(json.data)) {
+          this._cachedStudents = json.data;
+          this._cachedStudentsTime = Date.now();
+          localStudents = json.data;
+          saveLocalState();
+
+          let list = this._cachedStudents;
+          if (idKelas) list = list.filter(s => s.id_kelas === idKelas);
+          return { status: "success", total: list.length, data: list };
+        }
+      } catch (err) {
+        console.warn("GAS get_siswa fetch error, using local fallback:", err);
+      }
+    }
+
+    this._cachedStudents = localStudents;
+    this._cachedStudentsTime = Date.now();
     let list = localStudents;
     if (idKelas) list = list.filter(s => s.id_kelas === idKelas);
     return { status: "success", total: list.length, data: list };
   },
 
   async saveSiswa(data) {
+    this.invalidateSiswaCache();
     if (CONFIG.DEFAULT_API_URL) {
       try {
         const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=save_siswa`, {
@@ -306,7 +353,10 @@ export const API = {
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify(data)
         });
-        return await res.json();
+        const json = await res.json();
+        if (json.status === "success") {
+          return json;
+        }
       } catch (err) {}
     }
 
@@ -340,6 +390,7 @@ export const API = {
   },
 
   async batchImportSiswa(students) {
+    this.invalidateSiswaCache();
     if (CONFIG.DEFAULT_API_URL) {
       try {
         const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=batch_import_siswa`, {
@@ -347,7 +398,8 @@ export const API = {
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({ students })
         });
-        return await res.json();
+        const json = await res.json();
+        if (json.status === "success") return json;
       } catch (err) {}
     }
 
@@ -394,6 +446,7 @@ export const API = {
   },
 
   async deleteSiswa(idSiswa) {
+    this.invalidateSiswaCache();
     if (CONFIG.DEFAULT_API_URL) {
       try {
         const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=delete_siswa`, {
@@ -418,6 +471,7 @@ export const API = {
   },
 
   async deleteMultipleSiswa(idSiswaList) {
+    this.invalidateSiswaCache();
     if (!idSiswaList || idSiswaList.length === 0) {
       return { status: "error", message: "Tidak ada siswa yang dipilih." };
     }

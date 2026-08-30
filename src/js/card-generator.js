@@ -26,9 +26,9 @@ export const CARD_GENERATOR = {
   },
 
   // ==========================================================================
-  // 1. TAMPILAN UTAMA: GRID FOLDER 24 ROMBEL
+  // 1. TAMPILAN UTAMA: GRID FOLDER 24 ROMBEL (INSTANT CACHE RENDER)
   // ==========================================================================
-  async renderFolderView() {
+  async renderFolderView(forceRefresh = false) {
     const foldersView = document.getElementById("cards-folders-view");
     const listView = document.getElementById("cards-list-view");
     const gridContainer = document.getElementById("class-folders-grid");
@@ -39,54 +39,65 @@ export const CARD_GENERATOR = {
 
     if (!gridContainer) return;
 
-    gridContainer.innerHTML = `
-      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
-        <div style="font-size: 2.5rem; margin-bottom: 0.5rem; animation: pulse 1.5s infinite;">⏳</div>
-        Memuat data folder rombongan belajar...
-      </div>
-    `;
+    // 1. Jika data sudah ada di memory, render folder grid SEKETIKA (< 1ms)!
+    if (this.state.allStudents && this.state.allStudents.length > 0 && !forceRefresh) {
+      this.renderFolderCardsGrid(gridContainer);
+    } else {
+      gridContainer.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem; animation: pulse 1.5s infinite;">⏳</div>
+          Memuat data rombongan belajar...
+        </div>
+      `;
+    }
 
     try {
-      const res = await API.getSiswa();
+      const res = await API.getSiswa("", forceRefresh);
       this.state.allStudents = res.data || [];
-
-      // Hitung jumlah siswa per kelas
-      const countMap = {};
-      this.state.allStudents.forEach(s => {
-        const k = s.id_kelas || "KLS-1A";
-        countMap[k] = (countMap[k] || 0) + 1;
-      });
-
-      gridContainer.innerHTML = CONFIG.ROMBEL_LIST.map(r => {
-        const count = countMap[r.id] || 0;
-        const gedung = r.tingkat <= 3 ? "Gedung A (Bawah)" : "Gedung B (Atas)";
-
-        return `
-          <div class="class-folder-card" onclick="CARD_GENERATOR.openClassFolder('${r.id}', '${r.nama}')">
-            <div class="folder-card-header">
-              <div class="folder-icon-wrapper">📁</div>
-              <div>
-                <div class="folder-info-title">${r.nama}</div>
-                <div class="folder-info-desc">Tingkat ${r.tingkat} • ${gedung}</div>
-              </div>
-            </div>
-
-            <div class="folder-card-footer">
-              <span class="folder-student-badge ${count === 0 ? 'empty' : ''}">
-                👥 ${count} Siswa
-              </span>
-              <span class="folder-action-text">
-                Buka Kelas ➔
-              </span>
-            </div>
-          </div>
-        `;
-      }).join("");
-
+      this.renderFolderCardsGrid(gridContainer);
     } catch (e) {
       console.error("Gagal memuat folder kelas:", e);
-      gridContainer.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #f87171;">Gagal memuat data rombel: ${e.message}</div>`;
+      if (!this.state.allStudents || this.state.allStudents.length === 0) {
+        gridContainer.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; color: #f87171;">Gagal memuat data rombel: ${e.message}</div>`;
+      }
     }
+  },
+
+  renderFolderCardsGrid(gridContainer) {
+    if (!gridContainer) return;
+
+    // Hitung jumlah siswa per kelas
+    const countMap = {};
+    (this.state.allStudents || []).forEach(s => {
+      const k = s.id_kelas || "KLS-1A";
+      countMap[k] = (countMap[k] || 0) + 1;
+    });
+
+    gridContainer.innerHTML = CONFIG.ROMBEL_LIST.map(r => {
+      const count = countMap[r.id] || 0;
+      const gedung = r.tingkat <= 3 ? "Gedung A (Bawah)" : "Gedung B (Atas)";
+
+      return `
+        <div class="class-folder-card" onclick="CARD_GENERATOR.openClassFolder('${r.id}', '${r.nama}')">
+          <div class="folder-card-header">
+            <div class="folder-icon-wrapper">📁</div>
+            <div>
+              <div class="folder-info-title">${r.nama}</div>
+              <div class="folder-info-desc">Tingkat ${r.tingkat} • ${gedung}</div>
+            </div>
+          </div>
+
+          <div class="folder-card-footer">
+            <span class="folder-student-badge ${count === 0 ? 'empty' : ''}">
+              👥 ${count} Siswa
+            </span>
+            <span class="folder-action-text">
+              Buka Kelas ➔
+            </span>
+          </div>
+        </div>
+      `;
+    }).join("");
   },
 
   // ==========================================================================
