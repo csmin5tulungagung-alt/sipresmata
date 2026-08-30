@@ -20,7 +20,8 @@ export const ADMIN = {
     pageSize: 10,
     selectedIds: new Set(),
     currentClass: "",
-    currentSearch: ""
+    currentSearch: "",
+    isSelectionMode: false
   },
 
   rekapState: {
@@ -307,13 +308,15 @@ export const ADMIN = {
     const start = isAll ? 0 : (currentPage - 1) * effectivePageSize;
     const pageItems = isAll ? list : list.slice(start, start + effectivePageSize);
 
+    const isSelection = this.studentsState.isSelectionMode;
+
     tableBody.innerHTML = pageItems.map((s, idx) => {
       const isChecked = this.studentsState.selectedIds.has(s.id_siswa);
       const rowNumber = start + idx + 1;
 
       return `
         <tr style="${isChecked ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
-          <td style="text-align: center;">
+          <td class="col-checkbox-student" style="text-align: center; ${isSelection ? '' : 'display: none;'}">
             <input type="checkbox" class="table-checkbox student-row-check" value="${s.id_siswa}" ${isChecked ? 'checked' : ''} onchange="ADMIN.toggleStudentSelection('${s.id_siswa}', this.checked)">
           </td>
           <td>${rowNumber}</td>
@@ -333,13 +336,30 @@ export const ADMIN = {
       `;
     }).join("");
 
-    // Update Header Checkbox
+    // Update Header Checkbox & Header Column Visibility
+    const thCheckbox = document.getElementById("th-checkbox-students");
+    if (thCheckbox) thCheckbox.style.display = isSelection ? "table-cell" : "none";
+
     const headerCheck = document.getElementById("check-all-students");
+    const visibleIds = pageItems.map(s => s.id_siswa);
+    const allVisibleChecked = visibleIds.length > 0 && visibleIds.every(id => this.studentsState.selectedIds.has(id));
+
     if (headerCheck) {
-      const visibleIds = pageItems.map(s => s.id_siswa);
-      const allVisibleChecked = visibleIds.length > 0 && visibleIds.every(id => this.studentsState.selectedIds.has(id));
       headerCheck.checked = allVisibleChecked;
       headerCheck.onchange = (e) => this.toggleSelectAllVisibleStudents(visibleIds, e.target.checked);
+    }
+
+    const selectAllText = document.getElementById("btn-students-select-all-text");
+    if (selectAllText) {
+      selectAllText.textContent = allVisibleChecked ? "Batalkan Semua" : "Pilih Semua";
+    }
+
+    const btnToggle = document.getElementById("btn-toggle-select-students");
+    if (btnToggle) {
+      btnToggle.innerHTML = isSelection ? "✕ Selesai Memilih" : "🔘 Pilih Data Siswa";
+      btnToggle.style.background = isSelection ? "rgba(239, 68, 68, 0.15)" : "";
+      btnToggle.style.borderColor = isSelection ? "rgba(239, 68, 68, 0.4)" : "";
+      btnToggle.style.color = isSelection ? "#fca5a5" : "";
     }
 
     this.updateBulkActionBar();
@@ -360,6 +380,43 @@ export const ADMIN = {
         this.renderStudentsTable();
       }
     );
+  },
+
+  toggleSelectionMode() {
+    this.studentsState.isSelectionMode = !this.studentsState.isSelectionMode;
+    if (!this.studentsState.isSelectionMode) {
+      this.studentsState.selectedIds.clear();
+    }
+    this.renderStudentsTable();
+  },
+
+  exitSelectionMode() {
+    this.studentsState.isSelectionMode = false;
+    this.studentsState.selectedIds.clear();
+    this.renderStudentsTable();
+  },
+
+  toggleSelectAllVisible() {
+    const list = this.studentsState.filteredList;
+    const pageSize = this.studentsState.pageSize;
+    const isAll = pageSize === "ALL";
+    const effectivePageSize = isAll ? list.length : parseInt(pageSize, 10);
+    const currentPage = this.studentsState.currentPage;
+    const start = isAll ? 0 : (currentPage - 1) * effectivePageSize;
+    const pageItems = isAll ? list : list.slice(start, start + effectivePageSize);
+    const visibleIds = pageItems.map(s => s.id_siswa);
+
+    const allChecked = visibleIds.length > 0 && visibleIds.every(id => this.studentsState.selectedIds.has(id));
+
+    visibleIds.forEach(id => {
+      if (allChecked) {
+        this.studentsState.selectedIds.delete(id);
+      } else {
+        this.studentsState.selectedIds.add(id);
+      }
+    });
+
+    this.renderStudentsTable();
   },
 
   toggleStudentSelection(idSiswa, isChecked) {
@@ -394,7 +451,7 @@ export const ADMIN = {
 
     if (!bulkBar) return;
 
-    if (selectedCount > 0) {
+    if (this.studentsState.isSelectionMode) {
       bulkBar.classList.add("active");
       if (countBadge) countBadge.textContent = selectedCount;
     } else {
@@ -404,7 +461,10 @@ export const ADMIN = {
 
   async deleteSelectedStudents() {
     const count = this.studentsState.selectedIds.size;
-    if (count === 0) return;
+    if (count === 0) {
+      alert("Pilih minimal 1 siswa untuk dihapus.");
+      return;
+    }
 
     if (confirm(`Apakah Anda yakin ingin menghapus ${count} data siswa yang dipilih? Tindakan ini tidak dapat dibatalkan.`)) {
       const ids = Array.from(this.studentsState.selectedIds);
@@ -416,7 +476,7 @@ export const ADMIN = {
         } else {
           alert(res.message || `${count} siswa berhasil dihapus.`);
         }
-        this.clearStudentSelection();
+        this.exitSelectionMode();
         this.loadStudents(this.studentsState.currentClass, this.studentsState.currentSearch);
       } else {
         if (typeof showToast === 'function') {

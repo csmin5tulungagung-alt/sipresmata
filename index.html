@@ -299,6 +299,9 @@
             <!-- Bulk Action Bar -->
             <div id="students-bulk-bar" class="bulk-action-bar">
               <div class="bulk-selection-info">
+                <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="ADMIN.toggleSelectAllVisible()">
+                  ☑️ <span id="btn-students-select-all-text">Pilih Semua</span>
+                </button>
                 <span class="bulk-selection-badge" id="bulk-selected-count">0</span>
                 <span>Siswa dipilih</span>
               </div>
@@ -306,18 +309,23 @@
                 <button type="button" class="btn-danger-bulk" onclick="ADMIN.deleteSelectedStudents()">
                   🗑️ Hapus Siswa Terpilih
                 </button>
-                <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="ADMIN.clearStudentSelection()">
-                  ✕ Batal
+                <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="ADMIN.exitSelectionMode()">
+                  ✕ Selesai
                 </button>
               </div>
             </div>
 
             <div class="table-filter-bar">
-              <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 450px;">
-                <input type="text" id="search-student-input" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1;" oninput="ADMIN.handleStudentSearch(this.value)">
+              <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 550px; flex-wrap: wrap;">
+                <input type="text" id="search-student-input" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1; min-width: 200px;" oninput="ADMIN.handleStudentSearch(this.value)">
                 <select id="filter-student-class" class="form-control select-kelas-rombel" data-include-all="true" onchange="ADMIN.handleStudentClassFilter(this.value)">
                   <!-- Injected -->
                 </select>
+              </div>
+              <div>
+                <button type="button" id="btn-toggle-select-students" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="ADMIN.toggleSelectionMode()">
+                  🔘 Pilih Data Siswa
+                </button>
               </div>
             </div>
 
@@ -325,7 +333,7 @@
               <table class="custom-data-table">
                 <thead>
                   <tr>
-                    <th style="width: 4%; text-align: center;">
+                    <th id="th-checkbox-students" style="width: 4%; text-align: center; display: none;">
                       <input type="checkbox" id="check-all-students" class="table-checkbox" title="Pilih Semua Siswa">
                     </th>
                     <th style="width: 5%;">No</th>
@@ -466,6 +474,9 @@
               <!-- Bulk Action Bar -->
               <div id="cards-bulk-bar" class="bulk-action-bar">
                 <div class="bulk-selection-info">
+                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="CARD_GENERATOR.toggleSelectAllVisible()">
+                    ☑️ <span id="btn-cards-select-all-text">Pilih Semua</span>
+                  </button>
                   <span class="bulk-selection-badge" id="cards-bulk-count">0</span>
                   <span>Siswa dipilih</span>
                 </div>
@@ -476,16 +487,21 @@
                   <button type="button" class="btn btn-secondary" style="background: rgba(2, 132, 199, 0.2); border-color: #0284c7; color: #38bdf8; padding: 0.45rem 0.85rem; font-size: 0.85rem; font-weight: 700;" onclick="CARD_GENERATOR.exportSelectedZip()">
                     📦 Unduh ZIP Terpilih
                   </button>
-                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="CARD_GENERATOR.clearSelection()">
-                    ✕ Batal
+                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="CARD_GENERATOR.exitSelectionMode()">
+                    ✕ Selesai
                   </button>
                 </div>
               </div>
 
-              <!-- Search Bar -->
+              <!-- Search Bar & Toggle Select -->
               <div class="table-filter-bar">
                 <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 450px;">
                   <input type="text" id="search-card-student" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1;" oninput="CARD_GENERATOR.handleSearch(this.value)">
+                </div>
+                <div>
+                  <button type="button" id="btn-toggle-select-cards" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="CARD_GENERATOR.toggleSelectionMode()">
+                    🔘 Pilih Siswa
+                  </button>
                 </div>
               </div>
 
@@ -494,7 +510,7 @@
                 <table class="custom-data-table">
                   <thead>
                     <tr>
-                      <th style="width: 4%; text-align: center;">
+                      <th id="th-checkbox-cards" style="width: 4%; text-align: center; display: none;">
                         <input type="checkbox" id="check-all-card-students" class="table-checkbox" title="Pilih Semua Siswa">
                       </th>
                       <th style="width: 5%;">No</th>

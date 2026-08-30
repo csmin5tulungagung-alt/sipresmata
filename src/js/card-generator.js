@@ -21,6 +21,7 @@ export const CARD_GENERATOR = {
     pageSize: 10,
     selectedIds: new Set(),
     searchTerm: "",
+    isSelectionMode: false,
     previewStudent: null
   },
 
@@ -166,6 +167,8 @@ export const CARD_GENERATOR = {
     const start = isAll ? 0 : (currentPage - 1) * effectivePageSize;
     const pageItems = isAll ? list : list.slice(start, start + effectivePageSize);
 
+    const isSelection = this.state.isSelectionMode;
+
     tableBody.innerHTML = pageItems.map((s, idx) => {
       const isChecked = this.state.selectedIds.has(s.id_siswa);
       const rowNum = start + idx + 1;
@@ -173,7 +176,7 @@ export const CARD_GENERATOR = {
 
       return `
         <tr style="${isChecked ? 'background: rgba(2, 132, 199, 0.08);' : ''}">
-          <td style="text-align: center;">
+          <td class="col-checkbox-card" style="text-align: center; ${isSelection ? '' : 'display: none;'}">
             <input type="checkbox" class="table-checkbox card-student-row-check" value="${s.id_siswa}" ${isChecked ? 'checked' : ''} onchange="CARD_GENERATOR.toggleSelection('${s.id_siswa}', this.checked)">
           </td>
           <td>${rowNum}</td>
@@ -198,12 +201,30 @@ export const CARD_GENERATOR = {
       `;
     }).join("");
 
-    // Update Header Checkbox
+    // Update Header Checkbox & Header Column Visibility
+    const thCheckbox = document.getElementById("th-checkbox-cards");
+    if (thCheckbox) thCheckbox.style.display = isSelection ? "table-cell" : "none";
+
     const headerCheck = document.getElementById("check-all-card-students");
+    const visibleIds = pageItems.map(s => s.id_siswa);
+    const allVisibleChecked = visibleIds.length > 0 && visibleIds.every(id => this.state.selectedIds.has(id));
+
     if (headerCheck) {
-      const visibleIds = pageItems.map(s => s.id_siswa);
-      headerCheck.checked = visibleIds.length > 0 && visibleIds.every(id => this.state.selectedIds.has(id));
+      headerCheck.checked = allVisibleChecked;
       headerCheck.onchange = (e) => this.toggleSelectAll(visibleIds, e.target.checked);
+    }
+
+    const selectAllText = document.getElementById("btn-cards-select-all-text");
+    if (selectAllText) {
+      selectAllText.textContent = allVisibleChecked ? "Batalkan Semua" : "Pilih Semua";
+    }
+
+    const btnToggle = document.getElementById("btn-toggle-select-cards");
+    if (btnToggle) {
+      btnToggle.innerHTML = isSelection ? "✕ Selesai Memilih" : "🔘 Pilih Siswa";
+      btnToggle.style.background = isSelection ? "rgba(2, 132, 199, 0.15)" : "";
+      btnToggle.style.borderColor = isSelection ? "rgba(2, 132, 199, 0.4)" : "";
+      btnToggle.style.color = isSelection ? "#38bdf8" : "";
     }
 
     this.updateBulkBar();
@@ -229,6 +250,43 @@ export const CARD_GENERATOR = {
   // ==========================================================================
   // 3. CHECKLIST MULTI-SELECT & BULK ACTIONS
   // ==========================================================================
+  toggleSelectionMode() {
+    this.state.isSelectionMode = !this.state.isSelectionMode;
+    if (!this.state.isSelectionMode) {
+      this.state.selectedIds.clear();
+    }
+    this.renderCardsTable();
+  },
+
+  exitSelectionMode() {
+    this.state.isSelectionMode = false;
+    this.state.selectedIds.clear();
+    this.renderCardsTable();
+  },
+
+  toggleSelectAllVisible() {
+    const list = this.state.filteredStudents;
+    const pageSize = this.state.pageSize;
+    const isAll = pageSize === "ALL";
+    const effectivePageSize = isAll ? list.length : parseInt(pageSize, 10);
+    const currentPage = this.state.currentPage;
+    const start = isAll ? 0 : (currentPage - 1) * effectivePageSize;
+    const pageItems = isAll ? list : list.slice(start, start + effectivePageSize);
+    const visibleIds = pageItems.map(s => s.id_siswa);
+
+    const allChecked = visibleIds.length > 0 && visibleIds.every(id => this.state.selectedIds.has(id));
+
+    visibleIds.forEach(id => {
+      if (allChecked) {
+        this.state.selectedIds.delete(id);
+      } else {
+        this.state.selectedIds.add(id);
+      }
+    });
+
+    this.renderCardsTable();
+  },
+
   toggleSelection(idSiswa, isChecked) {
     if (isChecked) {
       this.state.selectedIds.add(idSiswa);
@@ -261,7 +319,7 @@ export const CARD_GENERATOR = {
 
     if (!bulkBar) return;
 
-    if (selectedCount > 0) {
+    if (this.state.isSelectionMode) {
       bulkBar.classList.add("active");
       if (countBadge) countBadge.textContent = selectedCount;
     } else {
