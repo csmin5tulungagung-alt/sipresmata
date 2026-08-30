@@ -488,16 +488,33 @@ window.editStudent = async function(idSiswa) {
   openModal("modal-student-form");
 };
 
-window.deleteStudent = async function(idSiswa, encodedNama) {
+window.deleteStudent = function(idSiswa, encodedNama) {
   const nama = decodeURIComponent(encodedNama || "ini");
   if (confirm(`Apakah Anda yakin ingin menghapus data siswa ${nama}?`)) {
-    const res = await API.deleteSiswa(idSiswa);
-    if (res.status === "success") {
-      showToast(res.message || "Siswa berhasil dihapus.", "success");
-      ADMIN.loadStudents(ADMIN.studentsState.currentClass, ADMIN.studentsState.currentSearch);
-    } else {
-      showToast(res.message || "Gagal menghapus siswa.", "danger");
+    const cleanId = String(idSiswa || "").trim().toUpperCase();
+
+    // 1. OPTIMISTIC INSTANT UPDATE (0 ms): Hapus seketika dari tabel & memori
+    if (window.ADMIN) {
+      ADMIN.studentsState.allList = (ADMIN.studentsState.allList || []).filter(s => 
+        String(s.id_siswa || "").trim().toUpperCase() !== cleanId && 
+        String(s.nisn || "").trim().toUpperCase() !== cleanId
+      );
+      ADMIN.applyStudentFilters();
     }
+
+    if (window.CARD_GENERATOR) {
+      window.CARD_GENERATOR.state.allStudents = (window.CARD_GENERATOR.state.allStudents || []).filter(s => 
+        String(s.id_siswa || "").trim().toUpperCase() !== cleanId && 
+        String(s.nisn || "").trim().toUpperCase() !== cleanId
+      );
+    }
+
+    showToast(`✓ Data siswa ${nama} berhasil dihapus.`, "success");
+
+    // 2. Kirim sinkronisasi ke backend di latar belakang
+    API.deleteSiswa(idSiswa).catch(err => {
+      console.warn("Background delete error:", err);
+    });
   }
 };
 

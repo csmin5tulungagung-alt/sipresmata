@@ -473,33 +473,28 @@ export const ADMIN = {
 
     if (confirm(`Apakah Anda yakin ingin menghapus ${count} data siswa yang dipilih? Tindakan ini tidak dapat dibatalkan.`)) {
       const ids = Array.from(this.studentsState.selectedIds);
-      const btnDelete = document.querySelector("#students-bulk-bar .btn-danger-bulk");
-      if (btnDelete) {
-        btnDelete.disabled = true;
-        btnDelete.innerHTML = "⏳ Menghapus data...";
+      const idSet = new Set(ids.map(id => String(id || "").trim().toUpperCase()));
+
+      // 1. OPTIMISTIC INSTANT UPDATE (0 ms): Hapus seketika dari tabel & memori tanpa jeda loading
+      this.studentsState.allList = (this.studentsState.allList || []).filter(s => 
+        !idSet.has(String(s.id_siswa || "").trim().toUpperCase()) && 
+        !idSet.has(String(s.nisn || "").trim().toUpperCase())
+      );
+      this.applyStudentFilters();
+      this.exitSelectionMode();
+      showToast(`✓ ${count} data siswa berhasil dihapus.`, "success");
+
+      if (window.CARD_GENERATOR) {
+        window.CARD_GENERATOR.state.allStudents = (window.CARD_GENERATOR.state.allStudents || []).filter(s => 
+          !idSet.has(String(s.id_siswa || "").trim().toUpperCase()) && 
+          !idSet.has(String(s.nisn || "").trim().toUpperCase())
+        );
       }
 
-      try {
-        const res = await API.deleteMultipleSiswa(ids);
-        
-        if (res.status === "success") {
-          showToast(res.message || `${count} siswa berhasil dihapus.`, "success");
-          this.exitSelectionMode();
-          await this.loadStudents(this.studentsState.currentClass, this.studentsState.currentSearch, true);
-          if (window.CARD_GENERATOR) {
-            window.CARD_GENERATOR.state.allStudents = [];
-          }
-        } else {
-          showToast(res.message || "Gagal menghapus siswa.", "danger");
-        }
-      } catch (err) {
-        showToast("Terjadi kesalahan saat menghapus: " + err.message, "danger");
-      } finally {
-        if (btnDelete) {
-          btnDelete.disabled = false;
-          btnDelete.innerHTML = `🗑️ Hapus Siswa Terpilih`;
-        }
-      }
+      // 2. Kirim sinkronisasi ke backend Google Apps Script di latar belakang
+      API.deleteMultipleSiswa(ids).catch(err => {
+        console.warn("Background delete sync error:", err);
+      });
     }
   },
 

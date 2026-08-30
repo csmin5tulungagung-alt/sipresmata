@@ -347,50 +347,55 @@ export const CARD_GENERATOR = {
 
     if (confirm(`Apakah Anda yakin ingin menghapus ${count} data siswa yang dipilih? Tindakan ini tidak dapat dibatalkan.`)) {
       const ids = Array.from(this.state.selectedIds);
-      const btnDelete = document.querySelector("#cards-bulk-bar .btn-danger-bulk");
-      if (btnDelete) {
-        btnDelete.disabled = true;
-        btnDelete.innerHTML = "⏳ Menghapus data...";
+      const idSet = new Set(ids.map(id => String(id || "").trim().toUpperCase()));
+
+      // 1. OPTIMISTIC INSTANT UPDATE (0 ms): Hapus seketika dari tabel & memori
+      this.state.allStudents = (this.state.allStudents || []).filter(s => 
+        !idSet.has(String(s.id_siswa || "").trim().toUpperCase()) && 
+        !idSet.has(String(s.nisn || "").trim().toUpperCase())
+      );
+      this.clearSelection();
+      this.openClassFolder(this.state.selectedClassId, this.state.selectedClassName);
+      showToast(`✓ ${count} data siswa berhasil dihapus.`, "success");
+
+      if (window.ADMIN) {
+        window.ADMIN.studentsState.allList = (window.ADMIN.studentsState.allList || []).filter(s => 
+          !idSet.has(String(s.id_siswa || "").trim().toUpperCase()) && 
+          !idSet.has(String(s.nisn || "").trim().toUpperCase())
+        );
       }
 
-      try {
-        const res = await API.deleteMultipleSiswa(ids);
-        
-        if (res.status === "success") {
-          showToast(res.message || `${count} siswa berhasil dihapus.`, "success");
-          this.clearSelection();
-          // Force refresh data dari database
-          const refreshRes = await API.getSiswa("", true);
-          this.state.allStudents = refreshRes.data || [];
-          this.openClassFolder(this.state.selectedClassId, this.state.selectedClassName);
-        } else {
-          showToast(res.message || "Gagal menghapus siswa.", "danger");
-        }
-      } catch (err) {
-        showToast("Terjadi kesalahan saat menghapus: " + err.message, "danger");
-      } finally {
-        if (btnDelete) {
-          btnDelete.disabled = false;
-          btnDelete.innerHTML = `🗑️ Hapus Siswa Terpilih`;
-        }
-      }
+      // 2. Kirim sinkronisasi ke backend di latar belakang
+      API.deleteMultipleSiswa(ids).catch(err => {
+        console.warn("Background bulk delete error:", err);
+      });
     }
   },
 
   async deleteStudent(idSiswa, encodedNama) {
     const nama = decodeURIComponent(encodedNama || "siswa ini");
     if (confirm(`Apakah Anda yakin ingin menghapus data siswa ${nama}?`)) {
-      const res = await API.deleteSiswa(idSiswa);
-      if (res.status === "success") {
-        if (typeof showToast === 'function') {
-          showToast(res.message || "Siswa berhasil dihapus.", "success");
-        }
-        const refreshRes = await API.getSiswa();
-        this.state.allStudents = refreshRes.data || [];
-        this.openClassFolder(this.state.selectedClassId, this.state.selectedClassName);
-      } else {
-        alert(res.message || "Gagal menghapus siswa.");
+      const cleanId = String(idSiswa || "").trim().toUpperCase();
+
+      // 1. OPTIMISTIC INSTANT UPDATE (0 ms): Hapus seketika dari tabel & memori
+      this.state.allStudents = (this.state.allStudents || []).filter(s => 
+        String(s.id_siswa || "").trim().toUpperCase() !== cleanId && 
+        String(s.nisn || "").trim().toUpperCase() !== cleanId
+      );
+      this.openClassFolder(this.state.selectedClassId, this.state.selectedClassName);
+      showToast(`✓ Siswa ${nama} berhasil dihapus.`, "success");
+
+      if (window.ADMIN) {
+        window.ADMIN.studentsState.allList = (window.ADMIN.studentsState.allList || []).filter(s => 
+          String(s.id_siswa || "").trim().toUpperCase() !== cleanId && 
+          String(s.nisn || "").trim().toUpperCase() !== cleanId
+        );
       }
+
+      // 2. Kirim sinkronisasi ke backend di latar belakang
+      API.deleteSiswa(idSiswa).catch(err => {
+        console.warn("Background delete error:", err);
+      });
     }
   },
 
