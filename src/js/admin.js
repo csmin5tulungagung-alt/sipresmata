@@ -38,7 +38,9 @@ export const ADMIN = {
     pageSize: 10,
     periode: {},
     idKelas: "",
-    summary: {}
+    summary: {},
+    isSelectionMode: false,
+    selectedIds: new Set()
   },
 
   dashboardState: {
@@ -208,7 +210,7 @@ export const ADMIN = {
 
     const scans = this.dashboardState.scans;
     if (scans.length === 0) {
-      feedContainer.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Belum ada data scan presensi hari ini.</td></tr>`;
+      feedContainer.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">Belum ada data scan presensi hari ini.</td></tr>`;
       this.renderPagination("dashboard-feed-pagination", 0, 1, 10, () => {}, () => {});
       return;
     }
@@ -230,6 +232,11 @@ export const ADMIN = {
             ${s.status_kehadiran}
           </span>
         </td>
+        <td style="text-align: center;">
+          <button class="btn btn-secondary btn-icon" onclick="ADMIN.deleteDashboardScan('${s.id_absensi}', '${encodeURIComponent(s.nama_lengkap)}')" title="Hapus Catatan Presensi Ini" style="color: #f87171; padding: 0.35rem 0.5rem;">
+            🗑️
+          </button>
+        </td>
       </tr>
     `).join("");
 
@@ -248,6 +255,29 @@ export const ADMIN = {
         this.renderDashboardFeed();
       }
     );
+  },
+
+  async deleteDashboardScan(idAbsensi, encodedNama) {
+    const namaSiswa = decodeURIComponent(encodedNama || "siswa ini");
+    const confirmDelete = confirm(`Apakah Anda yakin ingin menghapus data presensi hari ini untuk ${namaSiswa}?`);
+    if (!confirmDelete) return;
+
+    // Optimistic UI Removal
+    const idx = this.dashboardState.scans.findIndex(s => s.id_absensi === idAbsensi);
+    if (idx !== -1) {
+      this.dashboardState.scans.splice(idx, 1);
+      this.renderDashboardFeed();
+    }
+
+    showToast(`Data presensi ${namaSiswa} berhasil dihapus.`, "success");
+
+    // Sync in background
+    try {
+      await API.deleteAbsensi(idAbsensi);
+      this.loadDashboard();
+    } catch (e) {
+      console.warn("Delete dashboard scan error:", e);
+    }
   },
 
   // ==========================================================================
@@ -972,7 +1002,8 @@ export const ADMIN = {
     const total = items.length;
 
     if (total === 0) {
-      tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Tidak ada riwayat presensi pada rentang tanggal tersebut.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem;">Tidak ada riwayat presensi pada rentang tanggal tersebut.</td></tr>`;
+      this.updateRekapBulkActionBar();
       this.renderPagination("rekap-pagination", 0, 1, 10, () => {}, () => {});
       return;
     }
@@ -984,27 +1015,67 @@ export const ADMIN = {
 
     const start = isAll ? 0 : (currentPage - 1) * effectivePageSize;
     const pageItems = isAll ? items : items.slice(start, start + effectivePageSize);
+    const isSelection = this.rekapState.isSelectionMode;
 
-    tableBody.innerHTML = pageItems.map((item, idx) => `
-      <tr>
-        <td>${start + idx + 1}</td>
-        <td>${item.tanggal}</td>
-        <td><code>${item.nisn}</code></td>
-        <td><strong>${item.nama_lengkap}</strong></td>
-        <td>${item.nama_kelas}</td>
-        <td>${item.jam_masuk || '-'}</td>
-        <td>
-          <span class="badge ${
-            item.status_kehadiran === 'HADIR' ? 'badge-success' :
-            item.status_kehadiran === 'TERLAMBAT' ? 'badge-warning' :
-            item.status_kehadiran === 'IZIN' ? 'badge-info' :
-            item.status_kehadiran === 'SAKIT' ? 'badge-purple' : 'badge-danger'
-          }">
-            ${item.status_kehadiran}
-          </span>
-        </td>
-      </tr>
-    `).join("");
+    tableBody.innerHTML = pageItems.map((item, idx) => {
+      const isChecked = this.rekapState.selectedIds.has(item.id_absensi);
+      return `
+        <tr style="${isChecked ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
+          <td class="col-checkbox-rekap" style="text-align: center; ${isSelection ? '' : 'display: none;'}">
+            <input type="checkbox" class="table-checkbox rekap-row-check" value="${item.id_absensi}" ${isChecked ? 'checked' : ''} onchange="ADMIN.toggleRekapItemSelection('${item.id_absensi}', this.checked)">
+          </td>
+          <td>${start + idx + 1}</td>
+          <td>${item.tanggal}</td>
+          <td><code>${item.nisn}</code></td>
+          <td><strong>${item.nama_lengkap}</strong></td>
+          <td><span class="badge badge-info">${item.nama_kelas || item.id_kelas}</span></td>
+          <td>${item.jam_masuk || '-'}</td>
+          <td>
+            <span class="badge ${
+              item.status_kehadiran === 'HADIR' ? 'badge-success' :
+              item.status_kehadiran === 'TERLAMBAT' ? 'badge-warning' :
+              item.status_kehadiran === 'IZIN' ? 'badge-info' :
+              item.status_kehadiran === 'SAKIT' ? 'badge-purple' : 'badge-danger'
+            }">
+              ${item.status_kehadiran}
+            </span>
+          </td>
+          <td style="text-align: center;">
+            <button class="btn btn-secondary btn-icon" onclick="ADMIN.deleteRekapItem('${item.id_absensi}', '${encodeURIComponent(item.nama_lengkap)}', '${item.tanggal}')" title="Hapus Data Presensi Ini" style="color: #f87171; padding: 0.35rem 0.5rem;">
+              🗑️
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    // Update Header Checkbox & Column Visibility
+    const thCheckbox = document.getElementById("th-checkbox-rekap");
+    if (thCheckbox) thCheckbox.style.display = isSelection ? "table-cell" : "none";
+
+    const headerCheck = document.getElementById("check-all-rekap");
+    const visibleIds = pageItems.map(item => item.id_absensi);
+    const allVisibleChecked = visibleIds.length > 0 && visibleIds.every(id => this.rekapState.selectedIds.has(id));
+
+    if (headerCheck) {
+      headerCheck.checked = allVisibleChecked;
+      headerCheck.onchange = (e) => this.toggleSelectAllVisibleRekapRows(visibleIds, e.target.checked);
+    }
+
+    const selectAllText = document.getElementById("btn-rekap-select-all-text");
+    if (selectAllText) {
+      selectAllText.textContent = allVisibleChecked ? "Batalkan Semua" : "Pilih Semua";
+    }
+
+    const btnToggle = document.getElementById("btn-toggle-select-rekap");
+    if (btnToggle) {
+      btnToggle.innerHTML = isSelection ? "✕ Selesai Memilih" : "🔘 Pilih Data Presensi";
+      btnToggle.style.background = isSelection ? "rgba(239, 68, 68, 0.15)" : "";
+      btnToggle.style.borderColor = isSelection ? "rgba(239, 68, 68, 0.4)" : "";
+      btnToggle.style.color = isSelection ? "#fca5a5" : "";
+    }
+
+    this.updateRekapBulkActionBar();
 
     this.renderPagination(
       "rekap-pagination",
@@ -1021,6 +1092,122 @@ export const ADMIN = {
         this.renderRekapTable();
       }
     );
+  },
+
+  toggleRekapSelectionMode() {
+    this.rekapState.isSelectionMode = !this.rekapState.isSelectionMode;
+    if (!this.rekapState.isSelectionMode) {
+      this.rekapState.selectedIds.clear();
+    }
+    this.renderRekapTable();
+  },
+
+  exitRekapSelectionMode() {
+    this.rekapState.isSelectionMode = false;
+    this.rekapState.selectedIds.clear();
+    this.renderRekapTable();
+  },
+
+  toggleSelectAllVisibleRekap() {
+    const items = this.rekapState.items || [];
+    if (items.length === 0) return;
+
+    const allChecked = items.every(item => this.rekapState.selectedIds.has(item.id_absensi));
+
+    if (allChecked) {
+      items.forEach(item => this.rekapState.selectedIds.delete(item.id_absensi));
+    } else {
+      items.forEach(item => this.rekapState.selectedIds.add(item.id_absensi));
+    }
+
+    this.renderRekapTable();
+  },
+
+  toggleRekapItemSelection(idAbsensi, isChecked) {
+    if (isChecked) {
+      this.rekapState.selectedIds.add(idAbsensi);
+    } else {
+      this.rekapState.selectedIds.delete(idAbsensi);
+    }
+    this.renderRekapTable();
+  },
+
+  toggleSelectAllVisibleRekapRows(visibleIds, isChecked) {
+    visibleIds.forEach(id => {
+      if (isChecked) {
+        this.rekapState.selectedIds.add(id);
+      } else {
+        this.rekapState.selectedIds.delete(id);
+      }
+    });
+    this.renderRekapTable();
+  },
+
+  updateRekapBulkActionBar() {
+    const bulkBar = document.getElementById("rekap-bulk-bar");
+    const countBadge = document.getElementById("rekap-bulk-count");
+    const selectAllText = document.getElementById("btn-rekap-select-all-text");
+    const selectedCount = this.rekapState.selectedIds.size;
+    const totalItems = (this.rekapState.items || []).length;
+
+    if (!bulkBar) return;
+
+    if (this.rekapState.isSelectionMode) {
+      bulkBar.classList.add("active");
+      if (countBadge) countBadge.textContent = selectedCount;
+      if (selectAllText) {
+        selectAllText.textContent = (selectedCount > 0 && selectedCount === totalItems) ? "Batalkan Semua" : "Pilih Semua";
+      }
+    } else {
+      bulkBar.classList.remove("active");
+    }
+  },
+
+  async deleteRekapItem(idAbsensi, encodedNama, tanggal) {
+    const namaSiswa = decodeURIComponent(encodedNama || "siswa ini");
+    const confirmDelete = confirm(`Apakah Anda yakin ingin menghapus data presensi ${namaSiswa} pada tanggal ${tanggal}?`);
+    if (!confirmDelete) return;
+
+    // Optimistic UI
+    const idx = this.rekapState.items.findIndex(item => item.id_absensi === idAbsensi);
+    if (idx !== -1) {
+      this.rekapState.items.splice(idx, 1);
+      this.renderRekapTable();
+    }
+
+    showToast(`Data presensi ${namaSiswa} (${tanggal}) berhasil dihapus.`, "success");
+
+    // Background sync
+    API.deleteAbsensi(idAbsensi).catch(err => {
+      console.warn("Delete rekap error:", err);
+    });
+  },
+
+  async deleteSelectedRekap() {
+    const count = this.rekapState.selectedIds.size;
+    if (count === 0) {
+      showToast("Pilih minimal 1 data presensi untuk dihapus.", "warning");
+      return;
+    }
+
+    const confirmDelete = confirm(`⚠️ PERINGATAN:\nApakah Anda yakin ingin menghapus ${count} data presensi terpilih secara permanen?`);
+    if (!confirmDelete) return;
+
+    const ids = Array.from(this.rekapState.selectedIds);
+    const idSet = new Set(ids);
+
+    // Optimistic UI
+    this.rekapState.items = this.rekapState.items.filter(item => !idSet.has(item.id_absensi));
+    this.rekapState.selectedIds.clear();
+    this.rekapState.isSelectionMode = false;
+    this.renderRekapTable();
+
+    showToast(`✓ ${count} data presensi berhasil dihapus.`, "success");
+
+    // Background sync
+    API.deleteMultipleAbsensi(ids).catch(err => {
+      console.warn("Bulk delete rekap error:", err);
+    });
   },
 
   // ==========================================================================

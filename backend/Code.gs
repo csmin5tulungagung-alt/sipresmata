@@ -61,6 +61,12 @@ function handleRequest(e, method) {
       case "manual_absen":
         result = handleManualAbsen(requestData);
         break;
+      case "delete_absensi":
+        result = handleDeleteAbsensi(requestData);
+        break;
+      case "delete_multiple_absensi":
+        result = handleDeleteMultipleAbsensi(requestData);
+        break;
 
       // 2. Data Master Siswa & Kelas
       case "get_siswa":
@@ -399,6 +405,64 @@ function handleManualAbsen(req) {
   return {
     status: "success",
     message: "Status presensi manual siswa " + siswa.nama_lengkap + " berhasil disimpan sebagai " + status + "."
+  };
+}
+
+function handleDeleteAbsensi(req) {
+  var idAbsensi = (req.id_absensi || "").trim();
+  if (!idAbsensi) {
+    return { status: "error", code: "MISSING_ID", message: "ID Presensi wajib disertakan." };
+  }
+
+  var db = getDB();
+  var sheet = db.getSheetByName("data_absensi");
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === idAbsensi) {
+      var tgl = data[i][1];
+      sheet.deleteRow(i + 1);
+      clearCache();
+      catatLog(db, req.aktor || "ADMIN", "DELETE_ABSENSI", "Menghapus data presensi " + idAbsensi + " tanggal " + tgl);
+      return { status: "success", message: "Data presensi " + idAbsensi + " berhasil dihapus." };
+    }
+  }
+
+  return { status: "error", code: "NOT_FOUND", message: "Data presensi dengan ID " + idAbsensi + " tidak ditemukan." };
+}
+
+function handleDeleteMultipleAbsensi(req) {
+  var idList = req.id_list || [];
+  if (!Array.isArray(idList) || idList.length === 0) {
+    return { status: "error", code: "EMPTY_LIST", message: "Daftar ID presensi yang akan dihapus tidak boleh kosong." };
+  }
+
+  var targetMap = {};
+  for (var k = 0; k < idList.length; k++) {
+    targetMap[String(idList[k]).trim()] = true;
+  }
+
+  var db = getDB();
+  var sheet = db.getSheetByName("data_absensi");
+  var data = sheet.getDataRange().getValues();
+  var deletedCount = 0;
+
+  // Hapus dari baris terbawah ke atas agar index baris tidak bergeser
+  for (var i = data.length - 1; i >= 1; i--) {
+    var curId = String(data[i][0]).trim();
+    if (targetMap[curId]) {
+      sheet.deleteRow(i + 1);
+      deletedCount++;
+    }
+  }
+
+  clearCache();
+  catatLog(db, req.aktor || "ADMIN", "DELETE_MULTIPLE_ABSENSI", "Menghapus " + deletedCount + " data presensi massal.");
+
+  return {
+    status: "success",
+    message: deletedCount + " data presensi berhasil dihapus.",
+    deleted_count: deletedCount
   };
 }
 

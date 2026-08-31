@@ -634,6 +634,59 @@ export const API = {
     saveLocalState();
   },
 
+  // 6c. Hapus Catatan Presensi (Single & Multiple Bulk)
+  async deleteAbsensi(idAbsensi) {
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=delete_absensi`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ id_absensi: idAbsensi })
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+          this._deleteLocalAbsensi(idAbsensi);
+          return json;
+        }
+      } catch (err) {
+        console.warn("GAS delete_absensi error, fallback to local:", err);
+      }
+    }
+
+    this._deleteLocalAbsensi(idAbsensi);
+    return { status: "success", message: `Data presensi ${idAbsensi} berhasil dihapus.` };
+  },
+
+  async deleteMultipleAbsensi(idList) {
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=delete_multiple_absensi`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ id_list: idList })
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+          idList.forEach(id => this._deleteLocalAbsensi(id));
+          return json;
+        }
+      } catch (err) {
+        console.warn("GAS delete_multiple_absensi error, fallback to local:", err);
+      }
+    }
+
+    idList.forEach(id => this._deleteLocalAbsensi(id));
+    return { status: "success", message: `${idList.length} data presensi berhasil dihapus.` };
+  },
+
+  _deleteLocalAbsensi(idAbsensi) {
+    const idx = localAttendance.findIndex(a => a.id_absensi === idAbsensi);
+    if (idx !== -1) {
+      localAttendance.splice(idx, 1);
+      saveLocalState();
+    }
+  },
+
   // 7. Pengaturan Sistem & Jadwal Operasional
   async getPengaturan() {
     if (CONFIG.DEFAULT_API_URL) {

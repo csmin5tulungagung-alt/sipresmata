@@ -275,6 +275,7 @@
                     <th>Kelas</th>
                     <th>Waktu Scan</th>
                     <th>Status Kehadiran</th>
+                    <th style="width: 80px; text-align: center;">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="live-scans-feed">
@@ -528,8 +529,27 @@
           </div>
 
           <div class="card-table-wrapper">
+            <!-- Bulk Action Bar Rekap -->
+            <div id="rekap-bulk-bar" class="bulk-action-bar">
+              <div class="bulk-selection-info">
+                <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="ADMIN.toggleSelectAllVisibleRekap()">
+                  ☑️ <span id="btn-rekap-select-all-text">Pilih Semua</span>
+                </button>
+                <span class="bulk-selection-badge" id="rekap-bulk-count">0</span>
+                <span>Data presensi dipilih</span>
+              </div>
+              <div class="bulk-action-buttons">
+                <button type="button" class="btn-danger-bulk" onclick="ADMIN.deleteSelectedRekap()">
+                  🗑️ Hapus Presensi Terpilih
+                </button>
+                <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="ADMIN.exitRekapSelectionMode()">
+                  ✕ Selesai
+                </button>
+              </div>
+            </div>
+
             <form id="form-filter-rekap" class="table-filter-bar">
-              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; flex: 1;">
                 <label style="font-size: 0.85rem; font-weight: 600;">Periode:</label>
                 <input type="date" id="rekap-tgl-mulai" class="form-control">
                 <span>s.d.</span>
@@ -544,8 +564,13 @@
                 </button>
               </div>
 
-              <div id="rekap-summary-badge" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-                <!-- Summary badges -->
+              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" id="btn-toggle-select-rekap" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="ADMIN.toggleRekapSelectionMode()">
+                  🔘 Pilih Data Presensi
+                </button>
+                <div id="rekap-summary-badge" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                  <!-- Summary badges -->
+                </div>
               </div>
             </form>
 
@@ -553,6 +578,9 @@
               <table class="custom-data-table">
                 <thead>
                   <tr>
+                    <th id="th-checkbox-rekap" class="col-checkbox-rekap" style="width: 40px; text-align: center; display: none;">
+                      <input type="checkbox" id="check-all-rekap" class="table-checkbox">
+                    </th>
                     <th style="width: 4%;">No</th>
                     <th>Tanggal</th>
                     <th>NISN</th>
@@ -560,6 +588,7 @@
                     <th>Kelas</th>
                     <th>Jam Masuk</th>
                     <th>Status</th>
+                    <th style="width: 80px; text-align: center;">Aksi</th>
                   </tr>
                 </thead>
                 <tbody id="rekap-table-body">
