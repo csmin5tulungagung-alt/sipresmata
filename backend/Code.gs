@@ -97,6 +97,9 @@ function handleRequest(e, method) {
       case "update_pengaturan":
         result = handleUpdatePengaturan(requestData);
         break;
+      case "test_wa_notif":
+        result = handleTestWaNotif(requestData);
+        break;
       case "ping":
         result = { status: "success", message: "SIPRESMATA API is running smoothly!", app: "MIN 5 Tulungagung" };
         break;
@@ -234,6 +237,9 @@ function handleAbsenScan(req) {
 
     absensiSheet.appendRow(rowBaru);
 
+    // Kirim Notifikasi WhatsApp Otomatis ke Nomor HP Orang Tua (Anti-Banned Queue)
+    kirimNotifikasiWhatsApp(db, settings, siswa, "MASUK", statusKehadiran, timeStr, keterlambatanMenit);
+
     // Audio Voice Text
     var audioPrompt = (statusKehadiran === "HADIR")
       ? "Selamat pagi " + siswa.nama_lengkap + ". Absen masuk berhasil, tepat waktu."
@@ -278,6 +284,9 @@ function handleAbsenScan(req) {
       ];
       absensiSheet.appendRow(rowPulang);
 
+      // Kirim Notifikasi WhatsApp Otomatis ke Nomor HP Orang Tua (Anti-Banned Queue)
+      kirimNotifikasiWhatsApp(db, settings, siswa, "PULANG", "HADIR", timeStr, 0);
+
       return {
         status: "success",
         message: "Presensi pulang berhasil dicatat.",
@@ -305,6 +314,9 @@ function handleAbsenScan(req) {
 
     // Update kolom jam_pulang (Kolom 6)
     absensiSheet.getRange(existingRowIndex, 6).setValue(timeStr);
+
+    // Kirim Notifikasi WhatsApp Otomatis ke Nomor HP Orang Tua (Anti-Banned Queue)
+    kirimNotifikasiWhatsApp(db, settings, siswa, "PULANG", existingRecord.status || "HADIR", timeStr, 0);
 
     return {
       status: "success",
@@ -770,16 +782,209 @@ function handleUpdatePengaturan(req) {
   var db = getDB();
   var sheet = db.getSheetByName("pengaturan_sekolah");
   var data = sheet.getDataRange().getValues();
+  var existingKeys = {};
 
   for (var i = 1; i < data.length; i++) {
     var key = data[i][0];
+    existingKeys[key] = i + 1;
     if (req[key] !== undefined) {
       sheet.getRange(i + 1, 2).setValue(String(req[key]));
     }
   }
 
+  // Auto-append key baru jika belum ada di spreadsheet
+  for (var prop in req) {
+    if (prop !== "action" && req[prop] !== undefined && !existingKeys[prop]) {
+      sheet.appendRow([prop, String(req[prop]), "Pengaturan " + prop]);
+    }
+  }
+
   clearCache();
   return { status: "success", message: "Pengaturan madrasah berhasil diperbarui." };
+}
+
+// ----------------------------------------------------------------------------
+// 6. HANDLER & HELPER: WHATSAPP GATEWAY (FONNTE) & ANTI-BANNED QUEUE
+// ----------------------------------------------------------------------------
+function handleTestWaNotif(req) {
+  var token = (req.fonnte_token || "").trim();
+  var target = (req.target_hp || "").trim();
+  var nowStr = Utilities.formatDate(new Date(), "Asia/Jakarta", "HH:mm:ss");
+
+  if (!token) {
+    return { status: "error", code: "MISSING_TOKEN", message: "Token Fonnte tidak boleh kosong." };
+  }
+  if (!target) {
+    return { status: "error", code: "MISSING_TARGET", message: "Nomor WhatsApp tujuan tes wajib diisi." };
+  }
+
+  var cleanHp = target.replace(/[^0-9]/g, "");
+  if (cleanHp.indexOf("0") === 0) cleanHp = "62" + cleanHp.substring(1);
+  else if (cleanHp.indexOf("8") === 0) cleanHp = "62" + cleanHp;
+
+  var pesan = "🧪 *UJI COBA KONEKSI WHATSAPP GATEWAY*\n"
+            + "*MIN 5 TULUNGAGUNG - SIPRESMATA*\n\n"
+            + "Halo! Ini adalah pesan uji coba integrasi WhatsApp Gateway (Fonnte) pada sistem presensi SIPRESMATA.\n\n"
+            + "⏰ *Waktu Tes:* " + nowStr + " WIB\n"
+            + "✅ *Status Token:* TERHUBUNG & AKTIF\n"
+            + "🛡️ *Fitur Anti-Banned Delay:* AKTIF\n\n"
+            + "Sistem presensi siap mengirim notifikasi otomatis saat kartu barcode siswa discan.";
+
+  try {
+    var options = {
+      method: "post",
+      headers: { "Authorization": token },
+      payload: { target: cleanHp, message: pesan, countryCode: "62" },
+      muteHttpExceptions: true
+    };
+
+    var res = UrlFetchApp.fetch("https://api.fonnte.com/send", options);
+    var resText = res.getContentText();
+    var json = {};
+    try { json = JSON.parse(resText); } catch (e) { json = { raw: resText }; }
+
+    if (json.status === true || json.status === "true" || json.status === "success") {
+      return {
+        status: "success",
+        message: "✓ Pesan uji coba berhasil dikirim ke " + target + ".",
+        data: json
+      };
+    } else {
+      return {
+        status: "error",
+        code: "FONNTE_ERROR",
+        message: json.reason || json.message || "Gagal mengirim pesan via Fonnte. Periksa apakah token valid dan device Fonnte terhubung (QR Code sudah discan).",
+        data: json
+      };
+    }
+  } catch (err) {
+    return {
+      status: "error",
+      code: "FETCH_ERROR",
+      message: "Terjadi kesalahan koneksi ke server Fonnte: " + err.message
+    };
+  }
+}
+
+function kirimNotifikasiWhatsApp(db, settings, siswa, jenisSesi, statusKehadiran, timeStr, keterlambatanMenit) {
+  try {
+    // 1. Cek apakah notifikasi WA aktif
+    var waEnabled = settings.wa_notif_enabled;
+    if (waEnabled !== "true" && waEnabled !== true && waEnabled !== "1") {
+      return;
+    }
+
+    var token = (settings.fonnte_token || "").trim();
+    if (!token) {
+      return;
+    }
+
+    var noHp = (siswa.no_hp_ortu || "").trim();
+    if (!noHp) {
+      return;
+    }
+
+    // 2. Normalisasi nomor HP ke format internasional 628...
+    var cleanHp = noHp.replace(/[^0-9]/g, "");
+    if (cleanHp.indexOf("0") === 0) {
+      cleanHp = "62" + cleanHp.substring(1);
+    } else if (cleanHp.indexOf("8") === 0) {
+      cleanHp = "62" + cleanHp;
+    }
+
+    // Validasi panjang nomor
+    if (cleanHp.length < 10 || cleanHp === "6281234567801") {
+      return;
+    }
+
+    // 3. KEAMANAN TINGGI ANTI-BANNED: Hitung Dynamic Queue Delay
+    // Default jeda pengiriman minimal 10 detik antar pesan
+    var baseDelay = parseInt(settings.wa_delay_seconds || "10", 10);
+    if (isNaN(baseDelay) || baseDelay < 5) baseDelay = 10;
+
+    var cache = CacheService.getScriptCache();
+    var now = new Date().getTime();
+    var lastScheduledStr = cache.get("LAST_WA_SCHEDULE_TIMESTAMP");
+    var lastScheduled = lastScheduledStr ? parseInt(lastScheduledStr, 10) : 0;
+
+    var nextSendTime;
+    if (lastScheduled > now) {
+      nextSendTime = lastScheduled + (baseDelay * 1000);
+    } else {
+      nextSendTime = now + (baseDelay * 1000);
+    }
+
+    // Simpan jadwal antrean berikutnya ke cache (TTL 3600 detik)
+    cache.put("LAST_WA_SCHEDULE_TIMESTAMP", String(nextSendTime), 3600);
+
+    // Hitung selisih delay dalam detik untuk parameter Fonnte API
+    var effectiveDelaySeconds = Math.max(0, Math.round((nextSendTime - now) / 1000));
+
+    // 4. Susun Format Pesan WhatsApp yang Humanis & Rapi
+    var pesan = "";
+    if (jenisSesi === "MASUK") {
+      if (statusKehadiran === "TERLAMBAT") {
+        pesan = "🟡 *PEMBERITAHUAN KETERLAMBATAN SISWA*\n"
+              + "*MIN 5 TULUNGAGUNG*\n\n"
+              + "Yth. Bapak/Ibu Orang Tua / Wali Murid,\n\n"
+              + "Diberitahukan bahwa ananda:\n"
+              + "👤 *Nama:* " + siswa.nama_lengkap + "\n"
+              + "🆔 *NISN:* " + siswa.nisn + "\n"
+              + "🏫 *Kelas:* " + (siswa.nama_kelas || siswa.id_kelas) + "\n"
+              + "⏰ *Waktu Scan:* " + timeStr + " WIB\n"
+              + "⚠️ *Status:* TERLAMBAT (" + keterlambatanMenit + " Menit)\n\n"
+              + "Mohon bantuan Bapak/Ibu untuk memotivasi ananda hadir sebelum pukul 07:15 WIB. Terima kasih.\n\n"
+              + "_SIPRESMATA - Presensi Digital MIN 5 Tulungagung_";
+      } else {
+        pesan = "🟢 *PRESENSI KEHADIRAN SISWA*\n"
+              + "*MIN 5 TULUNGAGUNG*\n\n"
+              + "Yth. Bapak/Ibu Orang Tua / Wali Murid,\n\n"
+              + "Alhamdulillah, ananda telah tiba di madrasah:\n"
+              + "👤 *Nama:* " + siswa.nama_lengkap + "\n"
+              + "🆔 *NISN:* " + siswa.nisn + "\n"
+              + "🏫 *Kelas:* " + (siswa.nama_kelas || siswa.id_kelas) + "\n"
+              + "⏰ *Waktu Scan:* " + timeStr + " WIB\n"
+              + "✅ *Status:* HADIR TEPAT WAKTU\n\n"
+              + "Terima kasih atas perhatian dan kerjasamanya.\n\n"
+              + "_SIPRESMATA - Presensi Digital MIN 5 Tulungagung_";
+      }
+    } else {
+      pesan = "🔵 *PRESENSI KEPULANGAN SISWA*\n"
+            + "*MIN 5 TULUNGAGUNG*\n\n"
+            + "Yth. Bapak/Ibu Orang Tua / Wali Murid,\n\n"
+            + "Pemberitahuan bahwa ananda telah selesai belajar:\n"
+            + "👤 *Nama:* " + siswa.nama_lengkap + "\n"
+            + "🆔 *NISN:* " + siswa.nisn + "\n"
+            + "🏫 *Kelas:* " + (siswa.nama_kelas || siswa.id_kelas) + "\n"
+            + "⏰ *Waktu Pulang:* " + timeStr + " WIB\n"
+            + "🏠 *Status:* SELESAI / PULANG\n\n"
+            + "Semoga selamat sampai di rumah. Terima kasih.\n\n"
+            + "_SIPRESMATA - Presensi Digital MIN 5 Tulungagung_";
+    }
+
+    // 5. Kirim via Fonnte API dengan parameter delay
+    var payload = {
+      target: cleanHp,
+      message: pesan,
+      delay: String(effectiveDelaySeconds),
+      countryCode: "62"
+    };
+
+    var options = {
+      method: "post",
+      headers: {
+        "Authorization": token
+      },
+      payload: payload,
+      muteHttpExceptions: true
+    };
+
+    var response = UrlFetchApp.fetch("https://api.fonnte.com/send", options);
+    Logger.log("Fonnte WA Queue Delay: " + effectiveDelaySeconds + "s | Target: " + cleanHp + " | Res: " + response.getContentText());
+
+  } catch (err) {
+    Logger.log("Gagal mengirim WA (Non-blocking): " + err.toString());
+  }
 }
 
 // ----------------------------------------------------------------------------

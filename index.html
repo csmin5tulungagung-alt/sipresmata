@@ -794,6 +794,70 @@
                 </div>
               </div>
 
+              <!-- KARTU 3: INTEGRASI WHATSAPP GATEWAY (FONNTE) & ANTI-BANNED -->
+              <div class="card-table-wrapper" style="margin-bottom: 1.5rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; flex-wrap: wrap;">
+                  <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.4rem;">📱</span>
+                    <div>
+                      <h3 style="font-size: 1.05rem; font-weight: 700;">WhatsApp Gateway (Fonnte API)</h3>
+                      <p style="font-size: 0.78rem; color: var(--text-muted);">Kirim notifikasi otomatis ke nomor WhatsApp orang tua saat siswa melakukan scan presensi.</p>
+                    </div>
+                  </div>
+                  <label style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(37, 211, 102, 0.1); border: 1px solid rgba(37, 211, 102, 0.3); padding: 0.35rem 0.75rem; border-radius: var(--radius-full); cursor: pointer;">
+                    <input type="checkbox" id="setting-wa-enabled" class="table-checkbox">
+                    <strong style="color: #25d366; font-size: 0.82rem;">Aktifkan Notifikasi WA</strong>
+                  </label>
+                </div>
+
+                <!-- Token Fonnte Input -->
+                <div style="margin-bottom: 1.25rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600;">Fonnte API Token:</label>
+                    <a href="https://fonnte.com" target="_blank" style="font-size: 0.75rem; color: #38bdf8; text-decoration: none;">Dapatkan Token di Fonnte.com ↗</a>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem;">
+                    <input type="password" id="setting-fonnte-token" class="form-control" placeholder="Tempelkan API Token Fonnte di sini..." style="flex: 1;">
+                    <button type="button" id="btn-toggle-token-visibility" class="btn btn-secondary btn-icon" title="Lihat / Sembunyikan Token">
+                      👁️
+                    </button>
+                  </div>
+                  <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                    Token diperoleh setelah mendaftar dan scan QR nomor WhatsApp madrasah di dashboard Fonnte.
+                  </span>
+                </div>
+
+                <!-- Anti-Banned Rate Limiter Delay -->
+                <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <span style="font-size: 1.1rem;">🛡️</span>
+                    <strong style="color: #fbbf24; font-size: 0.9rem;">Keamanan Anti-Banned & Anti-Spam WhatsApp</strong>
+                  </div>
+                  <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.4;">
+                    Untuk melindungi nomor WhatsApp madrasah agar tidak diblokir oleh pihak WhatsApp akibat pengiriman pesan terlalu cepat secara bertubi-tubi saat antrean scan pagi, sistem secara otomatis menerapkan jeda antrean pengiriman.
+                  </p>
+                  <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <label style="font-size: 0.82rem; font-weight: 600;">Jeda Antrean Pengiriman:</label>
+                    <div style="display: flex; align-items: center; gap: 0.35rem;">
+                      <input type="number" id="setting-wa-delay" class="form-control" value="10" min="5" max="60" style="width: 80px; text-align: center;">
+                      <span style="font-size: 0.82rem; color: var(--text-muted);">detik / pesan (Disarankan: 10 detik)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Uji Coba Pengiriman Pesan -->
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">🧪 Uji Coba Koneksi WhatsApp Gateway:</label>
+                  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <input type="text" id="input-test-wa-phone" class="form-control" placeholder="Nomor WhatsApp penerima tes (contoh: 081234567890)" style="flex: 1; min-width: 220px;">
+                    <button type="button" id="btn-test-wa-send" class="btn btn-secondary" style="font-weight: 600; color: #34d399; border-color: rgba(52, 211, 153, 0.4);">
+                      📤 Kirim Pesan Tes
+                    </button>
+                  </div>
+                  <div id="wa-test-feedback" style="display: none; margin-top: 0.5rem; font-size: 0.8rem;"></div>
+                </div>
+              </div>
+
               <!-- Tombol Simpan -->
               <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
                 <button type="submit" id="btn-save-settings" class="btn btn-primary" style="padding: 0.65rem 1.5rem; font-size: 0.95rem; font-weight: 700; box-shadow: 0 4px 15px var(--primary-glow);">

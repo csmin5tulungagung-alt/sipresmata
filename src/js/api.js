@@ -658,7 +658,10 @@ export const API = {
         jam_masuk_maksimal: CONFIG.SCHEDULE.MASUK_MAKSIMAL,
         jam_pulang_mulai: CONFIG.SCHEDULE.PULANG_MULAI,
         jam_pulang_batas: CONFIG.SCHEDULE.PULANG_BATAS,
-        client_key: CONFIG.CLIENT_KEY
+        client_key: CONFIG.CLIENT_KEY,
+        fonnte_token: CONFIG.FONNTE_TOKEN,
+        wa_notif_enabled: CONFIG.WA_NOTIF_ENABLED,
+        wa_delay_seconds: CONFIG.WA_DELAY_SECONDS
       }
     };
   },
@@ -681,5 +684,48 @@ export const API = {
     }
 
     return { status: "success", message: "Pengaturan berhasil disimpan di sistem lokal." };
+  },
+
+  // 8. Uji Coba Pengiriman WhatsApp Gateway (Fonnte)
+  async testWaNotif(targetHp, fonnteToken) {
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=test_wa_notif`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            target_hp: targetHp,
+            fonnte_token: fonnteToken || CONFIG.FONNTE_TOKEN
+          })
+        });
+        return await res.json();
+      } catch (err) {
+        console.warn("GAS test_wa_notif fetch error:", err);
+      }
+    }
+
+    // Direct Browser Fallback for Testing Fonnte directly if GAS is offline
+    try {
+      const response = await fetch("https://api.fonnte.com/send", {
+        method: "POST",
+        headers: {
+          "Authorization": fonnteToken || CONFIG.FONNTE_TOKEN
+        },
+        body: new URLSearchParams({
+          target: targetHp,
+          message: "🧪 *UJI COBA WHATSAPP GATEWAY FONNTE*\n*SIPRESMATA MIN 5 TULUNGAGUNG*\n\nKoneksi WhatsApp Gateway berhasil aktif dan terhubung!",
+          countryCode: "62"
+        })
+      });
+      const data = await response.json();
+      if (data.status === true || data.status === "true") {
+        return { status: "success", message: `✓ Pesan uji coba berhasil terkirim ke ${targetHp}.`, data };
+      } else {
+        return { status: "error", message: data.reason || data.message || "Gagal mengirim pesan melalui Fonnte." };
+      }
+    } catch (e) {
+      return { status: "error", message: "Gagal terhubung ke API Fonnte: " + e.message };
+    }
   }
 };
+

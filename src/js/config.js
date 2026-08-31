@@ -17,6 +17,11 @@ export const CONFIG = {
   DEFAULT_API_URL: localStorage.getItem("SIPRESMATA_API_URL") || "https://script.google.com/macros/s/AKfycbywpbbkTu7vdckRTDZpCmUiv0UzeRsca70OFCeCp6rDzBtOx3T3aIG_9KSD6RCFJi9m9A/exec",
   CLIENT_KEY: localStorage.getItem("SIPRESMATA_CLIENT_KEY") || "MIN5_SIPRESMATA_2026",
   
+  // WhatsApp Gateway (Fonnte) & Notifikasi Anti-Banned
+  FONNTE_TOKEN: localStorage.getItem("SIPRESMATA_FONNTE_TOKEN") || "",
+  WA_NOTIF_ENABLED: localStorage.getItem("SIPRESMATA_WA_NOTIF_ENABLED") === "true",
+  WA_DELAY_SECONDS: parseInt(localStorage.getItem("SIPRESMATA_WA_DELAY_SECONDS") || "10", 10),
+  
   // Jam Operasional Presensi (WIB)
   SCHEDULE: {
     MASUK_MULAI: localStorage.getItem("SIPRESMATA_JAM_MASUK_MULAI") || "06:00:00",
@@ -88,9 +93,25 @@ export function saveSchedule(schedule) {
   }
 }
 
+export function saveWaSettings(settings) {
+  if (settings.FONNTE_TOKEN !== undefined) {
+    CONFIG.FONNTE_TOKEN = settings.FONNTE_TOKEN.trim();
+    localStorage.setItem("SIPRESMATA_FONNTE_TOKEN", CONFIG.FONNTE_TOKEN);
+  }
+  if (settings.WA_NOTIF_ENABLED !== undefined) {
+    CONFIG.WA_NOTIF_ENABLED = Boolean(settings.WA_NOTIF_ENABLED);
+    localStorage.setItem("SIPRESMATA_WA_NOTIF_ENABLED", String(CONFIG.WA_NOTIF_ENABLED));
+  }
+  if (settings.WA_DELAY_SECONDS !== undefined) {
+    CONFIG.WA_DELAY_SECONDS = parseInt(settings.WA_DELAY_SECONDS, 10) || 10;
+    localStorage.setItem("SIPRESMATA_WA_DELAY_SECONDS", String(CONFIG.WA_DELAY_SECONDS));
+  }
+}
+
 function formatTimeWithSeconds(val) {
   if (!val) return "00:00:00";
   const parts = val.split(":");
   if (parts.length === 2) return `${val}:00`;
   return val;
 }
+

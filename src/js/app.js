@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-import { CONFIG, saveApiUrl, saveClientKey, saveSchedule } from './config.js';
+import { CONFIG, saveApiUrl, saveClientKey, saveSchedule, saveWaSettings } from './config.js';
 import { API } from './api.js';
 import { SCANNER, playAudioBeep } from './scanner.js';
 import { ADMIN } from './admin.js';
@@ -540,8 +540,15 @@ async function initSettingsView() {
   const inputPulangBatas = document.getElementById("setting-jam-pulang-batas");
   const inputUrl = document.getElementById("setting-api-url");
   const inputKey = document.getElementById("setting-client-key");
+  const inputFonnteToken = document.getElementById("setting-fonnte-token");
+  const checkWaEnabled = document.getElementById("setting-wa-enabled");
+  const inputWaDelay = document.getElementById("setting-wa-delay");
   const formSettings = document.getElementById("form-settings");
   const btnSave = document.getElementById("btn-save-settings");
+  const btnToggleToken = document.getElementById("btn-toggle-token-visibility");
+  const btnTestWa = document.getElementById("btn-test-wa-send");
+  const inputTestPhone = document.getElementById("input-test-wa-phone");
+  const waTestFeedback = document.getElementById("wa-test-feedback");
 
   // Isi form dari config lokal saat ini
   if (inputMasukMulai) inputMasukMulai.value = (CONFIG.SCHEDULE.MASUK_MULAI || "06:00:00").substring(0, 5);
@@ -551,6 +558,76 @@ async function initSettingsView() {
   if (inputPulangBatas) inputPulangBatas.value = (CONFIG.SCHEDULE.PULANG_BATAS || "16:00:00").substring(0, 5);
   if (inputUrl) inputUrl.value = CONFIG.DEFAULT_API_URL;
   if (inputKey) inputKey.value = CONFIG.CLIENT_KEY;
+  if (inputFonnteToken) inputFonnteToken.value = CONFIG.FONNTE_TOKEN;
+  if (checkWaEnabled) checkWaEnabled.checked = CONFIG.WA_NOTIF_ENABLED;
+  if (inputWaDelay) inputWaDelay.value = CONFIG.WA_DELAY_SECONDS || 10;
+
+  // Toggle Password / Token Visibility
+  if (btnToggleToken && inputFonnteToken) {
+    btnToggleToken.onclick = () => {
+      if (inputFonnteToken.type === "password") {
+        inputFonnteToken.type = "text";
+        btnToggleToken.textContent = "🙈";
+      } else {
+        inputFonnteToken.type = "password";
+        btnToggleToken.textContent = "👁️";
+      }
+    };
+  }
+
+  // Tombol Uji Coba Kirim WA
+  if (btnTestWa && inputTestPhone) {
+    btnTestWa.onclick = async () => {
+      const targetPhone = inputTestPhone.value.trim();
+      const token = inputFonnteToken ? inputFonnteToken.value.trim() : CONFIG.FONNTE_TOKEN;
+
+      if (!token) {
+        showToast("Masukkan Token Fonnte terlebih dahulu sebelum uji coba.", "warning");
+        if (inputFonnteToken) inputFonnteToken.focus();
+        return;
+      }
+
+      if (!targetPhone) {
+        showToast("Masukkan nomor WhatsApp tujuan uji coba (contoh: 081234567890).", "warning");
+        inputTestPhone.focus();
+        return;
+      }
+
+      btnTestWa.disabled = true;
+      btnTestWa.textContent = "⏳ Mengirim Tes...";
+      if (waTestFeedback) {
+        waTestFeedback.style.display = "block";
+        waTestFeedback.style.color = "#38bdf8";
+        waTestFeedback.innerHTML = "Sedang menghubungkan ke server Fonnte WhatsApp API...";
+      }
+
+      try {
+        const res = await API.testWaNotif(targetPhone, token);
+        if (res.status === "success") {
+          showToast(res.message || "Pesan tes WhatsApp berhasil terkirim!", "success");
+          if (waTestFeedback) {
+            waTestFeedback.style.color = "#34d399";
+            waTestFeedback.innerHTML = `✅ <strong>Berhasil Terkirim:</strong> ${res.message}`;
+          }
+        } else {
+          showToast(res.message || "Gagal mengirim pesan tes WhatsApp.", "danger");
+          if (waTestFeedback) {
+            waTestFeedback.style.color = "#f87171";
+            waTestFeedback.innerHTML = `❌ <strong>Gagal:</strong> ${res.message}`;
+          }
+        }
+      } catch (err) {
+        showToast("Terjadi kesalahan: " + err.message, "danger");
+        if (waTestFeedback) {
+          waTestFeedback.style.color = "#f87171";
+          waTestFeedback.innerHTML = `❌ <strong>Kesalahan:</strong> ${err.message}`;
+        }
+      } finally {
+        btnTestWa.disabled = false;
+        btnTestWa.textContent = "📤 Kirim Pesan Tes";
+      }
+    };
+  }
 
   // Coba ambil pengaturan terbaru dari backend Google Apps Script / Spreadsheet
   try {
@@ -563,6 +640,11 @@ async function initSettingsView() {
       if (d.jam_pulang_mulai && inputPulangMulai) inputPulangMulai.value = d.jam_pulang_mulai.substring(0, 5);
       if (d.jam_pulang_batas && inputPulangBatas) inputPulangBatas.value = d.jam_pulang_batas.substring(0, 5);
       if (d.client_key && inputKey) inputKey.value = d.client_key;
+      if (d.fonnte_token && inputFonnteToken) inputFonnteToken.value = d.fonnte_token;
+      if (d.wa_notif_enabled !== undefined && checkWaEnabled) {
+        checkWaEnabled.checked = (d.wa_notif_enabled === "true" || d.wa_notif_enabled === true);
+      }
+      if (d.wa_delay_seconds && inputWaDelay) inputWaDelay.value = d.wa_delay_seconds;
     }
   } catch (e) {
     console.warn("Gagal sinkronisasi server settings, menggunakan cache lokal:", e);
@@ -585,10 +667,17 @@ async function initSettingsView() {
         PULANG_BATAS: inputPulangBatas ? inputPulangBatas.value : "16:00"
       };
 
+      const waSettings = {
+        FONNTE_TOKEN: inputFonnteToken ? inputFonnteToken.value.trim() : "",
+        WA_NOTIF_ENABLED: checkWaEnabled ? checkWaEnabled.checked : false,
+        WA_DELAY_SECONDS: inputWaDelay ? parseInt(inputWaDelay.value, 10) || 10 : 10
+      };
+
       // Simpan ke local config
       saveSchedule(scheduleData);
       if (inputUrl) saveApiUrl(inputUrl.value);
       if (inputKey) saveClientKey(inputKey.value);
+      saveWaSettings(waSettings);
 
       // Siapkan payload untuk Spreadsheet tab pengaturan_sekolah
       const serverPayload = {
@@ -597,14 +686,17 @@ async function initSettingsView() {
         jam_masuk_maksimal: `${scheduleData.MASUK_MAKSIMAL}:00`,
         jam_pulang_mulai: `${scheduleData.PULANG_MULAI}:00`,
         jam_pulang_batas: `${scheduleData.PULANG_BATAS}:00`,
-        client_key: inputKey ? inputKey.value : CONFIG.CLIENT_KEY
+        client_key: inputKey ? inputKey.value : CONFIG.CLIENT_KEY,
+        fonnte_token: waSettings.FONNTE_TOKEN,
+        wa_notif_enabled: String(waSettings.WA_NOTIF_ENABLED),
+        wa_delay_seconds: String(waSettings.WA_DELAY_SECONDS)
       };
 
       try {
         const res = await API.updatePengaturan(serverPayload);
-        showToast(res.message || "Jadwal presensi dan pengaturan berhasil disimpan.", "success");
+        showToast(res.message || "Pengaturan sistem dan WhatsApp Gateway berhasil disimpan.", "success");
       } catch (err) {
-        showToast("Pengaturan jam berhasil disimpan secara lokal.", "success");
+        showToast("Pengaturan berhasil disimpan secara lokal.", "success");
       } finally {
         if (btnSave) {
           btnSave.disabled = false;
