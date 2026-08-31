@@ -318,15 +318,19 @@ function handleAbsenScan(req) {
       };
     }
 
-    // Update kolom jam_pulang (Kolom 6)
+    // Pastikan status_kehadiran tetap HADIR (atau TERLAMBAT) saat sudah pulang
+    var statusKehadiranPulang = (existingRecord.status === "ALPA" || !existingRecord.status) ? "HADIR" : existingRecord.status;
+
+    // Update kolom jam_pulang (Kolom 6) dan kolom status (Kolom 7)
     absensiSheet.getRange(existingRowIndex, 6).setValue(timeStr);
+    absensiSheet.getRange(existingRowIndex, 7).setValue(statusKehadiranPulang);
 
     // Kirim Notifikasi WhatsApp Otomatis ke Nomor HP Orang Tua (Anti-Banned Queue)
-    kirimNotifikasiWhatsApp(db, settings, siswa, "PULANG", existingRecord.status || "HADIR", timeStr, 0);
+    kirimNotifikasiWhatsApp(db, settings, siswa, "PULANG", statusKehadiranPulang, timeStr, 0);
 
     return {
       status: "success",
-      message: "Presensi pulang berhasil dicatat.",
+      message: "Presensi pulang berhasil dicatat. Status: " + statusKehadiranPulang + " (Sudah Pulang).",
       data: {
         id_absensi: existingRecord.id_absensi,
         id_siswa: siswa.id_siswa,
@@ -334,9 +338,11 @@ function handleAbsenScan(req) {
         nama_lengkap: siswa.nama_lengkap,
         kelas: siswa.nama_kelas,
         jenis_sesi: "PULANG",
-        status_kehadiran: existingRecord.status,
+        status_kehadiran: statusKehadiranPulang,
         jam_scan: timeStr,
-        audio_prompt: "Terima kasih " + siswa.nama_lengkap + ". Absen pulang berhasil, hati-hati di jalan."
+        jam_masuk: existingRecord.jam_masuk || "",
+        jam_pulang: timeStr,
+        audio_prompt: "Terima kasih " + siswa.nama_lengkap + ". Presensi pulang berhasil dicatat, hati-hati di jalan."
       }
     };
   }
@@ -565,6 +571,7 @@ function handleGetDashboardStats(req) {
         nama_lengkap: siswa.nama_lengkap,
         kelas: siswa.nama_kelas || absData[i][3],
         jam_masuk: absData[i][4],
+        jam_pulang: absData[i][5],
         status_kehadiran: rowStatus,
         keterlambatan_menit: absData[i][7] || 0
       });

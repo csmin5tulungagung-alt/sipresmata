@@ -222,23 +222,33 @@ export const ADMIN = {
 
     const pageItems = isAll ? scans : scans.slice((currentPage - 1) * effectivePageSize, currentPage * effectivePageSize);
 
-    feedContainer.innerHTML = pageItems.map(s => `
-      <tr>
-        <td><strong>${s.nama_lengkap}</strong></td>
-        <td>${s.kelas || '-'}</td>
-        <td>${s.jam_masuk || '-'}</td>
-        <td>
-          <span class="badge ${s.status_kehadiran === 'HADIR' ? 'badge-success' : s.status_kehadiran === 'TERLAMBAT' ? 'badge-warning' : 'badge-danger'}">
-            ${s.status_kehadiran}
-          </span>
-        </td>
-        <td style="text-align: center;">
-          <button class="btn btn-secondary btn-icon" onclick="ADMIN.deleteDashboardScan('${s.id_absensi}', '${encodeURIComponent(s.nama_lengkap)}')" title="Hapus Catatan Presensi Ini" style="color: #f87171; padding: 0.35rem 0.5rem;">
-            🗑️
-          </button>
-        </td>
-      </tr>
-    `).join("");
+    feedContainer.innerHTML = pageItems.map(s => {
+      const isPulang = Boolean(s.jam_pulang);
+      const scanTime = isPulang 
+        ? `${s.jam_masuk ? s.jam_masuk + ' / ' : ''}<span style="color: #38bdf8; font-weight: 600;">🏠 ${s.jam_pulang}</span>`
+        : (s.jam_masuk || '-');
+      
+      const badgeClass = s.status_kehadiran === 'HADIR' ? 'badge-success' : s.status_kehadiran === 'TERLAMBAT' ? 'badge-warning' : 'badge-danger';
+      const badgeText = isPulang ? `${s.status_kehadiran} (PULANG)` : s.status_kehadiran;
+
+      return `
+        <tr>
+          <td><strong>${s.nama_lengkap}</strong></td>
+          <td>${s.kelas || '-'}</td>
+          <td>${scanTime}</td>
+          <td>
+            <span class="badge ${badgeClass}">
+              ${badgeText}
+            </span>
+          </td>
+          <td style="text-align: center;">
+            <button class="btn btn-secondary btn-icon" onclick="ADMIN.deleteDashboardScan('${s.id_absensi}', '${encodeURIComponent(s.nama_lengkap)}')" title="Hapus Catatan Presensi Ini" style="color: #f87171; padding: 0.35rem 0.5rem;">
+              🗑️
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
 
     this.renderPagination(
       "dashboard-feed-pagination",
@@ -1019,6 +1029,13 @@ export const ADMIN = {
 
     tableBody.innerHTML = pageItems.map((item, idx) => {
       const isChecked = this.rekapState.selectedIds.has(item.id_absensi);
+      const isPulang = Boolean(item.jam_pulang);
+      const statusBadgeClass = item.status_kehadiran === 'HADIR' ? 'badge-success' :
+                               item.status_kehadiran === 'TERLAMBAT' ? 'badge-warning' :
+                               item.status_kehadiran === 'IZIN' ? 'badge-info' :
+                               item.status_kehadiran === 'SAKIT' ? 'badge-purple' : 'badge-danger';
+      const statusLabel = isPulang ? `${item.status_kehadiran} (PULANG)` : item.status_kehadiran;
+
       return `
         <tr style="${isChecked ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
           <td class="col-checkbox-rekap" style="text-align: center; ${isSelection ? '' : 'display: none;'}">
@@ -1030,14 +1047,10 @@ export const ADMIN = {
           <td><strong>${item.nama_lengkap}</strong></td>
           <td><span class="badge badge-info">${item.nama_kelas || item.id_kelas}</span></td>
           <td>${item.jam_masuk || '-'}</td>
+          <td>${item.jam_pulang ? `<span style="color: #38bdf8; font-weight: 600;">🏠 ${item.jam_pulang}</span>` : '<span style="color: var(--text-muted);">-</span>'}</td>
           <td>
-            <span class="badge ${
-              item.status_kehadiran === 'HADIR' ? 'badge-success' :
-              item.status_kehadiran === 'TERLAMBAT' ? 'badge-warning' :
-              item.status_kehadiran === 'IZIN' ? 'badge-info' :
-              item.status_kehadiran === 'SAKIT' ? 'badge-purple' : 'badge-danger'
-            }">
-              ${item.status_kehadiran}
+            <span class="badge ${statusBadgeClass}">
+              ${statusLabel}
             </span>
           </td>
           <td style="text-align: center;">

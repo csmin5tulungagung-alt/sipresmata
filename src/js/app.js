@@ -211,22 +211,34 @@ function handleScanFeedback(res) {
 
   if (res.status === "success") {
     const data = res.data;
-    const isLate = data.status_kehadiran === "TERLAMBAT";
+    const isPulang = data.jenis_sesi === "PULANG";
+    const isLate = !isPulang && data.status_kehadiran === "TERLAMBAT";
+
+    let statusLabel = "✅ HADIR TEPAT WAKTU";
+    let statusClass = "hadir";
+
+    if (isPulang) {
+      statusLabel = "🏠 HADIR (SUDAH PULANG)";
+      statusClass = "hadir";
+    } else if (isLate) {
+      statusLabel = `⚠️ HADIR TERLAMBAT (${data.keterlambatan_menit || 0}m)`;
+      statusClass = "terlambat";
+    }
 
     resultCard.innerHTML = `
-      <div class="result-avatar-circle" style="${isLate ? 'background: linear-gradient(135deg, #f59e0b, #d97706);' : ''}">
+      <div class="result-avatar-circle" style="${isPulang ? 'background: linear-gradient(135deg, #0284c7, #0369a1);' : isLate ? 'background: linear-gradient(135deg, #f59e0b, #d97706);' : ''}">
         ${data.nama_lengkap.charAt(0)}
       </div>
       <h3 class="result-student-name">${data.nama_lengkap}</h3>
       <p class="result-student-meta">${data.kelas || '-'} • NISN: ${data.nisn || '-'}</p>
       
-      <div class="status-tag ${isLate ? 'terlambat' : 'hadir'}">
-        ${isLate ? '⚠️ TERLAMBAT' : '✅ HADIR TEPAT WAKTU'} (${data.jam_scan} WIB)
+      <div class="status-tag ${statusClass}">
+        ${statusLabel} (${data.jam_scan} WIB)
       </div>
 
       <p class="result-timestamp">${res.message}</p>
     `;
-    showToast(`Presensi Berhasil: ${data.nama_lengkap}`, "success");
+    showToast(`Presensi Berhasil: ${data.nama_lengkap} (${isPulang ? 'Sudah Pulang' : 'Hadir Masuk'})`, "success");
   } else {
     resultCard.innerHTML = `
       <div class="result-avatar-circle" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">
