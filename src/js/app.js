@@ -499,7 +499,7 @@ window.deleteStudent = function(idSiswa, encodedNama) {
         String(s.id_siswa || "").trim().toUpperCase() !== cleanId && 
         String(s.nisn || "").trim().toUpperCase() !== cleanId
       );
-      ADMIN.applyStudentFilters();
+      ADMIN.refreshCurrentStudentView();
     }
 
     if (window.CARD_GENERATOR) {
@@ -518,10 +518,14 @@ window.deleteStudent = function(idSiswa, encodedNama) {
   }
 };
 
-window.openAddStudentModal = function() {
+window.openAddStudentModal = function(preselectedClassId = "") {
   document.getElementById("student-modal-title").textContent = "Tambah Siswa Baru";
   document.getElementById("form-student-modal").reset();
   document.getElementById("student-modal-id").value = "";
+  if (preselectedClassId) {
+    const select = document.getElementById("student-modal-kelas");
+    if (select) select.value = preselectedClassId;
+  }
   openModal("modal-student-form");
 };
 

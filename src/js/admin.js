@@ -16,12 +16,20 @@ export const ADMIN = {
   studentsState: {
     allList: [],
     filteredList: [],
+    classStudents: [],
     currentPage: 1,
     pageSize: 10,
     selectedIds: new Set(),
     currentClass: "",
     currentSearch: "",
-    isSelectionMode: false
+    isSelectionMode: false,
+    viewMode: "CARDS", // "CARDS" | "CLASS_DETAIL" | "ALL_TABLE"
+    selectedClassId: "",
+    selectedClassName: "",
+    selectedTingkatFilter: "ALL",
+    selectedGenderFilter: "ALL",
+    cardsSearch: "",
+    classStudentSearch: ""
   },
 
   rekapState: {
@@ -243,28 +251,409 @@ export const ADMIN = {
   },
 
   // ==========================================================================
-  // 3. DATA MASTER SISWA CRUD & BULK ACTIONS
+  // 3. DATA MASTER SISWA (CARD ROMBEL VIEW & DETAIL PER KELAS)
   // ==========================================================================
   async loadStudents(idKelas = "", searchTerm = "", forceRefresh = false) {
-    this.studentsState.currentClass = idKelas;
-    this.studentsState.currentSearch = searchTerm;
+    if (idKelas) this.studentsState.currentClass = idKelas;
+    if (searchTerm) this.studentsState.currentSearch = searchTerm;
 
-    // 1. Jika data sudah ada di memory, render instan tanpa jeda (< 1ms)!
+    // 1. Render instan jika sudah ada data di memory (< 1ms)
     if (this.studentsState.allList && this.studentsState.allList.length > 0 && !forceRefresh) {
-      this.applyStudentFilters();
+      this.refreshCurrentStudentView();
     } else {
-      const tableBody = document.getElementById("students-table-body");
-      if (tableBody && (!this.studentsState.allList || this.studentsState.allList.length === 0)) {
-        tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Memuat data siswa...</td></tr>`;
+      const grid = document.getElementById("students-class-grid");
+      if (grid && (!this.studentsState.allList || this.studentsState.allList.length === 0)) {
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem; animation: pulse 1.5s infinite;">⏳</div>
+            Memuat data siswa dan rombongan belajar...
+          </div>
+        `;
       }
     }
 
-    // 2. Fetch/revalidate dari API (jika cache masih fresh, API akan return instan)
-    const res = await API.getSiswa(idKelas, forceRefresh);
-    this.studentsState.allList = res.data || [];
-    this.applyStudentFilters();
+    // 2. Fetch / revalidate dari API
+    try {
+      const res = await API.getSiswa("", forceRefresh);
+      this.studentsState.allList = res.data || [];
+      this.refreshCurrentStudentView();
+    } catch (e) {
+      console.error("Gagal memuat data siswa:", e);
+    }
   },
 
+  refreshCurrentStudentView() {
+    if (this.studentsState.viewMode === "CARDS") {
+      this.renderStudentClassCards();
+    } else if (this.studentsState.viewMode === "CLASS_DETAIL") {
+      this.applyClassStudentFilters();
+    } else if (this.studentsState.viewMode === "ALL_TABLE") {
+      this.applyStudentFilters();
+    }
+  },
+
+  setStudentViewMode(mode) {
+    this.studentsState.viewMode = mode;
+    this.studentsState.isSelectionMode = false;
+    this.studentsState.selectedIds.clear();
+
+    const cardsView = document.getElementById("students-cards-view");
+    const detailView = document.getElementById("students-class-detail-view");
+    const globalView = document.getElementById("students-global-table-view");
+
+    if (cardsView) cardsView.style.display = mode === "CARDS" ? "block" : "none";
+    if (detailView) detailView.style.display = mode === "CLASS_DETAIL" ? "block" : "none";
+    if (globalView) globalView.style.display = mode === "ALL_TABLE" ? "block" : "none";
+
+    this.refreshCurrentStudentView();
+  },
+
+  // --------------------------------------------------------------------------
+  // 3A. TAMPILAN 1: GRID 24 CARD ROMBEL
+  // --------------------------------------------------------------------------
+  renderStudentClassCards() {
+    const cardsView = document.getElementById("students-cards-view");
+    const detailView = document.getElementById("students-class-detail-view");
+    const globalView = document.getElementById("students-global-table-view");
+    const grid = document.getElementById("students-class-grid");
+
+    if (cardsView) cardsView.style.display = "block";
+    if (detailView) detailView.style.display = "none";
+    if (globalView) globalView.style.display = "none";
+    this.studentsState.viewMode = "CARDS";
+
+    if (!grid) return;
+
+    // Hitung jumlah & breakdown gender siswa per kelas
+    const countMap = {};
+    const genderMap = {};
+
+    (this.studentsState.allList || []).forEach(s => {
+      const k = s.id_kelas || "KLS-1A";
+      countMap[k] = (countMap[k] || 0) + 1;
+      if (!genderMap[k]) genderMap[k] = { L: 0, P: 0 };
+      const jk = (s.jenis_kelamin || "L").toUpperCase();
+      if (jk === "L" || jk === "LAKI-LAKI") genderMap[k].L++;
+      else genderMap[k].P++;
+    });
+
+    let rombels = CONFIG.ROMBEL_LIST || [];
+
+    // Filter Tingkat
+    if (this.studentsState.selectedTingkatFilter && this.studentsState.selectedTingkatFilter !== "ALL") {
+      const tingkatNum = parseInt(this.studentsState.selectedTingkatFilter, 10);
+      rombels = rombels.filter(r => r.tingkat === tingkatNum);
+    }
+
+    // Filter Search
+    const search = (this.studentsState.cardsSearch || "").toLowerCase().trim();
+    if (search) {
+      rombels = rombels.filter(r => {
+        const matchName = r.nama.toLowerCase().includes(search) || r.id.toLowerCase().includes(search);
+        const hasMatchingStudent = (this.studentsState.allList || []).some(s => 
+          s.id_kelas === r.id && (
+            (s.nama_lengkap && s.nama_lengkap.toLowerCase().includes(search)) ||
+            (s.nisn && s.nisn.includes(search))
+          )
+        );
+        return matchName || hasMatchingStudent;
+      });
+    }
+
+    if (rombels.length === 0) {
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted); background: var(--bg-card); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+          Tidak ditemukan kelas yang cocok dengan pencarian "<strong>${this.studentsState.cardsSearch}</strong>".
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = rombels.map(r => {
+      const count = countMap[r.id] || 0;
+      const g = genderMap[r.id] || { L: 0, P: 0 };
+      const gedung = r.tingkat <= 3 ? "Gedung A (Bawah)" : "Gedung B (Atas)";
+
+      return `
+        <div class="class-folder-card" onclick="ADMIN.openStudentClass('${r.id}', '${r.nama}')">
+          <div class="folder-card-header">
+            <div class="folder-icon-wrapper">🏫</div>
+            <div style="flex: 1;">
+              <div class="folder-info-title">${r.nama}</div>
+              <div class="folder-info-desc">Tingkat ${r.tingkat} • ${gedung}</div>
+              <div class="folder-gender-stats" style="margin-top: 0.35rem;">
+                <span class="folder-gender-pill male">👦 ${g.L} L</span>
+                <span class="folder-gender-pill female">👧 ${g.P} P</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="folder-card-footer">
+            <span class="folder-student-badge ${count === 0 ? 'empty' : ''}">
+              👥 ${count} Siswa
+            </span>
+            <span class="folder-action-text">
+              Kelola Siswa ➔
+            </span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  },
+
+  filterTingkatCards(tingkat) {
+    this.studentsState.selectedTingkatFilter = tingkat;
+    const pills = document.querySelectorAll("#students-tingkat-tabs .tingkat-pill");
+    pills.forEach(p => {
+      const match = (tingkat === "ALL" && p.textContent.includes("Semua")) ||
+                    (p.textContent.includes(`Kelas ${tingkat}`));
+      if (match) p.classList.add("active");
+      else p.classList.remove("active");
+    });
+    this.renderStudentClassCards();
+  },
+
+  handleCardsSearch(term) {
+    this.studentsState.cardsSearch = term;
+    this.renderStudentClassCards();
+  },
+
+  // --------------------------------------------------------------------------
+  // 3B. TAMPILAN 2: DETAIL SISWA PER KELAS
+  // --------------------------------------------------------------------------
+  openStudentClass(idKelas, namaKelas) {
+    this.studentsState.selectedClassId = idKelas;
+    this.studentsState.selectedClassName = namaKelas;
+    this.studentsState.viewMode = "CLASS_DETAIL";
+    this.studentsState.currentPage = 1;
+    this.studentsState.classStudentSearch = "";
+    this.studentsState.selectedGenderFilter = "ALL";
+    this.studentsState.selectedIds.clear();
+    this.studentsState.isSelectionMode = false;
+
+    const cardsView = document.getElementById("students-cards-view");
+    const detailView = document.getElementById("students-class-detail-view");
+    const globalView = document.getElementById("students-global-table-view");
+    const titleEl = document.getElementById("student-detail-class-title");
+    const searchInput = document.getElementById("search-class-student-input");
+    const genderSelect = document.getElementById("filter-class-gender");
+
+    if (cardsView) cardsView.style.display = "none";
+    if (globalView) globalView.style.display = "none";
+    if (detailView) detailView.style.display = "block";
+
+    if (titleEl) titleEl.textContent = `📁 Data Siswa - ${namaKelas}`;
+    if (searchInput) searchInput.value = "";
+    if (genderSelect) genderSelect.value = "ALL";
+
+    this.applyClassStudentFilters();
+  },
+
+  backToStudentCards() {
+    this.setStudentViewMode("CARDS");
+  },
+
+  openAddStudentForCurrentClass() {
+    window.openAddStudentModal(this.studentsState.selectedClassId);
+  },
+
+  jumpToClassCardPrint() {
+    const classId = this.studentsState.selectedClassId;
+    const className = this.studentsState.selectedClassName;
+    if (!classId) return;
+
+    const cardsNavLink = document.querySelector('.cms-nav-link[data-target="cms-view-cards"]');
+    if (cardsNavLink) cardsNavLink.click();
+
+    if (window.CARD_GENERATOR) {
+      window.CARD_GENERATOR.openClassFolder(classId, className);
+    }
+  },
+
+  previewStudentCard(idSiswa) {
+    if (window.CARD_GENERATOR && typeof window.CARD_GENERATOR.previewCard === "function") {
+      window.CARD_GENERATOR.previewCard(idSiswa);
+    } else {
+      showToast("Pratinjau kartu sedang disiapkan...", "info");
+    }
+  },
+
+  handleClassStudentSearch(term) {
+    this.studentsState.classStudentSearch = term;
+    this.studentsState.currentPage = 1;
+    this.applyClassStudentFilters();
+  },
+
+  handleClassGenderFilter(gender) {
+    this.studentsState.selectedGenderFilter = gender;
+    this.studentsState.currentPage = 1;
+    this.applyClassStudentFilters();
+  },
+
+  applyClassStudentFilters() {
+    const classId = this.studentsState.selectedClassId;
+    let list = (this.studentsState.allList || []).filter(s => s.id_kelas === classId);
+
+    const term = (this.studentsState.classStudentSearch || "").toLowerCase().trim();
+    if (term) {
+      list = list.filter(s => 
+        (s.nama_lengkap && s.nama_lengkap.toLowerCase().includes(term)) || 
+        (s.nisn && s.nisn.includes(term)) ||
+        (s.no_hp_ortu && s.no_hp_ortu.includes(term))
+      );
+    }
+
+    const gender = this.studentsState.selectedGenderFilter;
+    if (gender && gender !== "ALL") {
+      list = list.filter(s => (s.jenis_kelamin || "L").toUpperCase() === gender);
+    }
+
+    // Update Subtitle Statistik L/P
+    const allInClass = (this.studentsState.allList || []).filter(s => s.id_kelas === classId);
+    const lCount = allInClass.filter(s => (s.jenis_kelamin || "L").toUpperCase() === "L").length;
+    const pCount = allInClass.filter(s => (s.jenis_kelamin || "L").toUpperCase() === "P").length;
+
+    const subtitleEl = document.getElementById("student-detail-class-subtitle");
+    if (subtitleEl) {
+      subtitleEl.innerHTML = `Total <strong>${allInClass.length} Siswa</strong> terdaftar (👦 ${lCount} Laki-laki • 👧 ${pCount} Perempuan).`;
+    }
+
+    this.studentsState.filteredList = list;
+    this.renderClassStudentsTable();
+  },
+
+  renderClassStudentsTable() {
+    const tableBody = document.getElementById("class-students-table-body");
+    if (!tableBody) return;
+
+    const list = this.studentsState.filteredList;
+    const total = list.length;
+
+    if (total === 0) {
+      tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Tidak ada data siswa yang cocok dengan filter.</td></tr>`;
+      this.updateClassBulkActionBar();
+      this.renderPagination("class-students-pagination", 0, 1, 10, () => {}, () => {});
+      return;
+    }
+
+    const pageSize = this.studentsState.pageSize;
+    const isAll = pageSize === "ALL";
+    const effectivePageSize = isAll ? total : parseInt(pageSize, 10);
+    const currentPage = this.studentsState.currentPage;
+
+    const start = isAll ? 0 : (currentPage - 1) * effectivePageSize;
+    const pageItems = isAll ? list : list.slice(start, start + effectivePageSize);
+
+    const isSelection = this.studentsState.isSelectionMode;
+
+    tableBody.innerHTML = pageItems.map((s, idx) => {
+      const isChecked = this.studentsState.selectedIds.has(s.id_siswa);
+      const rowNumber = start + idx + 1;
+      const barcodeCode = s.kode_barcode || `MIN5-${s.nisn}`;
+      const hp = s.no_hp_ortu || "";
+      const waNumber = hp.startsWith("0") ? "62" + hp.substring(1) : hp.startsWith("+62") ? hp.substring(1) : hp;
+      const waLink = hp ? `<a href="https://wa.me/${waNumber.replace(/[^0-9]/g, '')}" target="_blank" class="btn-wa-link" title="Kirim Pesan WhatsApp">💬 ${hp}</a>` : `<span style="color: var(--text-muted); font-size: 0.8rem;">-</span>`;
+
+      return `
+        <tr style="${isChecked ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
+          <td class="col-checkbox-class-student" style="text-align: center; ${isSelection ? '' : 'display: none;'}">
+            <input type="checkbox" class="table-checkbox student-row-check" value="${s.id_siswa}" ${isChecked ? 'checked' : ''} onchange="ADMIN.toggleStudentSelection('${s.id_siswa}', this.checked)">
+          </td>
+          <td>${rowNumber}</td>
+          <td><code style="color: #38bdf8; font-weight: 700;">${s.nisn}</code></td>
+          <td><strong>${s.nama_lengkap}</strong></td>
+          <td>
+            <span class="badge ${s.jenis_kelamin === 'P' ? 'badge-purple' : 'badge-info'}" style="font-size: 0.75rem;">
+              ${s.jenis_kelamin === 'P' ? '👧 Perempuan' : '👦 Laki-laki'}
+            </span>
+          </td>
+          <td>${waLink}</td>
+          <td><span class="badge badge-purple" style="font-family: monospace; font-size: 0.75rem;">${barcodeCode}</span></td>
+          <td style="display: flex; gap: 0.4rem;">
+            <button class="btn btn-secondary btn-icon" onclick="window.editStudent('${s.id_siswa}')" title="Edit Data Siswa">
+              ✏️
+            </button>
+            <button class="btn btn-secondary btn-icon" onclick="ADMIN.previewStudentCard('${s.id_siswa}')" title="Cetak / Pratinjau Kartu Siswa">
+              🪪
+            </button>
+            <button class="btn btn-secondary btn-icon" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap)}')" title="Hapus Siswa" style="color: #f87171;">
+              🗑️
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    // Checkbox column header sync
+    const thCheckbox = document.getElementById("th-checkbox-class-students");
+    if (thCheckbox) thCheckbox.style.display = isSelection ? "table-cell" : "none";
+
+    const headerCheck = document.getElementById("check-all-class-students");
+    const visibleIds = pageItems.map(s => s.id_siswa);
+    const allVisibleChecked = visibleIds.length > 0 && visibleIds.every(id => this.studentsState.selectedIds.has(id));
+
+    if (headerCheck) {
+      headerCheck.checked = allVisibleChecked;
+      headerCheck.onchange = (e) => this.toggleSelectAllVisibleStudents(visibleIds, e.target.checked);
+    }
+
+    const selectAllText = document.getElementById("btn-class-students-select-all-text");
+    if (selectAllText) {
+      selectAllText.textContent = allVisibleChecked ? "Batalkan Semua" : "Pilih Semua";
+    }
+
+    const btnToggle = document.getElementById("btn-toggle-select-class-students");
+    if (btnToggle) {
+      btnToggle.innerHTML = isSelection ? "✕ Selesai Memilih" : "🔘 Pilih Data Siswa";
+      btnToggle.style.background = isSelection ? "rgba(239, 68, 68, 0.15)" : "";
+      btnToggle.style.borderColor = isSelection ? "rgba(239, 68, 68, 0.4)" : "";
+      btnToggle.style.color = isSelection ? "#fca5a5" : "";
+    }
+
+    this.updateClassBulkActionBar();
+
+    // Render Pagination
+    this.renderPagination(
+      "class-students-pagination",
+      total,
+      currentPage,
+      pageSize,
+      (newPage) => {
+        this.studentsState.currentPage = newPage;
+        this.renderClassStudentsTable();
+      },
+      (newSize) => {
+        this.studentsState.pageSize = newSize;
+        this.studentsState.currentPage = 1;
+        this.renderClassStudentsTable();
+      }
+    );
+  },
+
+  updateClassBulkActionBar() {
+    const bulkBar = document.getElementById("students-class-bulk-bar");
+    const countBadge = document.getElementById("bulk-class-selected-count");
+    const selectAllText = document.getElementById("btn-class-students-select-all-text");
+    const selectedCount = this.studentsState.selectedIds.size;
+    const totalFiltered = (this.studentsState.filteredList || []).length;
+
+    if (!bulkBar) return;
+
+    if (this.studentsState.isSelectionMode) {
+      bulkBar.classList.add("active");
+      if (countBadge) countBadge.textContent = selectedCount;
+      if (selectAllText) {
+        selectAllText.textContent = (selectedCount > 0 && selectedCount === totalFiltered) ? "Batalkan Semua" : "Pilih Semua";
+      }
+    } else {
+      bulkBar.classList.remove("active");
+    }
+  },
+
+  // --------------------------------------------------------------------------
+  // 3C. TAMPILAN 3: TABEL GLOBAL SELURUH SISWA (FLAT TABLE)
+  // --------------------------------------------------------------------------
   handleStudentSearch(term) {
     this.studentsState.currentSearch = term;
     this.applyStudentFilters();
@@ -272,17 +661,23 @@ export const ADMIN = {
 
   handleStudentClassFilter(idKelas) {
     this.studentsState.currentClass = idKelas;
-    this.loadStudents(idKelas, this.studentsState.currentSearch);
+    this.applyStudentFilters();
   },
 
   applyStudentFilters() {
-    let list = this.studentsState.allList;
-    const term = (this.studentsState.currentSearch || "").toLowerCase();
+    let list = this.studentsState.allList || [];
+    const term = (this.studentsState.currentSearch || "").toLowerCase().trim();
+    const idKelas = this.studentsState.currentClass;
+
+    if (idKelas) {
+      list = list.filter(s => s.id_kelas === idKelas);
+    }
 
     if (term) {
       list = list.filter(s => 
         (s.nama_lengkap && s.nama_lengkap.toLowerCase().includes(term)) || 
-        (s.nisn && s.nisn.includes(term))
+        (s.nisn && s.nisn.includes(term)) ||
+        (s.nama_kelas && s.nama_kelas.toLowerCase().includes(term))
       );
     }
 
@@ -299,7 +694,7 @@ export const ADMIN = {
     const total = list.length;
 
     if (total === 0) {
-      tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Tidak ada data siswa yang cocok.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Tidak ada data siswa yang cocok.</td></tr>`;
       this.updateBulkActionBar();
       this.renderPagination("students-pagination", 0, 1, 10, () => {}, () => {});
       return;
@@ -318,6 +713,9 @@ export const ADMIN = {
     tableBody.innerHTML = pageItems.map((s, idx) => {
       const isChecked = this.studentsState.selectedIds.has(s.id_siswa);
       const rowNumber = start + idx + 1;
+      const hp = s.no_hp_ortu || "";
+      const waNumber = hp.startsWith("0") ? "62" + hp.substring(1) : hp.startsWith("+62") ? hp.substring(1) : hp;
+      const waLink = hp ? `<a href="https://wa.me/${waNumber.replace(/[^0-9]/g, '')}" target="_blank" class="btn-wa-link" title="Kirim Pesan WhatsApp">💬 ${hp}</a>` : `<span style="color: var(--text-muted); font-size: 0.8rem;">-</span>`;
 
       return `
         <tr style="${isChecked ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
@@ -325,13 +723,21 @@ export const ADMIN = {
             <input type="checkbox" class="table-checkbox student-row-check" value="${s.id_siswa}" ${isChecked ? 'checked' : ''} onchange="ADMIN.toggleStudentSelection('${s.id_siswa}', this.checked)">
           </td>
           <td>${rowNumber}</td>
-          <td><code>${s.nisn}</code></td>
+          <td><code style="color: #38bdf8; font-weight: 700;">${s.nisn}</code></td>
           <td><strong>${s.nama_lengkap}</strong></td>
           <td><span class="badge badge-info">${s.nama_kelas || s.id_kelas}</span></td>
-          <td>${s.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</td>
+          <td>
+            <span class="badge ${s.jenis_kelamin === 'P' ? 'badge-purple' : 'badge-info'}" style="font-size: 0.75rem;">
+              ${s.jenis_kelamin === 'P' ? '👧 Perempuan' : '👦 Laki-laki'}
+            </span>
+          </td>
+          <td>${waLink}</td>
           <td style="display: flex; gap: 0.4rem;">
             <button class="btn btn-secondary btn-icon" onclick="window.editStudent('${s.id_siswa}')" title="Edit Siswa">
               ✏️
+            </button>
+            <button class="btn btn-secondary btn-icon" onclick="ADMIN.previewStudentCard('${s.id_siswa}')" title="Cetak / Pratinjau Kartu Siswa">
+              🪪
             </button>
             <button class="btn btn-secondary btn-icon" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap)}')" title="Hapus Siswa" style="color: #f87171;">
               🗑️
@@ -387,36 +793,48 @@ export const ADMIN = {
     );
   },
 
+  // --------------------------------------------------------------------------
+  // SELECTION & BULK ACTIONS (SHARED)
+  // --------------------------------------------------------------------------
   toggleSelectionMode() {
     this.studentsState.isSelectionMode = !this.studentsState.isSelectionMode;
     if (!this.studentsState.isSelectionMode) {
       this.studentsState.selectedIds.clear();
     }
-    this.renderStudentsTable();
+    if (this.studentsState.viewMode === "CLASS_DETAIL") {
+      this.renderClassStudentsTable();
+    } else {
+      this.renderStudentsTable();
+    }
   },
 
   exitSelectionMode() {
     this.studentsState.isSelectionMode = false;
     this.studentsState.selectedIds.clear();
-    this.renderStudentsTable();
+    if (this.studentsState.viewMode === "CLASS_DETAIL") {
+      this.renderClassStudentsTable();
+    } else {
+      this.renderStudentsTable();
+    }
   },
 
   toggleSelectAllVisible() {
     const list = this.studentsState.filteredList || [];
     if (list.length === 0) return;
 
-    // Cek apakah seluruh siswa pada list (seluruh halaman) sudah terpilih
     const allChecked = list.every(s => this.studentsState.selectedIds.has(s.id_siswa));
 
     if (allChecked) {
-      // Batalkan semua
       list.forEach(s => this.studentsState.selectedIds.delete(s.id_siswa));
     } else {
-      // Pilih semua siswa pada filter aktif
       list.forEach(s => this.studentsState.selectedIds.add(s.id_siswa));
     }
 
-    this.renderStudentsTable();
+    if (this.studentsState.viewMode === "CLASS_DETAIL") {
+      this.renderClassStudentsTable();
+    } else {
+      this.renderStudentsTable();
+    }
   },
 
   toggleStudentSelection(idSiswa, isChecked) {
@@ -425,7 +843,11 @@ export const ADMIN = {
     } else {
       this.studentsState.selectedIds.delete(idSiswa);
     }
-    this.renderStudentsTable();
+    if (this.studentsState.viewMode === "CLASS_DETAIL") {
+      this.renderClassStudentsTable();
+    } else {
+      this.renderStudentsTable();
+    }
   },
 
   toggleSelectAllVisibleStudents(visibleIds, isChecked) {
@@ -436,12 +858,20 @@ export const ADMIN = {
         this.studentsState.selectedIds.delete(id);
       }
     });
-    this.renderStudentsTable();
+    if (this.studentsState.viewMode === "CLASS_DETAIL") {
+      this.renderClassStudentsTable();
+    } else {
+      this.renderStudentsTable();
+    }
   },
 
   clearStudentSelection() {
     this.studentsState.selectedIds.clear();
-    this.renderStudentsTable();
+    if (this.studentsState.viewMode === "CLASS_DETAIL") {
+      this.renderClassStudentsTable();
+    } else {
+      this.renderStudentsTable();
+    }
   },
 
   updateBulkActionBar() {
@@ -475,13 +905,13 @@ export const ADMIN = {
       const ids = Array.from(this.studentsState.selectedIds);
       const idSet = new Set(ids.map(id => String(id || "").trim().toUpperCase()));
 
-      // 1. OPTIMISTIC INSTANT UPDATE (0 ms): Hapus seketika dari tabel & memori tanpa jeda loading
+      // 1. OPTIMISTIC INSTANT UPDATE (0 ms)
       this.studentsState.allList = (this.studentsState.allList || []).filter(s => 
         !idSet.has(String(s.id_siswa || "").trim().toUpperCase()) && 
         !idSet.has(String(s.nisn || "").trim().toUpperCase())
       );
-      this.applyStudentFilters();
       this.exitSelectionMode();
+      this.refreshCurrentStudentView();
       showToast(`✓ ${count} data siswa berhasil dihapus.`, "success");
 
       if (window.CARD_GENERATOR) {
@@ -491,7 +921,7 @@ export const ADMIN = {
         );
       }
 
-      // 2. Kirim sinkronisasi ke backend Google Apps Script di latar belakang
+      // 2. Kirim sinkronisasi ke backend di latar belakang
       API.deleteMultipleSiswa(ids).catch(err => {
         console.warn("Background delete sync error:", err);
       });

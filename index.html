@@ -288,82 +288,224 @@
         </section>
 
         <!-- ------------------------------------------------------------------
-             CMS VIEW 2: DATA MASTER SISWA (CRUD)
+             CMS VIEW 2: DATA MASTER SISWA (CARD ROMBEL & DETAIL LIST VIEW)
              ------------------------------------------------------------------ -->
         <section id="cms-view-students" class="cms-view-section">
-          <div class="cms-page-header">
-            <div>
-              <h2>👥 Data Master Siswa MIN 5</h2>
-              <p>Kelola data profil siswa, NISN, dan rombongan belajar (Kelas 1A-D s.d 6A-D).</p>
-            </div>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button class="btn btn-secondary" onclick="window.openImportModal()">
-                📥 Import Excel (Format EMIS)
-              </button>
-              <button class="btn btn-primary" onclick="window.openAddStudentModal()">
-                ➕ Tambah Siswa Baru
-              </button>
-            </div>
-          </div>
-
-          <div class="card-table-wrapper">
-            <!-- Bulk Action Bar -->
-            <div id="students-bulk-bar" class="bulk-action-bar">
-              <div class="bulk-selection-info">
-                <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="ADMIN.toggleSelectAllVisible()">
-                  ☑️ <span id="btn-students-select-all-text">Pilih Semua</span>
-                </button>
-                <span class="bulk-selection-badge" id="bulk-selected-count">0</span>
-                <span>Siswa dipilih</span>
-              </div>
-              <div class="bulk-action-buttons">
-                <button type="button" class="btn-danger-bulk" onclick="ADMIN.deleteSelectedStudents()">
-                  🗑️ Hapus Siswa Terpilih
-                </button>
-                <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="ADMIN.exitSelectionMode()">
-                  ✕ Selesai
-                </button>
-              </div>
-            </div>
-
-            <div class="table-filter-bar">
-              <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 550px; flex-wrap: wrap;">
-                <input type="text" id="search-student-input" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1; min-width: 200px;" oninput="ADMIN.handleStudentSearch(this.value)">
-                <select id="filter-student-class" class="form-control select-kelas-rombel" data-include-all="true" onchange="ADMIN.handleStudentClassFilter(this.value)">
-                  <!-- Injected -->
-                </select>
-              </div>
+          
+          <!-- SUB-VIEW 1: TAMPILAN GRID CARD 24 KELAS / ROMBEL -->
+          <div id="students-cards-view">
+            <div class="cms-page-header">
               <div>
-                <button type="button" id="btn-toggle-select-students" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="ADMIN.toggleSelectionMode()">
-                  🔘 Pilih Data Siswa
+                <h2>👥 Data Master Siswa MIN 5</h2>
+                <p>Kelola profil siswa dan data rombongan belajar (Kelas 1A-D s.d 6A-D).</p>
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="ADMIN.setStudentViewMode('ALL_TABLE')" title="Lihat seluruh siswa dalam satu tabel besar">
+                  📋 Tampilan Semua Siswa
+                </button>
+                <button class="btn btn-secondary" onclick="window.openImportModal()">
+                  📥 Import Excel (Format EMIS)
+                </button>
+                <button class="btn btn-primary" onclick="window.openAddStudentModal()">
+                  ➕ Tambah Siswa Baru
                 </button>
               </div>
             </div>
 
-            <div style="overflow-x: auto;">
-              <table class="custom-data-table">
-                <thead>
-                  <tr>
-                    <th id="th-checkbox-students" style="width: 4%; text-align: center; display: none;">
-                      <input type="checkbox" id="check-all-students" class="table-checkbox" title="Pilih Semua Siswa">
-                    </th>
-                    <th style="width: 5%;">No</th>
-                    <th>NISN</th>
-                    <th>Nama Lengkap</th>
-                    <th>Kelas / Rombel</th>
-                    <th>Jenis Kelamin</th>
-                    <th style="width: 15%;">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="students-table-body">
-                  <!-- Injected via JavaScript -->
-                </tbody>
-              </table>
+            <!-- Summary Bar & Filter Tingkat -->
+            <div class="table-filter-bar" style="margin-bottom: 1.25rem; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+              <div class="tingkat-filter-tabs" id="students-tingkat-tabs">
+                <button type="button" class="tingkat-pill active" onclick="ADMIN.filterTingkatCards('ALL')">Semua Tingkat</button>
+                <button type="button" class="tingkat-pill" onclick="ADMIN.filterTingkatCards(1)">Kelas 1</button>
+                <button type="button" class="tingkat-pill" onclick="ADMIN.filterTingkatCards(2)">Kelas 2</button>
+                <button type="button" class="tingkat-pill" onclick="ADMIN.filterTingkatCards(3)">Kelas 3</button>
+                <button type="button" class="tingkat-pill" onclick="ADMIN.filterTingkatCards(4)">Kelas 4</button>
+                <button type="button" class="tingkat-pill" onclick="ADMIN.filterTingkatCards(5)">Kelas 5</button>
+                <button type="button" class="tingkat-pill" onclick="ADMIN.filterTingkatCards(6)">Kelas 6</button>
+              </div>
+              
+              <div style="min-width: 260px; max-width: 360px; flex: 1;">
+                <input type="text" id="search-rombel-cards" class="form-control" placeholder="Cari nama kelas atau siswa..." oninput="ADMIN.handleCardsSearch(this.value)">
+              </div>
             </div>
 
-            <!-- Pagination Data Master Siswa -->
-            <div id="students-pagination" class="table-pagination-container"></div>
+            <!-- Grid 24 Card Rombel -->
+            <div id="students-class-grid" class="folder-grid">
+              <!-- Injected via JavaScript -->
+            </div>
           </div>
+
+          <!-- SUB-VIEW 2: TAMPILAN DETAIL SISWA PER KELAS TERPILIH -->
+          <div id="students-class-detail-view" style="display: none;">
+            <div class="cms-page-header">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary btn-icon" onclick="ADMIN.backToStudentCards()" title="Kembali ke Daftar Rombel">
+                  ⬅
+                </button>
+                <div>
+                  <h2 id="student-detail-class-title">📁 Data Siswa - Kelas 1A</h2>
+                  <p id="student-detail-class-subtitle">Daftar siswa terdaftar, NISN, dan kontak orang tua.</p>
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary" onclick="ADMIN.jumpToClassCardPrint()" title="Cetak Kartu Barcode Siswa Kelas Ini">
+                  🪪 Cetak Kartu Barcode
+                </button>
+                <button class="btn btn-secondary" onclick="window.openImportModal()">
+                  📥 Import Excel
+                </button>
+                <button id="btn-add-student-to-class" class="btn btn-primary" onclick="ADMIN.openAddStudentForCurrentClass()">
+                  ➕ Tambah Siswa di Kelas Ini
+                </button>
+              </div>
+            </div>
+
+            <div class="card-table-wrapper">
+              <!-- Bulk Action Bar -->
+              <div id="students-class-bulk-bar" class="bulk-action-bar">
+                <div class="bulk-selection-info">
+                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="ADMIN.toggleSelectAllVisible()">
+                    ☑️ <span id="btn-class-students-select-all-text">Pilih Semua</span>
+                  </button>
+                  <span class="bulk-selection-badge" id="bulk-class-selected-count">0</span>
+                  <span>Siswa dipilih</span>
+                </div>
+                <div class="bulk-action-buttons">
+                  <button type="button" class="btn-danger-bulk" onclick="ADMIN.deleteSelectedStudents()">
+                    🗑️ Hapus Siswa Terpilih
+                  </button>
+                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="ADMIN.exitSelectionMode()">
+                    ✕ Selesai
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter & Search Toolbar in Class Detail -->
+              <div class="table-filter-bar">
+                <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 550px; flex-wrap: wrap;">
+                  <input type="text" id="search-class-student-input" class="form-control" placeholder="Cari nama atau NISN di kelas ini..." style="flex: 1; min-width: 200px;" oninput="ADMIN.handleClassStudentSearch(this.value)">
+                  <select id="filter-class-gender" class="form-control" style="max-width: 160px;" onchange="ADMIN.handleClassGenderFilter(this.value)">
+                    <option value="ALL">Semua Gender</option>
+                    <option value="L">👦 Laki-laki</option>
+                    <option value="P">👧 Perempuan</option>
+                  </select>
+                </div>
+                <div>
+                  <button type="button" id="btn-toggle-select-class-students" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="ADMIN.toggleSelectionMode()">
+                    🔘 Pilih Data Siswa
+                  </button>
+                </div>
+              </div>
+
+              <!-- Table Data Siswa Kelas -->
+              <div style="overflow-x: auto;">
+                <table class="custom-data-table">
+                  <thead>
+                    <tr>
+                      <th id="th-checkbox-class-students" style="width: 4%; text-align: center; display: none;">
+                        <input type="checkbox" id="check-all-class-students" class="table-checkbox" title="Pilih Semua Siswa">
+                      </th>
+                      <th style="width: 5%;">No</th>
+                      <th>NISN</th>
+                      <th>Nama Lengkap</th>
+                      <th>Jenis Kelamin</th>
+                      <th>No. HP / WhatsApp Ortu</th>
+                      <th>Kode Barcode</th>
+                      <th style="width: 15%;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="class-students-table-body">
+                    <!-- Injected via JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination Data Siswa Kelas -->
+              <div id="class-students-pagination" class="table-pagination-container"></div>
+            </div>
+          </div>
+
+          <!-- SUB-VIEW 3: TAMPILAN GLOBAL TABEL SEMUA SISWA LINTAS KELAS -->
+          <div id="students-global-table-view" style="display: none;">
+            <div class="cms-page-header">
+              <div>
+                <h2>📋 Seluruh Data Siswa (Master Table)</h2>
+                <p>Melihat dan mengelola seluruh siswa dari semua rombongan belajar dalam satu tabel.</p>
+              </div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="ADMIN.setStudentViewMode('CARDS')">
+                  🗂️ Kembali ke Tampilan Card Kelas
+                </button>
+                <button class="btn btn-secondary" onclick="window.openImportModal()">
+                  📥 Import Excel (Format EMIS)
+                </button>
+                <button class="btn btn-primary" onclick="window.openAddStudentModal()">
+                  ➕ Tambah Siswa Baru
+                </button>
+              </div>
+            </div>
+
+            <div class="card-table-wrapper">
+              <!-- Bulk Action Bar Global -->
+              <div id="students-bulk-bar" class="bulk-action-bar">
+                <div class="bulk-selection-info">
+                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="ADMIN.toggleSelectAllVisible()">
+                    ☑️ <span id="btn-students-select-all-text">Pilih Semua</span>
+                  </button>
+                  <span class="bulk-selection-badge" id="bulk-selected-count">0</span>
+                  <span>Siswa dipilih</span>
+                </div>
+                <div class="bulk-action-buttons">
+                  <button type="button" class="btn-danger-bulk" onclick="ADMIN.deleteSelectedStudents()">
+                    🗑️ Hapus Siswa Terpilih
+                  </button>
+                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="ADMIN.exitSelectionMode()">
+                    ✕ Selesai
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-filter-bar">
+                <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 550px; flex-wrap: wrap;">
+                  <input type="text" id="search-student-input" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1; min-width: 200px;" oninput="ADMIN.handleStudentSearch(this.value)">
+                  <select id="filter-student-class" class="form-control select-kelas-rombel" data-include-all="true" onchange="ADMIN.handleStudentClassFilter(this.value)">
+                    <!-- Injected -->
+                  </select>
+                </div>
+                <div>
+                  <button type="button" id="btn-toggle-select-students" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="ADMIN.toggleSelectionMode()">
+                    🔘 Pilih Data Siswa
+                  </button>
+                </div>
+              </div>
+
+              <div style="overflow-x: auto;">
+                <table class="custom-data-table">
+                  <thead>
+                    <tr>
+                      <th id="th-checkbox-students" style="width: 4%; text-align: center; display: none;">
+                        <input type="checkbox" id="check-all-students" class="table-checkbox" title="Pilih Semua Siswa">
+                      </th>
+                      <th style="width: 5%;">No</th>
+                      <th>NISN</th>
+                      <th>Nama Lengkap</th>
+                      <th>Kelas / Rombel</th>
+                      <th>Jenis Kelamin</th>
+                      <th>No. HP / WhatsApp Ortu</th>
+                      <th style="width: 15%;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="students-table-body">
+                    <!-- Injected via JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination Data Master Siswa Global -->
+              <div id="students-pagination" class="table-pagination-container"></div>
+            </div>
+          </div>
+
         </section>
 
         <!-- ------------------------------------------------------------------
