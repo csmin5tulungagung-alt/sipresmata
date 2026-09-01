@@ -76,10 +76,12 @@ export const ADMIN = {
 
     container.style.display = "flex";
 
-    const isAll = pageSize === "ALL" || pageSize >= totalItems;
-    const effectivePageSize = isAll ? totalItems : parseInt(pageSize, 10);
-    const totalPages = isAll ? 1 : Math.ceil(totalItems / effectivePageSize);
-    const safeCurrentPage = Math.max(1, Math.min(currentPage, totalPages));
+    const isAll = pageSize === "ALL" || (parseInt(pageSize, 10) >= totalItems);
+    const parsedPageSize = parseInt(pageSize, 10);
+    const effectivePageSize = isAll ? totalItems : (!isNaN(parsedPageSize) && parsedPageSize > 0 ? parsedPageSize : 10);
+    const totalPages = isAll ? 1 : Math.max(1, Math.ceil(totalItems / effectivePageSize));
+    const parsedCurrentPage = parseInt(currentPage, 10);
+    const safeCurrentPage = (isNaN(parsedCurrentPage) || parsedCurrentPage < 1) ? 1 : Math.min(parsedCurrentPage, totalPages);
 
     const startIdx = totalItems === 0 ? 0 : isAll ? 1 : (safeCurrentPage - 1) * effectivePageSize + 1;
     const endIdx = isAll ? totalItems : Math.min(safeCurrentPage * effectivePageSize, totalItems);
@@ -1807,11 +1809,17 @@ export const ADMIN = {
         classLabel: idKelas ? `Kelas ${idKelas}` : "Semua Kelas (1A-D s.d 6A-D)"
       };
 
+      const prevPageSize = (this.rekapState.monthly && this.rekapState.monthly.pageSize) || 10;
+      const prevSearch = (this.rekapState.monthly && this.rekapState.monthly.searchQuery) || "";
+
       this.rekapState.monthly = {
         month,
         year,
         idKelas,
         daysInMonth,
+        currentPage: 1,
+        pageSize: prevPageSize,
+        searchQuery: prevSearch,
         matrixStudents,
         summary: monthlySummary
       };
@@ -1857,7 +1865,10 @@ export const ADMIN = {
     const container = document.getElementById("monthly-matrix-wrapper");
     if (!container) return;
 
-    const { daysInMonth, matrixStudents, summary, currentPage, pageSize, searchQuery } = this.rekapState.monthly;
+    const { daysInMonth, matrixStudents, summary } = this.rekapState.monthly;
+    const currentPage = parseInt(this.rekapState.monthly.currentPage, 10) || 1;
+    const pageSize = this.rekapState.monthly.pageSize || 10;
+    const searchQuery = this.rekapState.monthly.searchQuery || "";
 
     if (!matrixStudents || matrixStudents.length === 0) {
       container.innerHTML = `
