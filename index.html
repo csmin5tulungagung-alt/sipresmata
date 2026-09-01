@@ -25,6 +25,30 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    // Universal Safety Patch: Mencegah error 'createPattern' pada canvas berukuran 0x0 saat html2canvas clone DOM
+    (function() {
+      if (typeof CanvasRenderingContext2D !== 'undefined' && CanvasRenderingContext2D.prototype.createPattern) {
+        var _origCreatePattern = CanvasRenderingContext2D.prototype.createPattern;
+        CanvasRenderingContext2D.prototype.createPattern = function(image, repetition) {
+          if (!image || image.width === 0 || image.height === 0 || image.naturalWidth === 0 || image.naturalHeight === 0) {
+            var fallback = document.createElement('canvas');
+            fallback.width = 2;
+            fallback.height = 2;
+            return _origCreatePattern.call(this, fallback, repetition || 'repeat');
+          }
+          try {
+            return _origCreatePattern.call(this, image, repetition);
+          } catch (e) {
+            var fallback = document.createElement('canvas');
+            fallback.width = 2;
+            fallback.height = 2;
+            return _origCreatePattern.call(this, fallback, repetition || 'repeat');
+          }
+        };
+      }
+    })();
+  </script>
 </head>
 <body class="mode-kiosk">
 

@@ -604,8 +604,29 @@ export const CARD_GENERATOR = {
                     this.state.previewStudent ||
                     (window.ADMIN && (window.ADMIN.studentsState.allList || []).find(s => s.id_siswa === idSiswa));
     if (!student) {
-      showToast("Data siswa tidak ditemukan untuk diunduh.", "warning");
+      if (typeof showToast === 'function') showToast("Data siswa tidak ditemukan untuk diunduh.", "warning");
       return;
+    }
+
+    // Safety Monkey-Patch Canvas createPattern
+    if (typeof CanvasRenderingContext2D !== 'undefined' && CanvasRenderingContext2D.prototype.createPattern) {
+      const _orig = CanvasRenderingContext2D.prototype.createPattern;
+      CanvasRenderingContext2D.prototype.createPattern = function(img, rep) {
+        if (!img || img.width === 0 || img.height === 0 || img.naturalWidth === 0 || img.naturalHeight === 0) {
+          const fb = document.createElement('canvas');
+          fb.width = 2;
+          fb.height = 2;
+          return _orig.call(this, fb, rep || 'repeat');
+        }
+        try {
+          return _orig.call(this, img, rep);
+        } catch (e) {
+          const fb = document.createElement('canvas');
+          fb.width = 2;
+          fb.height = 2;
+          return _orig.call(this, fb, rep || 'repeat');
+        }
+      };
     }
 
     // Buat container bersih dalam viewport agar kalkulasi rendering 100% akurat
@@ -628,8 +649,21 @@ export const CARD_GENERATOR = {
     const qrText = student.kode_barcode || `MIN5-${student.nisn}`;
     await this.renderCardQRToImage(qrElem, qrText);
 
-    // Tunggu render elemen
-    await new Promise(r => setTimeout(r, 120));
+    // Pastikan semua gambar dalam kartu sudah termuat / decode sebelum capture
+    const images = Array.from(captureWrapper.querySelectorAll("img"));
+    await Promise.all(images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(res => {
+        img.onload = () => res();
+        img.onerror = () => res();
+      });
+    }));
+
+    // Tunggu render elemen & fonts
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+    await new Promise(r => setTimeout(r, 100));
 
     try {
       const targetElement = cardEl || captureWrapper;
@@ -764,6 +798,15 @@ export const CARD_GENERATOR = {
 
         const qrText = s.kode_barcode || `MIN5-${s.nisn}`;
         await this.renderCardQRToImage(qrElem, qrText);
+
+        const images = Array.from(tempContainer.querySelectorAll("img"));
+        await Promise.all(images.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(res => {
+            img.onload = () => res();
+            img.onerror = () => res();
+          });
+        }));
 
         await new Promise(r => setTimeout(r, 60));
 
