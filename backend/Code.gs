@@ -179,23 +179,47 @@ function handleAbsenScan(req) {
   }
 
   // 2. Evaluasi Sesi Waktu (Masuk vs Pulang)
+  var dayOfWeek = now.getDay(); // 0 = Minggu, 5 = Jumat
+
+  // Cek Hari Libur Minggu
+  var liburMingguEnabled = (settings.libur_minggu_enabled !== "false");
+  var bypassTestMode = (settings.bypass_schedule_test_mode === "true" || req.bypass_schedule === "true");
+
+  if (dayOfWeek === 0 && liburMingguEnabled && !bypassTestMode) {
+    return {
+      status: "error",
+      code: "HOLIDAY_OFF",
+      message: "Hari ini adalah hari libur (Minggu). Pemindaian presensi madrasah dinonaktifkan."
+    };
+  }
+
   var jamMasukMulai = settings.jam_masuk_mulai || "06:00:00";
   var jamMasukBatas = settings.jam_masuk_batas || "07:15:00";
   var jamMasukMaks = settings.jam_masuk_maksimal || "08:30:00";
   var jamPulangMulai = settings.jam_pulang_mulai || "12:30:00";
   var jamPulangBatas = settings.jam_pulang_batas || "16:00:00";
 
+  // Penyesuaian Jadwal Khusus Hari Jumat
+  if (dayOfWeek === 5 && settings.jumat_khusus_enabled !== "false") {
+    jamPulangMulai = settings.jam_pulang_jumat_mulai || "11:00:00";
+    jamPulangBatas = settings.jam_pulang_jumat_batas || "14:00:00";
+  }
+
   var jenisSesi = "";
   if (timeStr >= jamMasukMulai && timeStr <= jamMasukMaks) {
     jenisSesi = "MASUK";
   } else if (timeStr >= jamPulangMulai && timeStr <= jamPulangBatas) {
     jenisSesi = "PULANG";
+  } else if (bypassTestMode) {
+    // Mode Pengujian / Bypass
+    jenisSesi = (timeStr < (jamPulangMulai || "12:00:00")) ? "MASUK" : "PULANG";
   } else {
     // Di luar jam scan normal
+    var arrHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
     return {
       status: "error",
       code: "OUT_OF_SCHEDULE",
-      message: "Saat ini di luar jam operasional presensi (" + timeStr + " WIB). Sesi Masuk: " + jamMasukMulai.substring(0, 5) + "-" + jamMasukMaks.substring(0, 5) + " WIB. Sesi Pulang: " + jamPulangMulai.substring(0, 5) + "-" + jamPulangBatas.substring(0, 5) + " WIB."
+      message: "Saat ini di luar jam operasional presensi hari " + arrHari[dayOfWeek] + " (" + timeStr + " WIB). Sesi Masuk: " + jamMasukMulai.substring(0, 5) + "-" + jamMasukMaks.substring(0, 5) + " WIB. Sesi Pulang: " + jamPulangMulai.substring(0, 5) + "-" + jamPulangBatas.substring(0, 5) + " WIB."
     };
   }
 

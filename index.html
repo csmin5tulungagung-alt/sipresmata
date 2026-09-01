@@ -216,6 +216,10 @@
           <span class="nav-icon">🪪</span> Cetak Kartu Barcode
         </button>
 
+        <button class="cms-nav-link" data-target="cms-view-schedule">
+          <span class="nav-icon">⏰</span> Jadwal Operasional
+        </button>
+
         <div class="cms-nav-section-title">SISTEM & AKSI</div>
 
         <button class="cms-nav-link" data-target="cms-view-settings">
@@ -805,6 +809,303 @@
 
 
         <!-- ------------------------------------------------------------------
+             CMS VIEW 5: JADWAL OPERASIONAL PRESENSI SISWA
+             ------------------------------------------------------------------ -->
+        <section id="cms-view-schedule" class="cms-view-section">
+          <div style="max-width: 880px; margin: 0 auto;">
+            
+            <div class="cms-page-header">
+              <div>
+                <h2>⏰ Jadwal Operasional Presensi Siswa</h2>
+                <p>Konfigurasi jam masuk, toleransi keterlambatan, jam pulang reguler & khusus Jumat, serta mode simulasi.</p>
+              </div>
+            </div>
+
+            <!-- 1. HERO CARD: LIVE STATUS & REALTIME CLOCK -->
+            <div class="schedule-hero-card">
+              <div class="schedule-live-clock-wrapper">
+                <div class="schedule-clock-display">
+                  <div id="schedule-live-clock" class="schedule-live-clock">--:--:-- WIB</div>
+                  <div id="schedule-live-date" class="schedule-live-date">Memuat waktu...</div>
+                </div>
+
+                <div id="schedule-current-session-badge" class="schedule-status-badge badge-active-green">
+                  <span class="status-indicator-dot dot-green"></span> Memeriksa status sesi...
+                </div>
+              </div>
+
+              <div id="schedule-session-detail-desc" class="schedule-desc-banner">
+                Sistem secara otomatis menyesuaikan status kehadiran siswa berdasarkan batasan jam di bawah.
+              </div>
+            </div>
+
+            <!-- 2. VISUAL TIMELINE CARD -->
+            <div class="schedule-timeline-container">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-main);">
+                  🧭 Alur Garis Waktu Operasional Presensi
+                </div>
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Format Waktu Indonesia Barat (WIB)</span>
+              </div>
+
+              <div class="schedule-timeline-grid">
+                <div class="timeline-milestone-card milestone-green">
+                  <span style="font-size: 1.1rem;">🔔</span>
+                  <div class="milestone-title">Gerbang Buka</div>
+                  <div id="timeline-time-masuk-mulai" class="milestone-time-val">06:00</div>
+                  <div class="milestone-sub">Mulai Scan Masuk</div>
+                </div>
+
+                <div class="timeline-milestone-card milestone-amber">
+                  <span style="font-size: 1.1rem;">⏳</span>
+                  <div class="milestone-title">Batas Toleransi</div>
+                  <div id="timeline-time-masuk-batas" class="milestone-time-val">07:15</div>
+                  <div class="milestone-sub">Lewat = Terlambat</div>
+                </div>
+
+                <div class="timeline-milestone-card milestone-red">
+                  <span style="font-size: 1.1rem;">🚪</span>
+                  <div class="milestone-title">Tutup Masuk</div>
+                  <div id="timeline-time-masuk-maks" class="milestone-time-val">08:30</div>
+                  <div class="milestone-sub">KBM Dimulai</div>
+                </div>
+
+                <div class="timeline-milestone-card milestone-cyan">
+                  <span style="font-size: 1.1rem;">🏠</span>
+                  <div class="milestone-title">Buka Pulang</div>
+                  <div id="timeline-time-pulang-mulai" class="milestone-time-val">12:30</div>
+                  <div class="milestone-sub">Scan Kepulangan</div>
+                </div>
+
+                <div class="timeline-milestone-card milestone-purple">
+                  <span style="font-size: 1.1rem;">🌙</span>
+                  <div class="milestone-title">Tutup Pulang</div>
+                  <div id="timeline-time-pulang-batas" class="milestone-time-val">16:00</div>
+                  <div class="milestone-sub">Akhir Sesi Pulang</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. FORMULIR PENGATURAN JADWAL -->
+            <form id="form-schedule-settings">
+              
+              <!-- KARTU 1: SESI MASUK PAGI -->
+              <div class="card-table-wrapper" style="margin-bottom: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                  <span style="font-size: 1.3rem;">🌅</span>
+                  <div>
+                    <h3 style="font-size: 1.05rem; font-weight: 700; color: #34d399;">Sesi Masuk Pagi</h3>
+                    <p style="font-size: 0.78rem; color: var(--text-muted);">Atur batas toleransi kehadiran dan awal pembukaan pemindai.</p>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+                  <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+                      Jam Mulai Scan Masuk:
+                    </label>
+                    <input type="time" id="sched-masuk-mulai" class="form-control" style="width: 100%; font-size: 1.05rem; font-weight: 700;" required>
+                    <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                      Awal mesin scanner aktif menerima tap kartu masuk pagi.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; color: #fbbf24;">
+                      Batas Tepat Waktu (Toleransi):
+                    </label>
+                    <input type="time" id="sched-masuk-batas" class="form-control" style="width: 100%; font-size: 1.05rem; font-weight: 700; border-color: rgba(251, 191, 36, 0.5);" required>
+                    <span style="font-size: 0.72rem; color: #fbbf24; display: block; margin-top: 0.25rem;">
+                      Tap lewat jam ini = Status <strong>TERLAMBAT</strong> + dihitung selisih menit.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+                      Batas Akhir Scan Masuk:
+                    </label>
+                    <input type="time" id="sched-masuk-maks" class="form-control" style="width: 100%; font-size: 1.05rem; font-weight: 700;" required>
+                    <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                      Scan masuk ditutup setelah jam ini (masuk jam pelajaran KBM).
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- KARTU 2: SESI PULANG (REGULER & KHUSUS JUMAT) -->
+              <div class="card-table-wrapper" style="margin-bottom: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                  <span style="font-size: 1.3rem;">🌇</span>
+                  <div>
+                    <h3 style="font-size: 1.05rem; font-weight: 700; color: #38bdf8;">Sesi Pulang (Siang / Sore)</h3>
+                    <p style="font-size: 0.78rem; color: var(--text-muted);">Atur jam kepulangan siswa reguler dan opsi kepulangan awal hari Jumat.</p>
+                  </div>
+                </div>
+
+                <!-- Reguler Senin - Kamis & Sabtu -->
+                <div style="margin-bottom: 1.25rem;">
+                  <strong style="font-size: 0.85rem; color: var(--text-main); display: block; margin-bottom: 0.65rem;">
+                    📅 Jadwal Reguler (Senin s.d. Kamis & Sabtu):
+                  </strong>
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+                    <div>
+                      <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem;">
+                        Jam Mulai Scan Pulang:
+                      </label>
+                      <input type="time" id="sched-pulang-mulai" class="form-control" style="width: 100%; font-size: 1.05rem; font-weight: 700;" required>
+                      <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                        Awal dibukanya tap kartu kepulangan.
+                      </span>
+                    </div>
+
+                    <div>
+                      <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem;">
+                        Batas Akhir Scan Pulang:
+                      </label>
+                      <input type="time" id="sched-pulang-batas" class="form-control" style="width: 100%; font-size: 1.05rem; font-weight: 700;" required>
+                      <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                        Batas akhir pencatatan presensi kepulangan.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sub-Card: Khusus Hari Jumat -->
+                <div style="background: rgba(6, 182, 212, 0.06); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-md); padding: 1.1rem;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <span style="font-size: 1.1rem;">🕌</span>
+                      <strong style="color: #38bdf8; font-size: 0.9rem;">Jadwal Khusus Hari Jumat (Pulang Awal)</strong>
+                    </div>
+                    <label style="display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: #38bdf8;">
+                      <input type="checkbox" id="sched-jumat-khusus-check" class="table-checkbox" checked>
+                      <span>Aktifkan Khusus Jumat</span>
+                    </label>
+                  </div>
+
+                  <div id="sched-friday-fields-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; transition: opacity 0.2s ease;">
+                    <div>
+                      <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem;">
+                        Jam Mulai Pulang Jumat:
+                      </label>
+                      <input type="time" id="sched-jumat-pulang-mulai" class="form-control" style="width: 100%; font-size: 1rem; font-weight: 700;">
+                      <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                        Standar madrasah: 11:00 WIB (sebelum shalat Jumat).
+                      </span>
+                    </div>
+
+                    <div>
+                      <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem;">
+                        Batas Akhir Pulang Jumat:
+                      </label>
+                      <input type="time" id="sched-jumat-pulang-batas" class="form-control" style="width: 100%; font-size: 1rem; font-weight: 700;">
+                      <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                        Standar madrasah: 14:00 WIB.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- KARTU 3: ATURAN HARI LIBUR & MODE PENGUJIAN -->
+              <div class="card-table-wrapper" style="margin-bottom: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+                  <span style="font-size: 1.3rem;">🛡️</span>
+                  <div>
+                    <h3 style="font-size: 1.05rem; font-weight: 700;">Aturan Hari Libur & Mode Bebas Uji Coba</h3>
+                    <p style="font-size: 0.78rem; color: var(--text-muted);">Kontrol penguncian otomatis hari Minggu dan bypass jam untuk testing.</p>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+                  <!-- Checkbox Libur Minggu -->
+                  <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-md); padding: 1rem;">
+                    <label style="display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;">
+                      <input type="checkbox" id="sched-libur-minggu-check" class="table-checkbox" style="margin-top: 0.2rem;" checked>
+                      <div>
+                        <strong style="color: #f87171; font-size: 0.88rem; display: block; margin-bottom: 0.2rem;">
+                          Kunci Scanner di Hari Minggu
+                        </strong>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; display: block;">
+                          Saat hari Minggu, scanner kiosk otomatis menampilkan pesan hari libur dan menolak pemindaian.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <!-- Checkbox Bypass Mode Uji Coba -->
+                  <div style="background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.25); border-radius: var(--radius-md); padding: 1rem;">
+                    <label style="display: flex; align-items: flex-start; gap: 0.6rem; cursor: pointer;">
+                      <input type="checkbox" id="sched-bypass-test-check" class="table-checkbox" style="margin-top: 0.2rem;">
+                      <div>
+                        <strong style="color: #c084fc; font-size: 0.88rem; display: block; margin-bottom: 0.2rem;">
+                          Mode Bebas Uji Coba (Bypass Jadwal)
+                        </strong>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; display: block;">
+                          Abaikan batasan jam (24 jam aktif). Berguna saat admin/operator sedang menguji barcode di malam hari atau di luar jam sekolah.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- TOMBOL SIMPAN & RESET -->
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 2rem;">
+                <button type="button" id="btn-reset-schedule-default" class="btn btn-secondary" style="font-size: 0.85rem; color: #94a3b8;">
+                  🔄 Kembalikan Standar Madrasah
+                </button>
+
+                <button type="submit" id="btn-save-schedule" class="btn btn-primary" style="padding: 0.7rem 1.8rem; font-size: 0.95rem; font-weight: 700; box-shadow: 0 4px 15px var(--primary-glow);">
+                  💾 Simpan Jadwal Operasional
+                </button>
+              </div>
+            </form>
+
+            <!-- 4. LIVE SIMULATOR WAKTU PRESENSI -->
+            <div class="card-table-wrapper" style="border: 1px solid rgba(56, 189, 248, 0.3); background: rgba(15, 23, 42, 0.5);">
+              <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.85rem;">
+                <span style="font-size: 1.3rem;">🧪</span>
+                <div>
+                  <h3 style="font-size: 1.05rem; font-weight: 700; color: #38bdf8;">Simulator Waktu & Logika Presensi</h3>
+                  <p style="font-size: 0.78rem; color: var(--text-muted);">Uji coba waktu pemindaian simulasi untuk melihat status kehadiran dan suara audio yang akan muncul.</p>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end;">
+                <div style="flex: 1; min-width: 150px;">
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.3rem;">Jam Simulasi:</label>
+                  <input type="time" id="sim-input-time" class="form-control" value="07:22" style="width: 100%;">
+                </div>
+
+                <div style="flex: 1; min-width: 150px;">
+                  <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.3rem;">Hari Simulasi:</label>
+                  <select id="sim-select-day" class="form-control" style="width: 100%;">
+                    <option value="1" selected>Senin (Hari Kerja)</option>
+                    <option value="2">Selasa</option>
+                    <option value="3">Rabu</option>
+                    <option value="4">Kamis</option>
+                    <option value="5">Jumat (Pulang Awal)</option>
+                    <option value="6">Sabtu</option>
+                    <option value="0">Minggu (Hari Libur)</option>
+                  </select>
+                </div>
+
+                <button type="button" id="btn-run-schedule-sim" class="btn btn-secondary" style="font-weight: 700; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4); padding: 0.6rem 1.25rem;">
+                  ⚡ Uji Status Sekarang
+                </button>
+              </div>
+
+              <!-- Hasil Simulasi Interaktif -->
+              <div id="sim-result-box" style="display: none;"></div>
+            </div>
+
+          </div>
+        </section>
+
+
+
+        <!-- ------------------------------------------------------------------
              CMS VIEW 6: PENGATURAN SISTEM
              ------------------------------------------------------------------ -->
         <section id="cms-view-settings" class="cms-view-section">
@@ -812,72 +1113,26 @@
             
             <div class="cms-page-header">
               <div>
-                <h2>⚙️ Pengaturan Jadwal & Sistem Madrasah</h2>
-                <p>Konfigurasi jam operasional absensi masuk & pulang, integrasi database, dan keamanan.</p>
+                <h2>⚙️ Pengaturan Sistem & Integrasi Cloud</h2>
+                <p>Konfigurasi koneksi Google Spreadsheet, deployment Google Apps Script API, WhatsApp Gateway, dan keamanan.</p>
               </div>
             </div>
 
-            <form id="form-settings">
-              <!-- KARTU 1: PENGATURAN JAM MASUK & PULANG -->
-              <div class="card-table-wrapper" style="margin-bottom: 1.5rem;">
-                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-                  <span style="font-size: 1.4rem;">⏰</span>
-                  <div>
-                    <h3 style="font-size: 1.05rem; font-weight: 700;">Jadwal Operasional Presensi Siswa</h3>
-                    <p style="font-size: 0.78rem; color: var(--text-muted);">Atur batasan jam pemindaian barcode untuk sesi pagi (masuk) dan siang/sore (pulang).</p>
-                  </div>
-                </div>
-
-                <!-- Section Jam Masuk -->
-                <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
-                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem;">
-                    <span style="font-size: 1.1rem;">🔔</span>
-                    <strong style="color: #34d399; font-size: 0.95rem;">Sesi Masuk Pagi</strong>
-                  </div>
-
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <div>
-                      <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem;">Jam Mulai Scan Masuk:</label>
-                      <input type="time" id="setting-jam-masuk-mulai" class="form-control" style="width: 100%;" required>
-                      <span style="font-size: 0.72rem; color: var(--text-muted);">Awal dibukanya pemindaian masuk.</span>
-                    </div>
-
-                    <div>
-                      <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem; color: #fbbf24;">Batas Tepat Waktu (Toleransi):</label>
-                      <input type="time" id="setting-jam-masuk-batas" class="form-control" style="width: 100%; border-color: rgba(251, 191, 36, 0.4);" required>
-                      <span style="font-size: 0.72rem; color: #fbbf24;">Lewat jam ini = Status TERLAMBAT.</span>
-                    </div>
-
-                    <div>
-                      <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem;">Batas Akhir Scan Masuk:</label>
-                      <input type="time" id="setting-jam-masuk-maks" class="form-control" style="width: 100%;" required>
-                      <span style="font-size: 0.72rem; color: var(--text-muted);">Scan masuk ditutup setelah jam ini.</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Section Jam Pulang -->
-                <div style="background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: var(--radius-md); padding: 1.25rem;">
-                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.85rem;">
-                    <span style="font-size: 1.1rem;">🏠</span>
-                    <strong style="color: #38bdf8; font-size: 0.95rem;">Sesi Presensi Pulang</strong>
-                  </div>
-
-                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <div>
-                      <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem;">Jam Mulai Scan Pulang:</label>
-                      <input type="time" id="setting-jam-pulang-mulai" class="form-control" style="width: 100%;" required>
-                      <span style="font-size: 0.72rem; color: var(--text-muted);">Awal dibukanya tap kartu kepulangan.</span>
-                    </div>
-
-                    <div>
-                      <label style="display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 0.35rem;">Batas Akhir Scan Pulang:</label>
-                      <input type="time" id="setting-jam-pulang-batas" class="form-control" style="width: 100%;" required>
-                      <span style="font-size: 0.72rem; color: var(--text-muted);">Batas akhir absensi kepulangan.</span>
-                    </div>
-                  </div>
+            <!-- SHORTCUT CARD: MENU JADWAL OPERASIONAL -->
+            <div class="card-table-wrapper" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, rgba(6, 78, 59, 0.25) 0%, rgba(15, 23, 42, 0.6) 100%); border-color: rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.6rem;">⏰</span>
+                <div>
+                  <h3 style="font-size: 0.98rem; font-weight: 700; color: #34d399;">Jadwal Operasional Presensi Siswa</h3>
+                  <p style="font-size: 0.78rem; color: var(--text-muted);">Pengaturan jam masuk, batas toleransi terlambat, jam pulang, dan jadwal khusus Jumat kini berada di menu mandiri.</p>
                 </div>
               </div>
+              <button type="button" class="btn btn-secondary" onclick="document.querySelector('.cms-nav-link[data-target=\'cms-view-schedule\']').click()" style="font-size: 0.82rem; font-weight: 700; color: #34d399; border-color: rgba(52, 211, 153, 0.4); white-space: nowrap;">
+                Buka Jadwal Operasional ➡️
+              </button>
+            </div>
+
+            <form id="form-settings">
 
               <!-- KARTU 2: INTEGRASI DATABASE & KEAMANAN -->
               <div class="card-table-wrapper" style="margin-bottom: 1.5rem;">

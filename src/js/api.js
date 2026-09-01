@@ -86,22 +86,61 @@ export const API = {
       };
     }
 
-    const masukMulai = CONFIG.SCHEDULE.MASUK_MULAI || "06:00:00";
-    const masukMaksimal = CONFIG.SCHEDULE.MASUK_MAKSIMAL || "08:30:00";
-    const masukBatas = CONFIG.SCHEDULE.MASUK_BATAS || "07:15:00";
-    const pulangMulai = CONFIG.SCHEDULE.PULANG_MULAI || "12:30:00";
-    const pulangBatas = CONFIG.SCHEDULE.PULANG_BATAS || "16:00:00";
+    const dayOfWeek = now.getDay(); // 0 = Minggu, 5 = Jumat
 
-    const isSesiMasuk = timeStr >= masukMulai && timeStr <= masukMaksimal;
-    const isSesiPulang = timeStr >= pulangMulai && timeStr <= pulangBatas;
+    // Cek Hari Libur Minggu
+    if (dayOfWeek === 0 && CONFIG.SCHEDULE.LIBUR_MINGGU_ENABLED && !CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE) {
+      return {
+        status: "error",
+        code: "HOLIDAY_OFF",
+        message: "Hari ini adalah hari libur (Minggu). Pemindaian presensi madrasah dinonaktifkan."
+      };
+    }
+
+    const masukMulai = CONFIG.SCHEDULE.MASUK_MULAI || "06:00:00";
+    const masukBatas = CONFIG.SCHEDULE.MASUK_BATAS || "07:15:00";
+    const masukMaksimal = CONFIG.SCHEDULE.MASUK_MAKSIMAL || "08:30:00";
+
+    // Jadwal Pulang (Cek Jumat Khusus)
+    let pulangMulai = CONFIG.SCHEDULE.PULANG_MULAI || "12:30:00";
+    let pulangBatas = CONFIG.SCHEDULE.PULANG_BATAS || "16:00:00";
+    if (dayOfWeek === 5 && CONFIG.SCHEDULE.JUMAT_KHUSUS_ENABLED) {
+      pulangMulai = CONFIG.SCHEDULE.JAM_PULANG_JUMAT_MULAI || "11:00:00";
+      pulangBatas = CONFIG.SCHEDULE.JAM_PULANG_JUMAT_BATAS || "14:00:00";
+    }
+
+    let isSesiMasuk = timeStr >= masukMulai && timeStr <= masukMaksimal;
+    let isSesiPulang = timeStr >= pulangMulai && timeStr <= pulangBatas;
+
+    // Mode Bypass Pengujian / Demo Scanner (Admin testing)
+    if (CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE && !isSesiMasuk && !isSesiPulang) {
+      // Jika jam di bawah 12.00, anggap sesi masuk; jika 12.00 ke atas, anggap sesi pulang
+      if (timeStr < (pulangMulai || "12:00:00")) {
+        isSesiMasuk = true;
+      } else {
+        isSesiPulang = true;
+      }
+    }
 
     // 1. Validasi Jadwal Operasional Terlebih Dahulu (OUT_OF_SCHEDULE)
     if (!isSesiMasuk && !isSesiPulang) {
+      const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][dayOfWeek];
       return {
         status: "error",
         code: "OUT_OF_SCHEDULE",
-        message: `Saat ini di luar jam operasional presensi (${timeStr} WIB). Sesi Masuk: ${masukMulai.slice(0, 5)}–${masukMaksimal.slice(0, 5)} WIB. Sesi Pulang: ${pulangMulai.slice(0, 5)}–${pulangBatas.slice(0, 5)} WIB.`
+        message: `Saat ini di luar jam operasional presensi hari ${namaHari} (${timeStr} WIB). Sesi Masuk: ${masukMulai.slice(0, 5)}–${masukMaksimal.slice(0, 5)} WIB. Sesi Pulang: ${pulangMulai.slice(0, 5)}–${pulangBatas.slice(0, 5)} WIB.`
       };
+    }
+
+    // Helper Hitung Selisih Menit
+    function hitungMenit(jamA, jamB) {
+      try {
+        const [hA, mA] = jamA.split(":").map(Number);
+        const [hB, mB] = jamB.split(":").map(Number);
+        return Math.max(0, (hB * 60 + mB) - (hA * 60 + mA));
+      } catch (e) {
+        return 0;
+      }
     }
 
     // 2. Cek apakah siswa sudah pernah scan pada sesi aktif hari ini (ALREADY_SCANNED)
@@ -117,7 +156,7 @@ export const API = {
       }
 
       const isTerlambat = timeStr > masukBatas;
-      const keterlambatanMenit = isTerlambat ? 12 : 0;
+      const keterlambatanMenit = isTerlambat ? hitungMenit(masukBatas, timeStr) : 0;
       const statusKehadiran = isTerlambat ? "TERLAMBAT" : "HADIR";
 
       const newRecord = {
@@ -133,7 +172,7 @@ export const API = {
         status_kehadiran: statusKehadiran,
         keterlambatan_menit: keterlambatanMenit,
         metode_absen: "BARCODE_SCAN",
-        keterangan: isTerlambat ? "Terlambat 12 menit" : "Hadir tepat waktu",
+        keterangan: isTerlambat ? `Terlambat ${keterlambatanMenit} menit` : "Hadir tepat waktu",
         created_at: new Date().toISOString()
       };
 
@@ -154,7 +193,7 @@ export const API = {
           jam_scan: timeStr,
           keterlambatan_menit: keterlambatanMenit,
           audio_prompt: isTerlambat 
-            ? `Selamat pagi ${siswa.nama_lengkap}. Absen masuk tercatat, Anda terlambat.` 
+            ? `Selamat pagi ${siswa.nama_lengkap}. Absen masuk tercatat, Anda terlambat ${keterlambatanMenit} menit.` 
             : `Selamat pagi ${siswa.nama_lengkap}. Absen masuk berhasil, tepat waktu.`
         }
       };

@@ -178,6 +178,11 @@ function setupSheetPengaturanSekolah(ss) {
       ["jam_masuk_maksimal", "08:30:00", "Batas akhir scan masuk (lewat = harus izin piket)"],
       ["jam_pulang_mulai", "12:30:00", "Awal dibukanya sesi scan pulang"],
       ["jam_pulang_batas", "16:00:00", "Batas akhir scan pulang"],
+      ["jumat_khusus_enabled", "TRUE", "Aktifkan jadwal khusus kepulangan Jumat"],
+      ["jam_pulang_jumat_mulai", "11:00:00", "Awal scan pulang khusus Jumat"],
+      ["jam_pulang_jumat_batas", "14:00:00", "Batas scan pulang khusus Jumat"],
+      ["libur_minggu_enabled", "TRUE", "Nonaktifkan scanner otomatis di hari Minggu"],
+      ["bypass_schedule_test_mode", "FALSE", "Mode bebas uji coba jam scan untuk admin"],
       ["client_key", "MIN5_SIPRESMATA_2026", "Kunci pengaman scanner kiosk"],
       ["suara_otomatis", "TRUE", "Aktifkan suara notifikasi Text-to-Speech (TRUE/FALSE)"]
     ];

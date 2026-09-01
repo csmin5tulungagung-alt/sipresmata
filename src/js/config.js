@@ -36,7 +36,14 @@ export const CONFIG = {
     MASUK_BATAS: localStorage.getItem("SIPRESMATA_JAM_MASUK_BATAS") || "07:15:00", // > 07:15 = Terlambat
     MASUK_MAKSIMAL: localStorage.getItem("SIPRESMATA_JAM_MASUK_MAKSIMAL") || "08:30:00",
     PULANG_MULAI: localStorage.getItem("SIPRESMATA_JAM_PULANG_MULAI") || "12:30:00",
-    PULANG_BATAS: localStorage.getItem("SIPRESMATA_JAM_PULANG_BATAS") || "16:00:00"
+    PULANG_BATAS: localStorage.getItem("SIPRESMATA_JAM_PULANG_BATAS") || "16:00:00",
+    // Jadwal Khusus Hari Jumat
+    JUMAT_KHUSUS_ENABLED: localStorage.getItem("SIPRESMATA_JUMAT_KHUSUS_ENABLED") !== "false", // default true
+    JAM_PULANG_JUMAT_MULAI: localStorage.getItem("SIPRESMATA_JAM_PULANG_JUMAT_MULAI") || "11:00:00",
+    JAM_PULANG_JUMAT_BATAS: localStorage.getItem("SIPRESMATA_JAM_PULANG_JUMAT_BATAS") || "14:00:00",
+    // Aturan Hari Libur & Mode Pengujian
+    LIBUR_MINGGU_ENABLED: localStorage.getItem("SIPRESMATA_LIBUR_MINGGU_ENABLED") !== "false", // default true
+    BYPASS_SCHEDULE_TEST_MODE: localStorage.getItem("SIPRESMATA_BYPASS_TEST_MODE") === "true" // default false
   },
   
   // Daftar 24 Rombel (Kelas 1A-D s.d 6A-D)
@@ -85,25 +92,45 @@ export function saveClientKey(key) {
 }
 
 export function saveSchedule(schedule) {
-  if (schedule.MASUK_MULAI) {
+  if (schedule.MASUK_MULAI !== undefined) {
     CONFIG.SCHEDULE.MASUK_MULAI = formatTimeWithSeconds(schedule.MASUK_MULAI);
     localStorage.setItem("SIPRESMATA_JAM_MASUK_MULAI", CONFIG.SCHEDULE.MASUK_MULAI);
   }
-  if (schedule.MASUK_BATAS) {
+  if (schedule.MASUK_BATAS !== undefined) {
     CONFIG.SCHEDULE.MASUK_BATAS = formatTimeWithSeconds(schedule.MASUK_BATAS);
     localStorage.setItem("SIPRESMATA_JAM_MASUK_BATAS", CONFIG.SCHEDULE.MASUK_BATAS);
   }
-  if (schedule.MASUK_MAKSIMAL) {
+  if (schedule.MASUK_MAKSIMAL !== undefined) {
     CONFIG.SCHEDULE.MASUK_MAKSIMAL = formatTimeWithSeconds(schedule.MASUK_MAKSIMAL);
     localStorage.setItem("SIPRESMATA_JAM_MASUK_MAKSIMAL", CONFIG.SCHEDULE.MASUK_MAKSIMAL);
   }
-  if (schedule.PULANG_MULAI) {
+  if (schedule.PULANG_MULAI !== undefined) {
     CONFIG.SCHEDULE.PULANG_MULAI = formatTimeWithSeconds(schedule.PULANG_MULAI);
     localStorage.setItem("SIPRESMATA_JAM_PULANG_MULAI", CONFIG.SCHEDULE.PULANG_MULAI);
   }
-  if (schedule.PULANG_BATAS) {
+  if (schedule.PULANG_BATAS !== undefined) {
     CONFIG.SCHEDULE.PULANG_BATAS = formatTimeWithSeconds(schedule.PULANG_BATAS);
     localStorage.setItem("SIPRESMATA_JAM_PULANG_BATAS", CONFIG.SCHEDULE.PULANG_BATAS);
+  }
+  if (schedule.JUMAT_KHUSUS_ENABLED !== undefined) {
+    CONFIG.SCHEDULE.JUMAT_KHUSUS_ENABLED = Boolean(schedule.JUMAT_KHUSUS_ENABLED);
+    localStorage.setItem("SIPRESMATA_JUMAT_KHUSUS_ENABLED", String(CONFIG.SCHEDULE.JUMAT_KHUSUS_ENABLED));
+  }
+  if (schedule.JAM_PULANG_JUMAT_MULAI !== undefined) {
+    CONFIG.SCHEDULE.JAM_PULANG_JUMAT_MULAI = formatTimeWithSeconds(schedule.JAM_PULANG_JUMAT_MULAI);
+    localStorage.setItem("SIPRESMATA_JAM_PULANG_JUMAT_MULAI", CONFIG.SCHEDULE.JAM_PULANG_JUMAT_MULAI);
+  }
+  if (schedule.JAM_PULANG_JUMAT_BATAS !== undefined) {
+    CONFIG.SCHEDULE.JAM_PULANG_JUMAT_BATAS = formatTimeWithSeconds(schedule.JAM_PULANG_JUMAT_BATAS);
+    localStorage.setItem("SIPRESMATA_JAM_PULANG_JUMAT_BATAS", CONFIG.SCHEDULE.JAM_PULANG_JUMAT_BATAS);
+  }
+  if (schedule.LIBUR_MINGGU_ENABLED !== undefined) {
+    CONFIG.SCHEDULE.LIBUR_MINGGU_ENABLED = Boolean(schedule.LIBUR_MINGGU_ENABLED);
+    localStorage.setItem("SIPRESMATA_LIBUR_MINGGU_ENABLED", String(CONFIG.SCHEDULE.LIBUR_MINGGU_ENABLED));
+  }
+  if (schedule.BYPASS_SCHEDULE_TEST_MODE !== undefined) {
+    CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE = Boolean(schedule.BYPASS_SCHEDULE_TEST_MODE);
+    localStorage.setItem("SIPRESMATA_BYPASS_TEST_MODE", String(CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE));
   }
 }
 

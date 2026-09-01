@@ -1652,3 +1652,288 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* ==========================================================================
+   CMS: JADWAL OPERASIONAL PRESENSI SISWA STYLES
+   ========================================================================== */
+.schedule-hero-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(6, 78, 59, 0.35) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.schedule-hero-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 250px;
+  height: 100%;
+  background: radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.schedule-live-clock-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.schedule-clock-display {
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-live-clock {
+  font-family: 'Plus Jakarta Sans', monospace;
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, #34d399, #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.1;
+}
+
+.schedule-live-date {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 0.25rem;
+}
+
+.schedule-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.schedule-status-badge.badge-active-green {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1.5px solid rgba(52, 211, 153, 0.5);
+}
+
+.schedule-status-badge.badge-warning-amber {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1.5px solid rgba(251, 191, 36, 0.5);
+}
+
+.schedule-status-badge.badge-active-cyan {
+  background: rgba(6, 182, 212, 0.18);
+  color: #38bdf8;
+  border: 1.5px solid rgba(56, 189, 248, 0.5);
+}
+
+.schedule-status-badge.badge-recess-blue {
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+  border: 1.5px solid rgba(165, 180, 252, 0.5);
+}
+
+.schedule-status-badge.badge-closed-gray {
+  background: rgba(100, 116, 139, 0.2);
+  color: #cbd5e1;
+  border: 1.5px solid rgba(148, 163, 184, 0.4);
+}
+
+.schedule-status-badge.badge-holiday {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  border: 1.5px solid rgba(252, 165, 165, 0.5);
+}
+
+.schedule-status-badge.badge-bypass {
+  background: rgba(168, 85, 247, 0.2);
+  color: #d8b4fe;
+  border: 1.5px solid rgba(192, 132, 252, 0.6);
+}
+
+.status-indicator-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-indicator-dot.dot-green {
+  background: #34d399;
+  box-shadow: 0 0 10px #34d399;
+  animation: pulse 1.5s infinite;
+}
+
+.status-indicator-dot.dot-amber {
+  background: #fbbf24;
+  box-shadow: 0 0 10px #fbbf24;
+  animation: pulse 1.5s infinite;
+}
+
+.status-indicator-dot.dot-cyan {
+  background: #38bdf8;
+  box-shadow: 0 0 10px #38bdf8;
+  animation: pulse 1.5s infinite;
+}
+
+.status-indicator-dot.dot-blue {
+  background: #818cf8;
+  box-shadow: 0 0 10px #818cf8;
+}
+
+.status-indicator-dot.dot-gray {
+  background: #94a3b8;
+}
+
+.status-indicator-dot.dot-purple {
+  background: #c084fc;
+  box-shadow: 0 0 10px #c084fc;
+  animation: pulse 1.5s infinite;
+}
+
+.schedule-desc-banner {
+  margin-top: 1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* Visual Timeline Card */
+.schedule-timeline-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.schedule-timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+  position: relative;
+}
+
+.timeline-milestone-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem 0.85rem;
+  text-align: center;
+  position: relative;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.timeline-milestone-card:hover {
+  transform: translateY(-3px);
+}
+
+.timeline-milestone-card.milestone-green {
+  border-top: 3px solid #34d399;
+}
+
+.timeline-milestone-card.milestone-amber {
+  border-top: 3px solid #fbbf24;
+}
+
+.timeline-milestone-card.milestone-red {
+  border-top: 3px solid #f87171;
+}
+
+.timeline-milestone-card.milestone-cyan {
+  border-top: 3px solid #38bdf8;
+}
+
+.timeline-milestone-card.milestone-purple {
+  border-top: 3px solid #c084fc;
+}
+
+.milestone-time-val {
+  font-family: 'Plus Jakarta Sans', monospace;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-top: 0.35rem;
+}
+
+.milestone-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 0.25rem;
+}
+
+.milestone-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+/* Simulation Result Card */
+.sim-result-card {
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-top: 1rem;
+  border: 1px solid;
+  animation: slideIn 0.25s ease;
+}
+
+.sim-result-card.sim-card-success {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+.sim-result-card.sim-card-warning {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.sim-result-card.sim-card-cyan {
+  background: rgba(6, 182, 212, 0.1);
+  border-color: rgba(6, 182, 212, 0.35);
+  color: #38bdf8;
+}
+
+.sim-result-card.sim-card-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+.sim-result-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.sim-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--text-main);
+}
+
+
