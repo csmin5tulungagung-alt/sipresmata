@@ -2010,31 +2010,61 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.03em;
 }
 
-/* Matrix Table Styling */
+/* ==========================================================================
+   MATRIX TABLE LUXURY STYLING & CUSTOM SCROLLBAR
+   ========================================================================== */
 .monthly-matrix-container {
   overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-card);
   max-width: 100%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  scrollbar-width: thin;
+  scrollbar-color: #059669 rgba(15, 23, 42, 0.85);
+  margin-bottom: 0.5rem;
+}
+
+/* Custom Scrollbar */
+.monthly-matrix-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.monthly-matrix-container::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 4px;
+}
+
+.monthly-matrix-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #059669 0%, #0284c7 100%);
+  border-radius: 4px;
+}
+
+.monthly-matrix-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, #10b981 0%, #38bdf8 100%);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
 }
 
 .monthly-matrix-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.82rem;
   white-space: nowrap;
 }
 
 .monthly-matrix-table th,
 .monthly-matrix-table td {
-  border: 1px solid var(--border-color);
-  padding: 6px 8px;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 8px 8px;
   text-align: center;
+  vertical-align: middle;
 }
 
 .monthly-matrix-table th {
-  background: rgba(15, 23, 42, 0.9);
+  background: #0f172a;
   color: #cbd5e1;
   font-weight: 700;
   font-size: 0.78rem;
@@ -2043,18 +2073,69 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 2;
 }
 
-.monthly-matrix-table .col-sticky-nama {
-  text-align: left;
-  min-width: 180px;
-  max-width: 220px;
-  position: sticky;
-  left: 0;
-  background: var(--bg-card);
-  z-index: 1;
+.monthly-matrix-table tbody tr {
+  transition: background 0.15s ease;
 }
 
-.monthly-matrix-table tr:hover .col-sticky-nama {
-  background: rgba(255, 255, 255, 0.04);
+.monthly-matrix-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.monthly-matrix-table tbody tr:hover {
+  background: rgba(56, 189, 248, 0.08) !important;
+}
+
+/* Kolom Khusus Matriks */
+.col-matrix-no {
+  width: 42px;
+  min-width: 42px;
+  max-width: 42px;
+  text-align: center;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.col-matrix-nisn {
+  width: 105px;
+  min-width: 105px;
+  max-width: 115px;
+  font-family: monospace;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.col-matrix-nama {
+  min-width: 210px;
+  max-width: 250px;
+  width: 230px;
+  text-align: left !important;
+  font-weight: 600;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-matrix-kelas {
+  width: 85px;
+  min-width: 85px;
+  max-width: 95px;
+  text-align: center;
+}
+
+.col-matrix-day {
+  width: 28px;
+  min-width: 28px;
+  padding: 4px 2px !important;
+  text-align: center;
+}
+
+.col-matrix-stat {
+  width: 32px;
+  min-width: 32px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .matrix-badge {
@@ -2106,19 +2187,40 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .matrix-cell-sunday {
-  background: rgba(239, 68, 68, 0.05);
+  background: rgba(239, 68, 68, 0.06);
 }
 
 .matrix-legend-bar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 1rem;
-  background: rgba(15, 23, 42, 0.5);
-  border-top: 1px solid var(--border-color);
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
   font-size: 0.78rem;
   color: var(--text-muted);
   flex-wrap: wrap;
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+}
+
+.matrix-legend-items {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.matrix-scroll-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #38bdf8;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 

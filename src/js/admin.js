@@ -1910,35 +1910,35 @@ export const ADMIN = {
       const dayNum = i + 1;
       const dayDate = new Date(summary.year, summary.monthIdx - 1, dayNum);
       const isSunday = dayDate.getDay() === 0;
-      return `<th class="${isSunday ? 'matrix-cell-sunday' : ''}" style="width: 28px; min-width: 28px; font-size: 0.75rem; color: ${isSunday ? '#f87171' : ''};">${dayNum}</th>`;
+      return `<th class="col-matrix-day ${isSunday ? 'matrix-cell-sunday' : ''}" style="color: ${isSunday ? '#f87171' : ''}; font-weight: 700;">${dayNum}</th>`;
     }).join("");
 
     const rowsHTML = pageItems.map((student, idx) => {
       const daysHTML = student.dailyStatus.map(d => {
         if (d.isHoliday) {
-          return `<td class="matrix-cell-sunday"><span class="matrix-badge matrix-badge-holiday">—</span></td>`;
+          return `<td class="col-matrix-day matrix-cell-sunday"><span class="matrix-badge matrix-badge-holiday">—</span></td>`;
         }
-        if (d.code === "H") return `<td><span class="matrix-badge matrix-badge-h" title="Hadir Tepat Waktu">H</span></td>`;
-        if (d.code === "T") return `<td><span class="matrix-badge matrix-badge-t" title="Terlambat">T</span></td>`;
-        if (d.code === "I") return `<td><span class="matrix-badge matrix-badge-i" title="Izin">I</span></td>`;
-        if (d.code === "S") return `<td><span class="matrix-badge matrix-badge-s" title="Sakit">S</span></td>`;
-        if (d.code === "A") return `<td><span class="matrix-badge matrix-badge-a" title="Alpa / Tanpa Keterangan">A</span></td>`;
-        return `<td><span style="color: var(--text-muted); opacity: 0.3;">-</span></td>`;
+        if (d.code === "H") return `<td class="col-matrix-day"><span class="matrix-badge matrix-badge-h" title="Hadir Tepat Waktu">H</span></td>`;
+        if (d.code === "T") return `<td class="col-matrix-day"><span class="matrix-badge matrix-badge-t" title="Terlambat">T</span></td>`;
+        if (d.code === "I") return `<td class="col-matrix-day"><span class="matrix-badge matrix-badge-i" title="Izin">I</span></td>`;
+        if (d.code === "S") return `<td class="col-matrix-day"><span class="matrix-badge matrix-badge-s" title="Sakit">S</span></td>`;
+        if (d.code === "A") return `<td class="col-matrix-day"><span class="matrix-badge matrix-badge-a" title="Alpa / Tanpa Keterangan">A</span></td>`;
+        return `<td class="col-matrix-day"><span style="color: var(--text-muted); opacity: 0.3;">-</span></td>`;
       }).join("");
 
       return `
         <tr>
-          <td style="font-size: 0.78rem;">${start + idx + 1}</td>
-          <td style="font-family: monospace; font-size: 0.78rem;">${student.nisn}</td>
-          <td class="col-sticky-nama"><strong>${student.nama_lengkap}</strong></td>
-          <td><span class="badge badge-info" style="font-size: 0.7rem;">${student.nama_kelas}</span></td>
+          <td class="col-matrix-no">${start + idx + 1}</td>
+          <td class="col-matrix-nisn">${student.nisn}</td>
+          <td class="col-matrix-nama" title="${student.nama_lengkap}"><strong>${student.nama_lengkap}</strong></td>
+          <td class="col-matrix-kelas"><span class="badge badge-info" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;">${student.nama_kelas}</span></td>
           ${daysHTML}
-          <td style="font-weight: 700; color: #34d399;">${student.summary.hadir}</td>
-          <td style="font-weight: 700; color: #fbbf24;">${student.summary.terlambat}</td>
-          <td style="color: #38bdf8;">${student.summary.izin}</td>
-          <td style="color: #c084fc;">${student.summary.sakit}</td>
-          <td style="font-weight: 700; color: ${student.summary.alpa > 0 ? '#f87171' : 'var(--text-muted)'};">${student.summary.alpa}</td>
-          <td style="font-weight: 800; color: ${student.percentage >= 85 ? '#34d399' : student.percentage >= 70 ? '#fbbf24' : '#f87171'};">${student.percentage}%</td>
+          <td class="col-matrix-stat" style="color: #34d399;">${student.summary.hadir}</td>
+          <td class="col-matrix-stat" style="color: #fbbf24;">${student.summary.terlambat}</td>
+          <td class="col-matrix-stat" style="color: #38bdf8;">${student.summary.izin}</td>
+          <td class="col-matrix-stat" style="color: #c084fc;">${student.summary.sakit}</td>
+          <td class="col-matrix-stat" style="color: ${student.summary.alpa > 0 ? '#f87171' : 'var(--text-muted)'};">${student.summary.alpa}</td>
+          <td class="col-matrix-stat" style="font-weight: 800; color: ${student.percentage >= 85 ? '#34d399' : student.percentage >= 70 ? '#fbbf24' : '#f87171'};">${student.percentage}%</td>
         </tr>
       `;
     }).join("");
@@ -1947,21 +1947,21 @@ export const ADMIN = {
       <table class="monthly-matrix-table">
         <thead>
           <tr>
-            <th rowspan="2" style="width: 35px;">No</th>
-            <th rowspan="2" style="width: 95px;">NISN</th>
-            <th rowspan="2" class="col-sticky-nama" style="min-width: 180px;">Nama Lengkap Siswa</th>
-            <th rowspan="2" style="width: 60px;">Kelas</th>
+            <th rowspan="2" class="col-matrix-no">No</th>
+            <th rowspan="2" class="col-matrix-nisn">NISN</th>
+            <th rowspan="2" class="col-matrix-nama">Nama Lengkap Siswa</th>
+            <th rowspan="2" class="col-matrix-kelas">Kelas</th>
             <th colspan="${daysInMonth}">Tanggal (${summary.monthName} ${summary.year})</th>
             <th colspan="5">Rekap Total</th>
-            <th rowspan="2" style="width: 45px;">%</th>
+            <th rowspan="2" class="col-matrix-stat" style="width: 45px;">%</th>
           </tr>
           <tr>
             ${dayHeadersHTML}
-            <th style="color: #34d399; width: 26px;">H</th>
-            <th style="color: #fbbf24; width: 26px;">T</th>
-            <th style="color: #38bdf8; width: 26px;">I</th>
-            <th style="color: #c084fc; width: 26px;">S</th>
-            <th style="color: #f87171; width: 26px;">A</th>
+            <th class="col-matrix-stat" style="color: #34d399;">H</th>
+            <th class="col-matrix-stat" style="color: #fbbf24;">T</th>
+            <th class="col-matrix-stat" style="color: #38bdf8;">I</th>
+            <th class="col-matrix-stat" style="color: #c084fc;">S</th>
+            <th class="col-matrix-stat" style="color: #f87171;">A</th>
           </tr>
         </thead>
         <tbody>
