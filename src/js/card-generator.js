@@ -403,8 +403,12 @@ export const CARD_GENERATOR = {
   // 4. MODAL POP-UP PREVIEW KARTU SISWA (HD 300 DPI)
   // ==========================================================================
   previewCard(idSiswa) {
-    const student = this.state.allStudents.find(s => s.id_siswa === idSiswa);
-    if (!student) return;
+    const student = (this.state.allStudents || []).find(s => s.id_siswa === idSiswa) || 
+                    (window.ADMIN && (window.ADMIN.studentsState.allList || []).find(s => s.id_siswa === idSiswa));
+    if (!student) {
+      showToast("Data siswa tidak ditemukan untuk kartu.", "warning");
+      return;
+    }
 
     this.state.previewStudent = student;
 
@@ -543,37 +547,46 @@ export const CARD_GENERATOR = {
   // 5. UNDUH SINGLE PNG CARD
   // ==========================================================================
   async downloadSingleCardById(idSiswa) {
-    const student = this.state.allStudents.find(s => s.id_siswa === idSiswa);
-    if (!student) return;
-
-    // Pastikan ada kartu yang dirender untuk di-screenshot
-    let cardEl = document.getElementById(`card-item-${idSiswa}`);
-    let tempContainer = null;
-
-    if (!cardEl) {
-      tempContainer = document.createElement("div");
-      tempContainer.style.position = "absolute";
-      tempContainer.style.left = "-9999px";
-      tempContainer.innerHTML = this.createCardHTML(student);
-      document.body.appendChild(tempContainer);
-      cardEl = tempContainer.querySelector(".student-card-portrait");
-
-      const qrElem = cardEl.querySelector(`#qrcode-${student.id_siswa}`);
-      if (qrElem && typeof QRCode !== 'undefined') {
-        new QRCode(qrElem, {
-          text: student.kode_barcode || `MIN5-${student.nisn}`,
-          width: 82,
-          height: 82,
-          colorDark: "#022c22",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.M
-        });
-      }
-      await new Promise(r => setTimeout(r, 100));
+    const student = (this.state.allStudents || []).find(s => s.id_siswa === idSiswa) ||
+                    this.state.previewStudent ||
+                    (window.ADMIN && (window.ADMIN.studentsState.allList || []).find(s => s.id_siswa === idSiswa));
+    if (!student) {
+      showToast("Data siswa tidak ditemukan untuk diunduh.", "warning");
+      return;
     }
 
+    // Buat container bersih khusus capture di body agar ukuran kartu pasti (260px) dan tidak terpengaruh scale modal
+    const captureWrapper = document.createElement("div");
+    captureWrapper.style.position = "fixed";
+    captureWrapper.style.left = "-9999px";
+    captureWrapper.style.top = "0";
+    captureWrapper.style.width = "270px";
+    captureWrapper.style.zIndex = "-1000";
+    captureWrapper.style.background = "#ffffff";
+    captureWrapper.innerHTML = this.createCardHTML(student);
+    document.body.appendChild(captureWrapper);
+
+    const cardEl = captureWrapper.querySelector(".student-card-portrait");
+    const qrElem = captureWrapper.querySelector(`#qrcode-${student.id_siswa}`);
+
+    if (qrElem && typeof QRCode !== 'undefined') {
+      qrElem.innerHTML = "";
+      new QRCode(qrElem, {
+        text: student.kode_barcode || `MIN5-${student.nisn}`,
+        width: 82,
+        height: 82,
+        colorDark: "#022c22",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    // Berikan jeda sejenak agar browser merender QR code dan SVG/font
+    await new Promise(r => setTimeout(r, 120));
+
     try {
-      const canvas = await html2canvas(cardEl, {
+      const targetElement = cardEl || captureWrapper;
+      const canvas = await html2canvas(targetElement, {
         scale: 3,
         useCORS: true,
         allowTaint: true,
@@ -581,8 +594,9 @@ export const CARD_GENERATOR = {
         logging: false
       });
 
-      const cleanNama = student.nama_lengkap.replace(/[\\/:*?"<>|]/g, "_").trim();
-      const fileName = `Kartu_${student.nisn}_${cleanNama}.png`;
+      const cleanNama = String(student.nama_lengkap || "Siswa").replace(/[\\/:*?"<>|]/g, "_").trim();
+      const nisn = String(student.nisn || student.id_siswa || "000");
+      const fileName = `Kartu_${nisn}_${cleanNama}.png`;
 
       const link = document.createElement("a");
       link.download = fileName;
@@ -592,13 +606,15 @@ export const CARD_GENERATOR = {
       document.body.removeChild(link);
 
       if (typeof showToast === 'function') {
-        showToast(`Kartu ${student.nama_lengkap} berhasil diunduh.`, "success");
+        showToast(`✓ Kartu ${student.nama_lengkap} berhasil diunduh.`, "success");
       }
     } catch (err) {
       console.error("Gagal download PNG:", err);
       alert("Gagal mengunduh kartu: " + err.message);
     } finally {
-      if (tempContainer) document.body.removeChild(tempContainer);
+      if (captureWrapper && captureWrapper.parentNode) {
+        document.body.removeChild(captureWrapper);
+      }
     }
   },
 
@@ -673,10 +689,14 @@ export const CARD_GENERATOR = {
     const zip = new JSZip();
     const total = studentsList.length;
 
-    // Temporary container untuk render off-screen
+    // Temporary container untuk render off-screen dengan ukuran pasti
     const tempContainer = document.createElement("div");
-    tempContainer.style.position = "absolute";
+    tempContainer.style.position = "fixed";
     tempContainer.style.left = "-9999px";
+    tempContainer.style.top = "0";
+    tempContainer.style.width = "270px";
+    tempContainer.style.zIndex = "-1000";
+    tempContainer.style.background = "#ffffff";
     document.body.appendChild(tempContainer);
 
     try {
@@ -693,6 +713,7 @@ export const CARD_GENERATOR = {
         const qrElem = tempContainer.querySelector(`#qrcode-${s.id_siswa}`);
 
         if (qrElem && typeof QRCode !== 'undefined') {
+          qrElem.innerHTML = "";
           new QRCode(qrElem, {
             text: s.kode_barcode || `MIN5-${s.nisn}`,
             width: 82,
@@ -703,9 +724,9 @@ export const CARD_GENERATOR = {
           });
         }
 
-        await new Promise(r => setTimeout(r, 60));
+        await new Promise(r => setTimeout(r, 100));
 
-        const canvas = await html2canvas(cardEl, {
+        const canvas = await html2canvas(cardEl || tempContainer, {
           scale: 3,
           useCORS: true,
           allowTaint: true,
