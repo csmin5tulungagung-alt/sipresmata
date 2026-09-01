@@ -597,96 +597,228 @@
         </section>
 
         <!-- ------------------------------------------------------------------
-             CMS VIEW 3: REKAPITULASI & LAPORAN BULANAN
+             CMS VIEW 3: REKAPITULASI & LAPORAN PRESENSI
              ------------------------------------------------------------------ -->
         <section id="cms-view-rekap" class="cms-view-section">
           <div class="cms-page-header">
             <div>
-              <h2>📑 Rekapitulasi Presensi & Laporan</h2>
-              <p>Filter riwayat kehadiran per rentang tanggal dan rombongan belajar.</p>
-            </div>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button id="btn-export-csv" class="btn btn-secondary">
-                📥 Ekspor Excel (.csv)
-              </button>
-              <button id="btn-print-report" class="btn btn-primary">
-                🖨️ Cetak Laporan Resmi
-              </button>
+              <h2>📑 Rekapitulasi Presensi & Laporan Kehadiran</h2>
+              <p>Kelola laporan riwayat presensi harian serta matriks kehadiran bulanan per rombel.</p>
             </div>
           </div>
 
-          <div class="card-table-wrapper">
-            <!-- Bulk Action Bar Rekap -->
-            <div id="rekap-bulk-bar" class="bulk-action-bar">
-              <div class="bulk-selection-info">
-                <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="ADMIN.toggleSelectAllVisibleRekap()">
-                  ☑️ <span id="btn-rekap-select-all-text">Pilih Semua</span>
-                </button>
-                <span class="bulk-selection-badge" id="rekap-bulk-count">0</span>
-                <span>Data presensi dipilih</span>
-              </div>
-              <div class="bulk-action-buttons">
-                <button type="button" class="btn-danger-bulk" onclick="ADMIN.deleteSelectedRekap()">
-                  🗑️ Hapus Presensi Terpilih
-                </button>
-                <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="ADMIN.exitRekapSelectionMode()">
-                  ✕ Selesai
-                </button>
-              </div>
-            </div>
+          <!-- TAB SWITCHER: LOG HARIAN VS MATRIKS BULANAN -->
+          <div class="rekap-tab-pill-group">
+            <button type="button" id="btn-tab-rekap-monthly" class="rekap-tab-btn active" onclick="ADMIN.setRekapTab('MONTHLY')">
+              📊 Rekap Matriks Bulanan (Format EMIS)
+            </button>
+            <button type="button" id="btn-tab-rekap-log" class="rekap-tab-btn" onclick="ADMIN.setRekapTab('LOG')">
+              📅 Rekap Log Harian / Rentang Tanggal
+            </button>
+          </div>
 
-            <form id="form-filter-rekap" class="table-filter-bar">
-              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; flex: 1;">
-                <label style="font-size: 0.85rem; font-weight: 600;">Periode:</label>
-                <input type="date" id="rekap-tgl-mulai" class="form-control">
-                <span>s.d.</span>
-                <input type="date" id="rekap-tgl-akhir" class="form-control">
-                
-                <select id="rekap-filter-kelas" class="form-control select-kelas-rombel" data-include-all="true">
-                  <!-- Injected Rombel 1A-D to 6A-D -->
-                </select>
-                
-                <button type="submit" class="btn btn-primary">
-                  🔍 Tampilkan Rekap
-                </button>
-              </div>
+          <!-- ================================================================
+               SUB-VIEW 1: REKAP MATRIKS BULANAN (DEFAULT)
+               ================================================================ -->
+          <div id="rekap-subview-monthly">
+            <div class="card-table-wrapper">
+              
+              <!-- Filter Bar Matriks Bulanan -->
+              <form id="form-filter-monthly-rekap" class="table-filter-bar" style="margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; flex: 1;">
+                  <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600;">Bulan:</label>
+                    <select id="filter-monthly-month" class="form-control" style="font-weight: 600;">
+                      <option value="1">Januari</option>
+                      <option value="2">Februari</option>
+                      <option value="3">Maret</option>
+                      <option value="4">April</option>
+                      <option value="5">Mei</option>
+                      <option value="6">Juni</option>
+                      <option value="7">Juli</option>
+                      <option value="8">Agustus</option>
+                      <option value="9">September</option>
+                      <option value="10">Oktober</option>
+                      <option value="11">November</option>
+                      <option value="12">Desember</option>
+                    </select>
+                  </div>
 
-              <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                <button type="button" id="btn-toggle-select-rekap" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="ADMIN.toggleRekapSelectionMode()">
-                  🔘 Pilih Data Presensi
-                </button>
-                <div id="rekap-summary-badge" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-                  <!-- Summary badges -->
+                  <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600;">Tahun:</label>
+                    <select id="filter-monthly-year" class="form-control" style="font-weight: 600;">
+                      <option value="2025">2025</option>
+                      <option value="2026" selected>2026</option>
+                      <option value="2027">2027</option>
+                    </select>
+                  </div>
+
+                  <div style="display: flex; align-items: center; gap: 0.35rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600;">Kelas:</label>
+                    <select id="filter-monthly-class" class="form-control select-kelas-rombel" data-include-all="true" style="min-width: 180px;">
+                      <!-- Injected Rombel 1A-D to 6A-D -->
+                    </select>
+                  </div>
+
+                  <button type="submit" class="btn btn-primary" style="font-weight: 700;">
+                    🔍 Tampilkan Rekap Bulanan
+                  </button>
+
+                  <div style="display: flex; gap: 0.35rem;">
+                    <button type="button" class="btn btn-secondary" onclick="ADMIN.setMonthlyQuickDate('THIS_MONTH')" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
+                      Bulan Ini
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="ADMIN.setMonthlyQuickDate('LAST_MONTH')" style="font-size: 0.8rem; padding: 0.4rem 0.75rem;">
+                      Bulan Lalu
+                    </button>
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <button type="button" id="btn-export-monthly-csv" class="btn btn-secondary" onclick="ADMIN.exportMonthlyCSV()">
+                    📥 Ekspor Excel (.csv)
+                  </button>
+                  <button type="button" id="btn-print-monthly-matrix" class="btn btn-primary" onclick="ADMIN.printMonthlyReport()">
+                    🖨️ Cetak Matriks Bulanan
+                  </button>
+                </div>
+              </form>
+
+              <!-- Monthly Summary Cards -->
+              <div id="monthly-stats-banner" class="monthly-stats-grid">
+                <div class="monthly-stat-card" style="border-top: 3px solid #38bdf8;">
+                  <span class="monthly-stat-lbl">Total Siswa</span>
+                  <div id="monthly-stat-total-students" class="monthly-stat-val" style="color: #38bdf8;">0</div>
+                </div>
+                <div class="monthly-stat-card" style="border-top: 3px solid #34d399;">
+                  <span class="monthly-stat-lbl">Rata-rata Kehadiran</span>
+                  <div id="monthly-stat-avg-attendance" class="monthly-stat-val" style="color: #34d399;">0%</div>
+                </div>
+                <div class="monthly-stat-card" style="border-top: 3px solid #059669;">
+                  <span class="monthly-stat-lbl">Total Hadir (H)</span>
+                  <div id="monthly-stat-hadir" class="monthly-stat-val" style="color: #34d399;">0</div>
+                </div>
+                <div class="monthly-stat-card" style="border-top: 3px solid #fbbf24;">
+                  <span class="monthly-stat-lbl">Terlambat (T)</span>
+                  <div id="monthly-stat-terlambat" class="monthly-stat-val" style="color: #fbbf24;">0</div>
+                </div>
+                <div class="monthly-stat-card" style="border-top: 3px solid #38bdf8;">
+                  <span class="monthly-stat-lbl">Izin (I)</span>
+                  <div id="monthly-stat-izin" class="monthly-stat-val" style="color: #38bdf8;">0</div>
+                </div>
+                <div class="monthly-stat-card" style="border-top: 3px solid #c084fc;">
+                  <span class="monthly-stat-lbl">Sakit (S)</span>
+                  <div id="monthly-stat-sakit" class="monthly-stat-val" style="color: #c084fc;">0</div>
+                </div>
+                <div class="monthly-stat-card" style="border-top: 3px solid #f87171;">
+                  <span class="monthly-stat-lbl">Alpa (A)</span>
+                  <div id="monthly-stat-alpa" class="monthly-stat-val" style="color: #f87171;">0</div>
                 </div>
               </div>
-            </form>
 
-            <div style="overflow-x: auto;">
-              <table class="custom-data-table">
-                <thead>
-                  <tr>
-                    <th id="th-checkbox-rekap" class="col-checkbox-rekap" style="width: 40px; text-align: center; display: none;">
-                      <input type="checkbox" id="check-all-rekap" class="table-checkbox">
-                    </th>
-                    <th style="width: 4%;">No</th>
-                    <th>Tanggal</th>
-                    <th>NISN</th>
-                    <th>Nama Lengkap Siswa</th>
-                    <th>Kelas</th>
-                    <th>Jam Masuk</th>
-                    <th>Jam Pulang</th>
-                    <th>Status</th>
-                    <th style="width: 80px; text-align: center;">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="rekap-table-body">
-                  <!-- Injected via JavaScript -->
-                </tbody>
-              </table>
+              <!-- Monthly Matrix Table Container -->
+              <div id="monthly-matrix-wrapper" class="monthly-matrix-container">
+                <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+                  Pilih bulan dan kelas, lalu klik <strong>Tampilkan Rekap Bulanan</strong>.
+                </div>
+              </div>
+
+              <!-- Matrix Legend Bar -->
+              <div class="matrix-legend-bar">
+                <strong style="color: var(--text-main);">Keterangan:</strong>
+                <span><strong class="matrix-badge matrix-badge-h" style="width:auto;padding:1px 5px;">H</strong> Hadir Tepat Waktu</span>
+                <span><strong class="matrix-badge matrix-badge-t" style="width:auto;padding:1px 5px;">T</strong> Terlambat</span>
+                <span><strong class="matrix-badge matrix-badge-i" style="width:auto;padding:1px 5px;">I</strong> Izin</span>
+                <span><strong class="matrix-badge matrix-badge-s" style="width:auto;padding:1px 5px;">S</strong> Sakit</span>
+                <span><strong class="matrix-badge matrix-badge-a" style="width:auto;padding:1px 5px;">A</strong> Alpa</span>
+                <span><strong style="color: #9ca3af;">—</strong> Hari Libur / Minggu</span>
+              </div>
             </div>
+          </div>
 
-            <!-- Pagination Rekap Presensi -->
-            <div id="rekap-pagination" class="table-pagination-container"></div>
+          <!-- ================================================================
+               SUB-VIEW 2: REKAP LOG HARIAN / RENTANG TANGGAL
+               ================================================================ -->
+          <div id="rekap-subview-log" style="display: none;">
+            <div class="card-table-wrapper">
+              <!-- Bulk Action Bar Rekap -->
+              <div id="rekap-bulk-bar" class="bulk-action-bar">
+                <div class="bulk-selection-info">
+                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="ADMIN.toggleSelectAllVisibleRekap()">
+                    ☑️ <span id="btn-rekap-select-all-text">Pilih Semua</span>
+                  </button>
+                  <span class="bulk-selection-badge" id="rekap-bulk-count">0</span>
+                  <span>Data presensi dipilih</span>
+                </div>
+                <div class="bulk-action-buttons">
+                  <button type="button" class="btn-danger-bulk" onclick="ADMIN.deleteSelectedRekap()">
+                    🗑️ Hapus Presensi Terpilih
+                  </button>
+                  <button type="button" class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="ADMIN.exitRekapSelectionMode()">
+                    ✕ Selesai
+                  </button>
+                </div>
+              </div>
+
+              <form id="form-filter-rekap" class="table-filter-bar">
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; flex: 1;">
+                  <label style="font-size: 0.85rem; font-weight: 600;">Periode:</label>
+                  <input type="date" id="rekap-tgl-mulai" class="form-control">
+                  <span>s.d.</span>
+                  <input type="date" id="rekap-tgl-akhir" class="form-control">
+                  
+                  <select id="rekap-filter-kelas" class="form-control select-kelas-rombel" data-include-all="true">
+                    <!-- Injected Rombel 1A-D to 6A-D -->
+                  </select>
+                  
+                  <button type="submit" class="btn btn-primary">
+                    🔍 Tampilkan Log
+                  </button>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <button type="button" id="btn-export-csv" class="btn btn-secondary">
+                    📥 Ekspor CSV
+                  </button>
+                  <button type="button" id="btn-print-report" class="btn btn-primary">
+                    🖨️ Cetak Log
+                  </button>
+                  <button type="button" id="btn-toggle-select-rekap" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="ADMIN.toggleRekapSelectionMode()">
+                    🔘 Pilih Data Presensi
+                  </button>
+                  <div id="rekap-summary-badge" style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                    <!-- Summary badges -->
+                  </div>
+                </div>
+              </form>
+
+              <div style="overflow-x: auto;">
+                <table class="custom-data-table">
+                  <thead>
+                    <tr>
+                      <th id="th-checkbox-rekap" class="col-checkbox-rekap" style="width: 40px; text-align: center; display: none;">
+                        <input type="checkbox" id="check-all-rekap" class="table-checkbox">
+                      </th>
+                      <th style="width: 4%;">No</th>
+                      <th>Tanggal</th>
+                      <th>NISN</th>
+                      <th>Nama Lengkap Siswa</th>
+                      <th>Kelas</th>
+                      <th>Jam Masuk</th>
+                      <th>Jam Pulang</th>
+                      <th>Status</th>
+                      <th style="width: 80px; text-align: center;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rekap-table-body">
+                    <!-- Injected via JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination Rekap Presensi -->
+              <div id="rekap-pagination" class="table-pagination-container"></div>
+            </div>
           </div>
         </section>
 

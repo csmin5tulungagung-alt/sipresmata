@@ -1936,4 +1936,190 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--text-main);
 }
 
+/* ==========================================================================
+   CMS: REKAPITULASI MATRIKS BULANAN STYLES
+   ========================================================================== */
+.rekap-tab-pill-group {
+  display: inline-flex;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 1.25rem;
+}
+
+.rekap-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.5rem 1.1rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s ease;
+}
+
+.rekap-tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rekap-tab-btn.active {
+  background: linear-gradient(135deg, #059669 0%, #0d9488 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+}
+
+/* Monthly Matrix Stats Cards */
+.monthly-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.monthly-stat-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.monthly-stat-val {
+  font-family: 'Plus Jakarta Sans', monospace;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-top: 0.25rem;
+}
+
+.monthly-stat-lbl {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Matrix Table Styling */
+.monthly-matrix-container {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  max-width: 100%;
+}
+
+.monthly-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.monthly-matrix-table th,
+.monthly-matrix-table td {
+  border: 1px solid var(--border-color);
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.monthly-matrix-table th {
+  background: rgba(15, 23, 42, 0.9);
+  color: #cbd5e1;
+  font-weight: 700;
+  font-size: 0.78rem;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.monthly-matrix-table .col-sticky-nama {
+  text-align: left;
+  min-width: 180px;
+  max-width: 220px;
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+  z-index: 1;
+}
+
+.monthly-matrix-table tr:hover .col-sticky-nama {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.matrix-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  font-family: monospace;
+}
+
+.matrix-badge-h {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.matrix-badge-t {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.matrix-badge-i {
+  background: rgba(6, 182, 212, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+}
+
+.matrix-badge-s {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.matrix-badge-a {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.matrix-badge-holiday {
+  color: var(--text-muted);
+  opacity: 0.4;
+  font-weight: 400;
+}
+
+.matrix-cell-sunday {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.matrix-legend-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(15, 23, 42, 0.5);
+  border-top: 1px solid var(--border-color);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+
 

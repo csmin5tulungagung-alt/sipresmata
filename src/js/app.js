@@ -162,9 +162,13 @@ function initCmsNavigation() {
       if (targetViewId === "cms-view-cards") CARD_GENERATOR.renderFolderView();
       if (targetViewId === "cms-view-schedule") SCHEDULE_PAGE.init();
       if (targetViewId === "cms-view-rekap") {
-        const tglMulai = document.getElementById("rekap-tgl-mulai").value || new Date().toISOString().split("T")[0];
-        const tglAkhir = document.getElementById("rekap-tgl-akhir").value || new Date().toISOString().split("T")[0];
-        ADMIN.loadRekap(tglMulai, tglAkhir);
+        if (ADMIN.rekapState.tabMode === "MONTHLY") {
+          ADMIN.loadMonthlyRekap();
+        } else {
+          const tglMulai = document.getElementById("rekap-tgl-mulai").value || new Date().toISOString().split("T")[0];
+          const tglAkhir = document.getElementById("rekap-tgl-akhir").value || new Date().toISOString().split("T")[0];
+          ADMIN.loadRekap(tglMulai, tglAkhir);
+        }
       }
       if (targetViewId === "cms-view-settings") initSettingsView();
     });
@@ -281,7 +285,7 @@ function initAdminForms() {
     });
   }
 
-  // Filter Rekap Form
+  // Filter Rekap Log Form
   const formFilterRekap = document.getElementById("form-filter-rekap");
   if (formFilterRekap) {
     formFilterRekap.addEventListener("submit", (e) => {
@@ -290,6 +294,21 @@ function initAdminForms() {
       const tglAkhir = document.getElementById("rekap-tgl-akhir").value;
       const idKelas = document.getElementById("rekap-filter-kelas").value;
       ADMIN.loadRekap(tglMulai, tglAkhir, idKelas);
+    });
+  }
+
+  // Filter Rekap Matriks Bulanan Form
+  const formFilterMonthly = document.getElementById("form-filter-monthly-rekap");
+  if (formFilterMonthly) {
+    const selMonth = document.getElementById("filter-monthly-month");
+    const selYear = document.getElementById("filter-monthly-year");
+    const now = new Date();
+    if (selMonth) selMonth.value = String(now.getMonth() + 1);
+    if (selYear) selYear.value = String(now.getFullYear());
+
+    formFilterMonthly.addEventListener("submit", (e) => {
+      e.preventDefault();
+      ADMIN.loadMonthlyRekap();
     });
   }
 

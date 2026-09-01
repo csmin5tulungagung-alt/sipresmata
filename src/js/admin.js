@@ -33,6 +33,7 @@ export const ADMIN = {
   },
 
   rekapState: {
+    tabMode: "MONTHLY", // "MONTHLY" | "LOG"
     items: [],
     currentPage: 1,
     pageSize: 10,
@@ -40,7 +41,15 @@ export const ADMIN = {
     idKelas: "",
     summary: {},
     isSelectionMode: false,
-    selectedIds: new Set()
+    selectedIds: new Set(),
+    monthly: {
+      month: new Date().getMonth() + 1,
+      year: new Date().getFullYear(),
+      idKelas: "",
+      daysInMonth: 31,
+      matrixStudents: [],
+      summary: { totalStudents: 0, avgAttendance: 0, hadir: 0, terlambat: 0, izin: 0, sakit: 0, alpa: 0 }
+    }
   },
 
   dashboardState: {
@@ -1583,6 +1592,354 @@ export const ADMIN = {
       console.warn("Bulk delete rekap sync error:", err);
       showToast(`Catatan: Terhapus lokal. Sinkronisasi server: ${err.message}`, "warning");
     }
+  },
+
+  // ==========================================================================
+  // 4B. REKAPITULASI PRESENSI MATRIKS BULANAN
+  // ==========================================================================
+  setRekapTab(mode) {
+    this.rekapState.tabMode = mode;
+    const btnMonthly = document.getElementById("btn-tab-rekap-monthly");
+    const btnLog = document.getElementById("btn-tab-rekap-log");
+    const viewMonthly = document.getElementById("rekap-subview-monthly");
+    const viewLog = document.getElementById("rekap-subview-log");
+
+    if (mode === "MONTHLY") {
+      if (btnMonthly) btnMonthly.classList.add("active");
+      if (btnLog) btnLog.classList.remove("active");
+      if (viewMonthly) viewMonthly.style.display = "block";
+      if (viewLog) viewLog.style.display = "none";
+
+      if (!this.rekapState.monthly.matrixStudents || this.rekapState.monthly.matrixStudents.length === 0) {
+        this.loadMonthlyRekap();
+      }
+    } else {
+      if (btnMonthly) btnMonthly.classList.remove("active");
+      if (btnLog) btnLog.classList.add("active");
+      if (viewMonthly) viewMonthly.style.display = "none";
+      if (viewLog) viewLog.style.display = "block";
+    }
+  },
+
+  setMonthlyQuickDate(type) {
+    const selMonth = document.getElementById("filter-monthly-month");
+    const selYear = document.getElementById("filter-monthly-year");
+    const now = new Date();
+
+    if (type === "THIS_MONTH") {
+      if (selMonth) selMonth.value = String(now.getMonth() + 1);
+      if (selYear) selYear.value = String(now.getFullYear());
+    } else if (type === "LAST_MONTH") {
+      let prevMonth = now.getMonth(); // 0-based for prev month
+      let prevYear = now.getFullYear();
+      if (prevMonth === 0) {
+        prevMonth = 12;
+        prevYear -= 1;
+      }
+      if (selMonth) selMonth.value = String(prevMonth);
+      if (selYear) selYear.value = String(prevYear);
+    }
+
+    this.loadMonthlyRekap();
+  },
+
+  async loadMonthlyRekap(customMonth, customYear, customClass) {
+    const selMonth = document.getElementById("filter-monthly-month");
+    const selYear = document.getElementById("filter-monthly-year");
+    const selClass = document.getElementById("filter-monthly-class");
+    const container = document.getElementById("monthly-matrix-wrapper");
+
+    const month = customMonth || (selMonth ? parseInt(selMonth.value, 10) : new Date().getMonth() + 1);
+    const year = customYear || (selYear ? parseInt(selYear.value, 10) : new Date().getFullYear());
+    const idKelas = (customClass !== undefined) ? customClass : (selClass ? selClass.value.trim() : "");
+
+    const monthNames = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+    const monthName = monthNames[month - 1] || `Bulan ${month}`;
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    if (container) {
+      container.innerHTML = `
+        <div style="padding: 3rem; text-align: center; color: #38bdf8;">
+          <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔄</div>
+          <div>Memuat matriks kehadiran presensi ${monthName} ${year}...</div>
+        </div>
+      `;
+    }
+
+    try {
+      const monthStr = String(month).padStart(2, "0");
+      const startDate = `${year}-${monthStr}-01`;
+      const endDate = `${year}-${monthStr}-${String(daysInMonth).padStart(2, "0")}`;
+
+      // Ambil transaksi presensi dan data master siswa secara paralel
+      const [rekapRes, siswaRes] = await Promise.all([
+        API.getRekapAbsensi(startDate, endDate, idKelas),
+        API.getSiswa()
+      ]);
+
+      const rawItems = (rekapRes && rekapRes.data && rekapRes.data.items) ? rekapRes.data.items : [];
+      let allStudents = (siswaRes && siswaRes.data) ? siswaRes.data : [];
+
+      // Filter siswa berdasarkan kelas jika dipilih
+      if (idKelas) {
+        allStudents = allStudents.filter(s => String(s.id_kelas || "").toUpperCase() === String(idKelas).toUpperCase());
+      }
+
+      // Urutkan siswa berdasarkan nama kelas, lalu nama lengkap
+      allStudents.sort((a, b) => {
+        if ((a.id_kelas || "") < (b.id_kelas || "")) return -1;
+        if ((a.id_kelas || "") > (b.id_kelas || "")) return 1;
+        return (a.nama_lengkap || "").localeCompare(b.nama_lengkap || "");
+      });
+
+      // Buat lookup map presensi: date_idSiswa dan date_nisn
+      const attendanceMap = {};
+      rawItems.forEach(it => {
+        const tgl = it.tanggal;
+        if (it.id_siswa) attendanceMap[`${tgl}_${String(it.id_siswa).toUpperCase()}`] = it;
+        if (it.nisn) attendanceMap[`${tgl}_${String(it.nisn).toUpperCase()}`] = it;
+      });
+
+      let totalHadir = 0;
+      let totalTerlambat = 0;
+      let totalIzin = 0;
+      let totalSakit = 0;
+      let totalAlpa = 0;
+      let sumPercentage = 0;
+
+      // Hitung matriks tiap siswa
+      const matrixStudents = allStudents.map(student => {
+        const studentId = String(student.id_siswa || "").toUpperCase();
+        const studentNisn = String(student.nisn || "").toUpperCase();
+
+        let sHadir = 0;
+        let sTerlambat = 0;
+        let sIzin = 0;
+        let sSakit = 0;
+        let sAlpa = 0;
+        let effectiveDays = 0;
+
+        const dailyStatus = [];
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dayDate = new Date(year, month - 1, d);
+          const isSunday = (dayDate.getDay() === 0);
+          const dayStr = String(d).padStart(2, "0");
+          const dateISO = `${year}-${monthStr}-${dayStr}`;
+
+          if (isSunday) {
+            dailyStatus.push({ day: d, date: dateISO, code: "", isHoliday: true });
+          } else {
+            effectiveDays++;
+            const record = attendanceMap[`${dateISO}_${studentId}`] || attendanceMap[`${dateISO}_${studentNisn}`];
+
+            if (record) {
+              const status = String(record.status_kehadiran || "HADIR").toUpperCase();
+              if (status === "HADIR") {
+                dailyStatus.push({ day: d, date: dateISO, code: "H", isHoliday: false });
+                sHadir++;
+              } else if (status === "TERLAMBAT") {
+                dailyStatus.push({ day: d, date: dateISO, code: "T", isHoliday: false });
+                sTerlambat++;
+              } else if (status === "IZIN") {
+                dailyStatus.push({ day: d, date: dateISO, code: "I", isHoliday: false });
+                sIzin++;
+              } else if (status === "SAKIT") {
+                dailyStatus.push({ day: d, date: dateISO, code: "S", isHoliday: false });
+                sSakit++;
+              } else {
+                dailyStatus.push({ day: d, date: dateISO, code: "A", isHoliday: false });
+                sAlpa++;
+              }
+            } else {
+              dailyStatus.push({ day: d, date: dateISO, code: "-", isHoliday: false });
+            }
+          }
+        }
+
+        const percentage = effectiveDays > 0 ? Math.min(100, Math.round(((sHadir + sTerlambat) / effectiveDays) * 100)) : 0;
+        sumPercentage += percentage;
+
+        totalHadir += sHadir;
+        totalTerlambat += sTerlambat;
+        totalIzin += sIzin;
+        totalSakit += sSakit;
+        totalAlpa += sAlpa;
+
+        return {
+          id_siswa: student.id_siswa,
+          nisn: student.nisn,
+          nama_lengkap: student.nama_lengkap,
+          nama_kelas: student.nama_kelas || student.id_kelas,
+          dailyStatus,
+          summary: {
+            hadir: sHadir,
+            terlambat: sTerlambat,
+            izin: sIzin,
+            sakit: sSakit,
+            alpa: sAlpa
+          },
+          percentage
+        };
+      });
+
+      const totalStudents = matrixStudents.length;
+      const avgAttendance = totalStudents > 0 ? Math.round(sumPercentage / totalStudents) : 0;
+
+      const monthlySummary = {
+        totalStudents,
+        avgAttendance,
+        hadir: totalHadir,
+        terlambat: totalTerlambat,
+        izin: totalIzin,
+        sakit: totalSakit,
+        alpa: totalAlpa,
+        monthIdx: month,
+        monthName,
+        year,
+        idKelas,
+        classLabel: idKelas ? `Kelas ${idKelas}` : "Semua Kelas (1A-D s.d 6A-D)"
+      };
+
+      this.rekapState.monthly = {
+        month,
+        year,
+        idKelas,
+        daysInMonth,
+        matrixStudents,
+        summary: monthlySummary
+      };
+
+      // Perbarui Kartu Ringkasan Statistik Bulanan
+      const elTotal = document.getElementById("monthly-stat-total-students");
+      const elAvg = document.getElementById("monthly-stat-avg-attendance");
+      const elH = document.getElementById("monthly-stat-hadir");
+      const elT = document.getElementById("monthly-stat-terlambat");
+      const elI = document.getElementById("monthly-stat-izin");
+      const elS = document.getElementById("monthly-stat-sakit");
+      const elA = document.getElementById("monthly-stat-alpa");
+
+      if (elTotal) elTotal.textContent = totalStudents;
+      if (elAvg) elAvg.textContent = `${avgAttendance}%`;
+      if (elH) elH.textContent = totalHadir;
+      if (elT) elT.textContent = totalTerlambat;
+      if (elI) elI.textContent = totalIzin;
+      if (elS) elS.textContent = totalSakit;
+      if (elA) elA.textContent = totalAlpa;
+
+      this.renderMonthlyMatrixTable();
+
+    } catch (err) {
+      console.error("Gagal memuat rekap bulanan:", err);
+      if (container) {
+        container.innerHTML = `
+          <div style="padding: 2rem; text-align: center; color: #f87171;">
+            ❌ <strong>Gagal memuat rekap bulanan:</strong> ${err.message}
+          </div>
+        `;
+      }
+    }
+  },
+
+  renderMonthlyMatrixTable() {
+    const container = document.getElementById("monthly-matrix-wrapper");
+    if (!container) return;
+
+    const { daysInMonth, matrixStudents, summary } = this.rekapState.monthly;
+
+    if (!matrixStudents || matrixStudents.length === 0) {
+      container.innerHTML = `
+        <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+          Tidak ada data siswa ditemukan untuk kriteria kelas yang dipilih.
+        </div>
+      `;
+      return;
+    }
+
+    const dayHeadersHTML = Array.from({ length: daysInMonth }, (_, i) => {
+      const dayNum = i + 1;
+      const dayDate = new Date(summary.year, summary.monthIdx - 1, dayNum);
+      const isSunday = dayDate.getDay() === 0;
+      return `<th class="${isSunday ? 'matrix-cell-sunday' : ''}" style="width: 28px; min-width: 28px; font-size: 0.75rem; color: ${isSunday ? '#f87171' : ''};">${dayNum}</th>`;
+    }).join("");
+
+    const rowsHTML = matrixStudents.map((student, idx) => {
+      const daysHTML = student.dailyStatus.map(d => {
+        if (d.isHoliday) {
+          return `<td class="matrix-cell-sunday"><span class="matrix-badge matrix-badge-holiday">—</span></td>`;
+        }
+        if (d.code === "H") return `<td><span class="matrix-badge matrix-badge-h" title="Hadir Tepat Waktu">H</span></td>`;
+        if (d.code === "T") return `<td><span class="matrix-badge matrix-badge-t" title="Terlambat">T</span></td>`;
+        if (d.code === "I") return `<td><span class="matrix-badge matrix-badge-i" title="Izin">I</span></td>`;
+        if (d.code === "S") return `<td><span class="matrix-badge matrix-badge-s" title="Sakit">S</span></td>`;
+        if (d.code === "A") return `<td><span class="matrix-badge matrix-badge-a" title="Alpa / Tanpa Keterangan">A</span></td>`;
+        return `<td><span style="color: var(--text-muted); opacity: 0.3;">-</span></td>`;
+      }).join("");
+
+      return `
+        <tr>
+          <td style="font-size: 0.78rem;">${idx + 1}</td>
+          <td style="font-family: monospace; font-size: 0.78rem;">${student.nisn}</td>
+          <td class="col-sticky-nama"><strong>${student.nama_lengkap}</strong></td>
+          <td><span class="badge badge-info" style="font-size: 0.7rem;">${student.nama_kelas}</span></td>
+          ${daysHTML}
+          <td style="font-weight: 700; color: #34d399;">${student.summary.hadir}</td>
+          <td style="font-weight: 700; color: #fbbf24;">${student.summary.terlambat}</td>
+          <td style="color: #38bdf8;">${student.summary.izin}</td>
+          <td style="color: #c084fc;">${student.summary.sakit}</td>
+          <td style="font-weight: 700; color: ${student.summary.alpa > 0 ? '#f87171' : 'var(--text-muted)'};">${student.summary.alpa}</td>
+          <td style="font-weight: 800; color: ${student.percentage >= 85 ? '#34d399' : student.percentage >= 70 ? '#fbbf24' : '#f87171'};">${student.percentage}%</td>
+        </tr>
+      `;
+    }).join("");
+
+    container.innerHTML = `
+      <table class="monthly-matrix-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width: 35px;">No</th>
+            <th rowspan="2" style="width: 95px;">NISN</th>
+            <th rowspan="2" class="col-sticky-nama" style="min-width: 180px;">Nama Lengkap Siswa</th>
+            <th rowspan="2" style="width: 60px;">Kelas</th>
+            <th colspan="${daysInMonth}">Tanggal (${summary.monthName} ${summary.year})</th>
+            <th colspan="5">Rekap Total</th>
+            <th rowspan="2" style="width: 45px;">%</th>
+          </tr>
+          <tr>
+            ${dayHeadersHTML}
+            <th style="color: #34d399; width: 26px;">H</th>
+            <th style="color: #fbbf24; width: 26px;">T</th>
+            <th style="color: #38bdf8; width: 26px;">I</th>
+            <th style="color: #c084fc; width: 26px;">S</th>
+            <th style="color: #f87171; width: 26px;">A</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHTML}
+        </tbody>
+      </table>
+    `;
+  },
+
+  exportMonthlyCSV() {
+    const { month, year, daysInMonth, matrixStudents, summary } = this.rekapState.monthly;
+    if (!matrixStudents || matrixStudents.length === 0) {
+      showToast("Data rekap bulanan masih kosong. Silakan klik Tampilkan Rekap Bulanan.", "warning");
+      return;
+    }
+    EXPORT.downloadMonthlyMatrixCSV(summary.monthName, year, summary.classLabel, matrixStudents, daysInMonth);
+  },
+
+  printMonthlyReport() {
+    const { year, daysInMonth, matrixStudents, summary } = this.rekapState.monthly;
+    if (!matrixStudents || matrixStudents.length === 0) {
+      showToast("Data rekap bulanan masih kosong. Silakan klik Tampilkan Rekap Bulanan.", "warning");
+      return;
+    }
+    EXPORT.printMonthlyMatrixReport(summary.monthName, year, summary.classLabel, matrixStudents, daysInMonth, summary);
   },
 
   // ==========================================================================
