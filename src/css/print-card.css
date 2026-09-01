@@ -58,15 +58,13 @@
   border-radius: 50%;
 }
 
-/* Pola Titik-titik Dekoratif Kanan Atas (SVG Data URI aman untuk html2canvas) */
+/* Pola Titik-titik Dekoratif (Inline Vector SVG) */
 .banner-dots-pattern {
   position: absolute;
   top: 10px;
   right: 12px;
   width: 28px;
   height: 20px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6' viewBox='0 0 6 6'%3E%3Ccircle cx='3' cy='3' r='1.2' fill='rgba(255,255,255,0.4)'/%3E%3C/svg%3E");
-  background-size: 6px 6px;
   pointer-events: none;
 }
 
@@ -76,8 +74,6 @@
   left: 12px;
   width: 24px;
   height: 24px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6' viewBox='0 0 6 6'%3E%3Ccircle cx='3' cy='3' r='1.2' fill='rgba(5,150,105,0.3)'/%3E%3C/svg%3E");
-  background-size: 6px 6px;
   pointer-events: none;
 }
 
@@ -87,8 +83,6 @@
   right: 14px;
   width: 24px;
   height: 24px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6' viewBox='0 0 6 6'%3E%3Ccircle cx='3' cy='3' r='1.2' fill='rgba(5,150,105,0.3)'/%3E%3C/svg%3E");
-  background-size: 6px 6px;
   pointer-events: none;
 }
 

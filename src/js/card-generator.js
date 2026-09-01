@@ -402,7 +402,47 @@ export const CARD_GENERATOR = {
   // ==========================================================================
   // 4. MODAL POP-UP PREVIEW KARTU SISWA (HD 300 DPI)
   // ==========================================================================
-  previewCard(idSiswa) {
+  // Helper: Render QR code secara aman ke format Tag <img> (mencegah error html2canvas createPattern)
+  async renderCardQRToImage(qrElem, qrText) {
+    if (!qrElem || typeof QRCode === 'undefined') return;
+    qrElem.innerHTML = "";
+    
+    const tempDiv = document.createElement("div");
+    tempDiv.style.width = "82px";
+    tempDiv.style.height = "82px";
+    
+    try {
+      new QRCode(tempDiv, {
+        text: qrText,
+        width: 82,
+        height: 82,
+        colorDark: "#022c22",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      // Tunggu generate canvas
+      await new Promise(r => setTimeout(r, 60));
+
+      const canvas = tempDiv.querySelector("canvas");
+      if (canvas && canvas.width > 0) {
+        const dataUrl = canvas.toDataURL("image/png");
+        qrElem.innerHTML = `<img src="${dataUrl}" width="82" height="82" style="width:82px;height:82px;display:block;margin:auto;" alt="QR" />`;
+      } else {
+        const img = tempDiv.querySelector("img");
+        if (img && img.src) {
+          qrElem.innerHTML = `<img src="${img.src}" width="82" height="82" style="width:82px;height:82px;display:block;margin:auto;" alt="QR" />`;
+        }
+      }
+    } catch (e) {
+      console.warn("QR Render warning:", e);
+    }
+  },
+
+  // ==========================================================================
+  // 4. MODAL POP-UP PREVIEW KARTU SISWA (HD 300 DPI)
+  // ==========================================================================
+  async previewCard(idSiswa) {
     const student = (this.state.allStudents || []).find(s => s.id_siswa === idSiswa) || 
                     (window.ADMIN && (window.ADMIN.studentsState.allList || []).find(s => s.id_siswa === idSiswa));
     if (!student) {
@@ -424,23 +464,9 @@ export const CARD_GENERATOR = {
 
     if (container) {
       container.innerHTML = this.createCardHTML(student);
-      // Render QR Code
       const qrElem = container.querySelector(`#qrcode-${student.id_siswa}`);
-      if (qrElem && typeof QRCode !== 'undefined') {
-        qrElem.innerHTML = "";
-        try {
-          new QRCode(qrElem, {
-            text: student.kode_barcode || `MIN5-${student.nisn}`,
-            width: 82,
-            height: 82,
-            colorDark: "#022c22",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.M
-          });
-        } catch (e) {
-          console.error("QR render error:", e);
-        }
-      }
+      const qrText = student.kode_barcode || `MIN5-${student.nisn}`;
+      await this.renderCardQRToImage(qrElem, qrText);
     }
 
     if (btnDownload) {
@@ -467,7 +493,14 @@ export const CARD_GENERATOR = {
         
         <!-- 1. Header Banner Atas -->
         <div class="card-top-banner">
-          <div class="banner-dots-pattern"></div>
+          <svg class="banner-dots-pattern" width="28" height="20" viewBox="0 0 28 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="4" cy="4" r="1.5" fill="rgba(255,255,255,0.45)"/>
+            <circle cx="14" cy="4" r="1.5" fill="rgba(255,255,255,0.45)"/>
+            <circle cx="24" cy="4" r="1.5" fill="rgba(255,255,255,0.45)"/>
+            <circle cx="4" cy="14" r="1.5" fill="rgba(255,255,255,0.45)"/>
+            <circle cx="14" cy="14" r="1.5" fill="rgba(255,255,255,0.45)"/>
+            <circle cx="24" cy="14" r="1.5" fill="rgba(255,255,255,0.45)"/>
+          </svg>
           
           <!-- Logo Resmi MIN 5 Tulungagung -->
           <div class="kemenag-logo-wrapper">
@@ -483,8 +516,28 @@ export const CARD_GENERATOR = {
 
         <!-- 2. Body Kartu (Foto & Data Siswa) -->
         <div class="card-body-content">
-          <div class="banner-dots-pattern-left"></div>
-          <div class="banner-dots-pattern-mid-right"></div>
+          <svg class="banner-dots-pattern-left" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="4" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="12" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="20" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="4" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="12" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="20" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="4" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="12" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="20" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
+          </svg>
+          <svg class="banner-dots-pattern-mid-right" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="4" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="12" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="20" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="4" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="12" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="20" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="4" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="12" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
+            <circle cx="20" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
+          </svg>
 
           <!-- Bingkai Foto Siswa -->
           <div class="card-photo-frame">
@@ -555,13 +608,16 @@ export const CARD_GENERATOR = {
       return;
     }
 
-    // Buat container bersih khusus capture di body agar ukuran kartu pasti (260px) dan tidak terpengaruh scale modal
+    // Buat container bersih dalam viewport agar kalkulasi rendering 100% akurat
     const captureWrapper = document.createElement("div");
     captureWrapper.style.position = "fixed";
-    captureWrapper.style.left = "-9999px";
+    captureWrapper.style.left = "0";
     captureWrapper.style.top = "0";
-    captureWrapper.style.width = "270px";
-    captureWrapper.style.zIndex = "-1000";
+    captureWrapper.style.width = "290px";
+    captureWrapper.style.height = "440px";
+    captureWrapper.style.opacity = "0.01";
+    captureWrapper.style.pointerEvents = "none";
+    captureWrapper.style.zIndex = "-999";
     captureWrapper.style.background = "#ffffff";
     captureWrapper.innerHTML = this.createCardHTML(student);
     document.body.appendChild(captureWrapper);
@@ -569,19 +625,10 @@ export const CARD_GENERATOR = {
     const cardEl = captureWrapper.querySelector(".student-card-portrait");
     const qrElem = captureWrapper.querySelector(`#qrcode-${student.id_siswa}`);
 
-    if (qrElem && typeof QRCode !== 'undefined') {
-      qrElem.innerHTML = "";
-      new QRCode(qrElem, {
-        text: student.kode_barcode || `MIN5-${student.nisn}`,
-        width: 82,
-        height: 82,
-        colorDark: "#022c22",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.M
-      });
-    }
+    const qrText = student.kode_barcode || `MIN5-${student.nisn}`;
+    await this.renderCardQRToImage(qrElem, qrText);
 
-    // Berikan jeda sejenak agar browser merender QR code dan SVG/font
+    // Tunggu render elemen
     await new Promise(r => setTimeout(r, 120));
 
     try {
@@ -689,13 +736,16 @@ export const CARD_GENERATOR = {
     const zip = new JSZip();
     const total = studentsList.length;
 
-    // Temporary container untuk render off-screen dengan ukuran pasti
+    // Temporary container untuk render off-screen dengan ukuran pasti dalam viewport
     const tempContainer = document.createElement("div");
     tempContainer.style.position = "fixed";
-    tempContainer.style.left = "-9999px";
+    tempContainer.style.left = "0";
     tempContainer.style.top = "0";
-    tempContainer.style.width = "270px";
-    tempContainer.style.zIndex = "-1000";
+    tempContainer.style.width = "290px";
+    tempContainer.style.height = "440px";
+    tempContainer.style.opacity = "0.01";
+    tempContainer.style.pointerEvents = "none";
+    tempContainer.style.zIndex = "-999";
     tempContainer.style.background = "#ffffff";
     document.body.appendChild(tempContainer);
 
@@ -712,19 +762,10 @@ export const CARD_GENERATOR = {
         const cardEl = tempContainer.querySelector(".student-card-portrait");
         const qrElem = tempContainer.querySelector(`#qrcode-${s.id_siswa}`);
 
-        if (qrElem && typeof QRCode !== 'undefined') {
-          qrElem.innerHTML = "";
-          new QRCode(qrElem, {
-            text: s.kode_barcode || `MIN5-${s.nisn}`,
-            width: 82,
-            height: 82,
-            colorDark: "#022c22",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.M
-          });
-        }
+        const qrText = s.kode_barcode || `MIN5-${s.nisn}`;
+        await this.renderCardQRToImage(qrElem, qrText);
 
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 60));
 
         const canvas = await html2canvas(cardEl || tempContainer, {
           scale: 3,
