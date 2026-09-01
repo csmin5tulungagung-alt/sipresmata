@@ -246,22 +246,81 @@
               <h2>📊 Dashboard Pemantauan Presensi</h2>
               <p>Ringkasan kehadiran siswa MIN 5 Tulungagung hari ini secara langsung.</p>
             </div>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+              <span id="badge-auto-sync-status" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: #34d399; background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.3); padding: 0.3rem 0.65rem; border-radius: 999px;">
+                <span class="db-dot online" style="width: 6px; height: 6px;"></span>
+                <span>Auto-Sync Realtime</span>
+              </span>
               <button class="btn btn-secondary" onclick="window.openIzinPortal()" title="Buka Formulir Izin di Tab Baru">
                 📝 Form Izin Siswa
               </button>
               <button class="btn btn-secondary" onclick="window.copyIzinLink()" title="Salin Tautan Form Izin untuk Dibagikan">
                 📋 Salin Link Izin
               </button>
-              <button class="btn btn-secondary" onclick="ADMIN.loadDashboard()">
+              <button class="btn btn-secondary" onclick="ADMIN.loadDashboard(true)">
                 🔄 Perbarui Data
               </button>
             </div>
           </div>
 
+          <!-- Database & WhatsApp Gateway Real-Time Status Bar -->
+          <div id="dashboard-db-status-bar" class="dashboard-db-status-bar" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.75rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); padding: 0.75rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
+              <!-- 1. Database Connection Status -->
+              <div class="db-status-indicator" style="display: flex; align-items: center; gap: 0.5rem;">
+                <span id="dashboard-db-dot" class="db-dot checking"></span>
+                <span id="dashboard-db-label" class="db-label" style="font-size: 0.85rem; font-weight: 600;">Memeriksa database...</span>
+              </div>
+              <!-- 2. Fonnte WhatsApp Status -->
+              <div class="fonnte-status-indicator" style="display: flex; align-items: center; gap: 0.5rem; border-left: 1px solid var(--border-color); padding-left: 1.25rem;">
+                <span id="dashboard-wa-dot" class="db-dot checking"></span>
+                <span id="dashboard-wa-label" class="db-label" style="font-size: 0.85rem; font-weight: 600;">Memeriksa Fonnte WA...</span>
+              </div>
+            </div>
+
+            <!-- Quick Action Diagnostic Buttons -->
+            <div style="display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="ADMIN.checkDbConnection(true)" title="Uji Ulang Koneksi Google Sheets" style="font-size: 0.75rem; padding: 0.3rem 0.65rem; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">
+                ⚡ Cek DB
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="ADMIN.checkFonnteConnection(true)" title="Uji Status Device & Kuota WhatsApp Fonnte" style="font-size: 0.75rem; padding: 0.3rem 0.65rem; border-color: rgba(52, 211, 153, 0.4); color: #34d399;">
+                📱 Cek Fonnte
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="ADMIN.syncAndClearCache()" title="Bersihkan Cache Memory & Sinkronkan Ulang" style="font-size: 0.75rem; padding: 0.3rem 0.65rem; border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">
+                🔄 Sync Cache
+              </button>
+            </div>
+            <div id="dashboard-db-detail" class="db-detail" style="display: none; width: 100%; font-size: 0.78rem; color: var(--text-muted); padding-top: 0.4rem; border-top: 1px dashed rgba(255,255,255,0.1);"></div>
+          </div>
+
           <!-- Stats Cards Grid -->
           <div id="dashboard-stats-grid" class="stats-cards-grid">
             <!-- Injected via JavaScript -->
+          </div>
+
+          <!-- Quick Scanner Panel (Scan Barcode dari Dashboard CMS) -->
+          <div class="dashboard-quick-scanner-panel">
+            <div class="quick-scanner-header">
+              <div class="quick-scanner-title">
+                <span class="pulse-dot"></span>
+                <strong>⚡ Quick Scanner — Scan Barcode Langsung</strong>
+              </div>
+              <span class="quick-scanner-hint">Gunakan scanner barcode USB/Bluetooth atau ketik kode manual</span>
+            </div>
+            <div class="quick-scanner-body">
+              <div class="quick-scanner-input-row">
+                <input type="text" id="dashboard-scan-input" class="form-control quick-scan-input" 
+                       placeholder="Scan atau ketik kode barcode / NISN siswa..." 
+                       autocomplete="off" autofocus>
+                <button type="button" id="btn-dashboard-scan" class="btn btn-primary quick-scan-btn" onclick="ADMIN.handleDashboardQuickScan()">
+                  📡 Scan
+                </button>
+              </div>
+              <!-- Feedback Hasil Scan -->
+              <div id="dashboard-scan-feedback" class="quick-scan-feedback" style="display: none;">
+                <!-- Injected via JS -->
+              </div>
+            </div>
           </div>
 
           <!-- Live Monitoring Table -->
@@ -798,29 +857,56 @@
 
               <!-- KARTU 2: INTEGRASI DATABASE & KEAMANAN -->
               <div class="card-table-wrapper" style="margin-bottom: 1.5rem;">
-                <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-                  <span style="font-size: 1.4rem;">🔗</span>
-                  <div>
-                    <h3 style="font-size: 1.05rem; font-weight: 700;">Integrasi Google Apps Script & Kiosk</h3>
-                    <p style="font-size: 0.78rem; color: var(--text-muted);">Konfigurasi koneksi spreadsheet dan kunci keamanan mesin pemindai.</p>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; flex-wrap: wrap;">
+                  <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.4rem;">🔗</span>
+                    <div>
+                      <h3 style="font-size: 1.05rem; font-weight: 700;">Integrasi Google Apps Script & Spreadsheet Database</h3>
+                      <p style="font-size: 0.78rem; color: var(--text-muted);">Konfigurasi koneksi cloud database, deployment Web App, dan keamanan pemindai.</p>
+                    </div>
+                  </div>
+                  <div id="badge-db-connection-status" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.65rem; border-radius: 999px; background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3);">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #94a3b8;"></span>
+                    <span>Belum Diuji</span>
                   </div>
                 </div>
 
                 <div style="margin-bottom: 1rem;">
-                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Google Spreadsheet ID Database:</label>
-                  <input type="text" class="form-control" value="1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh" readonly style="width: 100%; opacity: 0.8;">
-                  <span style="font-size: 0.75rem; color: var(--text-muted);">Database: <a href="https://docs.google.com/spreadsheets/d/1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh/edit" target="_blank" style="color: #38bdf8;">Buka Spreadsheet Langsung ↗</a></span>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600;">Google Spreadsheet ID Database:</label>
+                    <a id="link-open-spreadsheet" href="https://docs.google.com/spreadsheets/d/1omNmjeUB29BGNeNRlwPM2TSgTd4CLgQarT9EB_93a5A/edit" target="_blank" style="font-size: 0.75rem; color: #38bdf8; text-decoration: none;">Buka Spreadsheet Langsung ↗</a>
+                  </div>
+                  <input type="text" id="setting-spreadsheet-id" class="form-control" value="1omNmjeUB29BGNeNRlwPM2TSgTd4CLgQarT9EB_93a5A" placeholder="Contoh: 1omNmjeUB29BGNeNRlwPM2TSgTd4CLgQarT9EB_93a5A" style="width: 100%;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">ID unik dari URL Google Sheets (terletak di antara <code>/d/</code> dan <code>/edit</code>).</span>
                 </div>
 
                 <div style="margin-bottom: 1rem;">
-                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">URL Google Apps Script Web App (API):</label>
-                  <input type="url" id="setting-api-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" style="width: 100%;">
-                  <span style="font-size: 0.75rem; color: var(--text-muted);">Endpoint API backend Google Apps Script.</span>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label style="font-size: 0.85rem; font-weight: 600;">URL Google Apps Script Web App (API Endpoint):</label>
+                    <span style="font-size: 0.75rem; color: #a78bfa;">Who has access: <strong>Anyone</strong></span>
+                  </div>
+                  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <input type="url" id="setting-api-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" style="flex: 1; min-width: 260px;">
+                    <button type="button" id="btn-test-db-connection" class="btn btn-secondary" style="white-space: nowrap; font-size: 0.82rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
+                      ⚡ Uji Koneksi Database
+                    </button>
+                    <button type="button" id="btn-sync-clear-cache" class="btn btn-secondary" style="white-space: nowrap; font-size: 0.82rem; color: #c084fc; border-color: rgba(192, 132, 252, 0.4);">
+                      🔄 Bersihkan Cache & Sync
+                    </button>
+                  </div>
+                  <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+                    Diperoleh setelah klik <strong>Deploy &gt; New Deployment &gt; Web App</strong> pada editor Apps Script.
+                  </span>
+                </div>
+
+                <!-- Live Diagnostic Feedback Panel -->
+                <div id="db-test-feedback" style="display: none; margin-bottom: 1rem; border-radius: var(--radius-md); padding: 0.85rem 1rem; font-size: 0.82rem; line-height: 1.5; border: 1px solid var(--border-color); background: rgba(15, 23, 42, 0.6);">
                 </div>
 
                 <div>
                   <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">Kunci Pengaman Scanner Kiosk (Client Key):</label>
                   <input type="text" id="setting-client-key" class="form-control" value="MIN5_SIPRESMATA_2026" style="width: 100%;">
+                  <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">Kunci otorisasi pengaman request pemindaian barcode dari mesin kiosk.</span>
                 </div>
               </div>
 
@@ -834,27 +920,42 @@
                       <p style="font-size: 0.78rem; color: var(--text-muted);">Kirim notifikasi otomatis ke nomor WhatsApp orang tua saat siswa melakukan scan presensi.</p>
                     </div>
                   </div>
-                  <label style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(37, 211, 102, 0.1); border: 1px solid rgba(37, 211, 102, 0.3); padding: 0.35rem 0.75rem; border-radius: var(--radius-full); cursor: pointer;">
-                    <input type="checkbox" id="setting-wa-enabled" class="table-checkbox">
-                    <strong style="color: #25d366; font-size: 0.82rem;">Aktifkan Notifikasi WA</strong>
-                  </label>
+                  <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <div id="badge-wa-connection-status" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; font-weight: 600; padding: 0.3rem 0.65rem; border-radius: 999px; background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3);">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: #94a3b8;"></span>
+                      <span>Belum Diuji</span>
+                    </div>
+                    <label style="display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(37, 211, 102, 0.1); border: 1px solid rgba(37, 211, 102, 0.3); padding: 0.35rem 0.75rem; border-radius: var(--radius-full); cursor: pointer;">
+                      <input type="checkbox" id="setting-wa-enabled" class="table-checkbox">
+                      <strong style="color: #25d366; font-size: 0.82rem;">Aktifkan Notifikasi WA</strong>
+                    </label>
+                  </div>
                 </div>
 
-                <!-- Token Fonnte Input -->
+                <!-- Token Fonnte Input & Diagnostic Check -->
                 <div style="margin-bottom: 1.25rem;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
                     <label style="font-size: 0.85rem; font-weight: 600;">Fonnte API Token:</label>
                     <a href="https://fonnte.com" target="_blank" style="font-size: 0.75rem; color: #38bdf8; text-decoration: none;">Dapatkan Token di Fonnte.com ↗</a>
                   </div>
-                  <div style="display: flex; gap: 0.5rem;">
-                    <input type="password" id="setting-fonnte-token" class="form-control" placeholder="Tempelkan API Token Fonnte di sini..." style="flex: 1;">
-                    <button type="button" id="btn-toggle-token-visibility" class="btn btn-secondary btn-icon" title="Lihat / Sembunyikan Token">
-                      👁️
+                  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <div style="position: relative; flex: 1; min-width: 240px; display: flex;">
+                      <input type="password" id="setting-fonnte-token" class="form-control" placeholder="Tempelkan API Token Fonnte di sini..." style="width: 100%; padding-right: 40px;">
+                      <button type="button" id="btn-toggle-token-visibility" class="btn btn-secondary btn-icon" title="Lihat / Sembunyikan Token" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); height: 32px; width: 32px; border: none; background: transparent;">
+                        👁️
+                      </button>
+                    </div>
+                    <button type="button" id="btn-check-fonnte" class="btn btn-secondary" style="font-weight: 600; color: #34d399; border-color: rgba(52, 211, 153, 0.4); white-space: nowrap; font-size: 0.82rem;">
+                      🔍 Cek Koneksi & Kuota Fonnte
                     </button>
                   </div>
                   <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
                     Token diperoleh setelah mendaftar dan scan QR nomor WhatsApp madrasah di dashboard Fonnte.
                   </span>
+                </div>
+
+                <!-- Live Fonnte Diagnostic Feedback Panel -->
+                <div id="wa-device-feedback" style="display: none; margin-bottom: 1.25rem; border-radius: var(--radius-md); padding: 0.85rem 1rem; font-size: 0.82rem; line-height: 1.5; border: 1px solid var(--border-color); background: rgba(15, 23, 42, 0.6);">
                 </div>
 
                 <!-- Anti-Banned Rate Limiter Delay -->
@@ -875,12 +976,12 @@
                   </div>
                 </div>
 
-                <!-- Uji Coba Pengiriman Pesan -->
+                <!-- Uji Coba Pengiriman Pesan Langsung -->
                 <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
-                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">🧪 Uji Coba Koneksi WhatsApp Gateway:</label>
+                  <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">🧪 Uji Coba Kirim Pesan Langsung ke Nomor HP:</label>
                   <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <input type="text" id="input-test-wa-phone" class="form-control" placeholder="Nomor WhatsApp penerima tes (contoh: 081234567890)" style="flex: 1; min-width: 220px;">
-                    <button type="button" id="btn-test-wa-send" class="btn btn-secondary" style="font-weight: 600; color: #34d399; border-color: rgba(52, 211, 153, 0.4);">
+                    <button type="button" id="btn-test-wa-send" class="btn btn-secondary" style="font-weight: 600; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
                       📤 Kirim Pesan Tes
                     </button>
                   </div>

@@ -1279,6 +1279,7 @@ h1, h2, h3, h4, h5, h6 {
   border-color: #25d366;
 }
 
+
 /* Modal Card Preview Scale */
 #preview-card-container .student-card-portrait {
   transform: scale(0.95);
@@ -1286,5 +1287,271 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
+/* ==========================================================================
+   DASHBOARD: DATABASE CONNECTION STATUS BAR
+   ========================================================================== */
+.dashboard-db-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
 
+.db-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.db-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.db-dot.checking {
+  background: #fbbf24;
+  animation: pulse 1.5s infinite;
+}
+
+.db-dot.online {
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.5);
+}
+
+.db-dot.offline {
+  background: #f87171;
+  box-shadow: 0 0 8px rgba(248, 113, 113, 0.4);
+}
+
+.db-label {
+  color: var(--text-muted);
+}
+
+.db-label.online {
+  color: #34d399;
+}
+
+.db-label.offline {
+  color: #f87171;
+}
+
+.db-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding-top: 0.35rem;
+  line-height: 1.45;
+  width: 100%;
+}
+
+/* ==========================================================================
+   DASHBOARD: QUICK SCANNER PANEL
+   ========================================================================== */
+.dashboard-quick-scanner-panel {
+  background: linear-gradient(135deg, rgba(5, 150, 105, 0.08), rgba(13, 148, 136, 0.06));
+  border: 1px solid rgba(5, 150, 105, 0.25);
+  border-radius: var(--radius-lg);
+  padding: 0;
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.dashboard-quick-scanner-panel:hover {
+  border-color: rgba(5, 150, 105, 0.4);
+  box-shadow: 0 0 20px rgba(5, 150, 105, 0.08);
+}
+
+.quick-scanner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.15rem;
+  background: rgba(5, 150, 105, 0.1);
+  border-bottom: 1px solid rgba(5, 150, 105, 0.15);
+  flex-wrap: wrap;
+}
+
+.quick-scanner-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.quick-scanner-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.quick-scanner-body {
+  padding: 1rem 1.15rem 1.15rem;
+}
+
+.quick-scanner-input-row {
+  display: flex;
+  gap: 0.65rem;
+  align-items: stretch;
+}
+
+.quick-scan-input {
+  flex: 1;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  padding: 0.65rem 1rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(5, 150, 105, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  transition: var(--transition);
+}
+
+.quick-scan-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow), 0 0 15px rgba(5, 150, 105, 0.15);
+  outline: none;
+}
+
+.quick-scan-input::placeholder {
+  color: rgba(148, 163, 184, 0.5);
+  font-weight: 400;
+  font-size: 0.88rem;
+  letter-spacing: normal;
+}
+
+.quick-scan-btn {
+  padding: 0.65rem 1.5rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+  min-width: 100px;
+}
+
+/* Scan Feedback Card */
+.quick-scan-feedback {
+  margin-top: 0.85rem;
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius-md);
+  animation: slideIn 0.3s ease;
+}
+
+.quick-scan-feedback.feedback-success {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.08));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.quick-scan-feedback.feedback-warning {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08));
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.quick-scan-feedback.feedback-error {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(185, 28, 28, 0.08));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.scan-feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.scan-feedback-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 800;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.scan-feedback-avatar.late {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.scan-feedback-avatar.error {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+}
+
+.scan-feedback-avatar.pulang {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+}
+
+.scan-feedback-info h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+.scan-feedback-info p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.scan-feedback-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-top: 0.4rem;
+}
+
+.scan-feedback-status.status-hadir {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.scan-feedback-status.status-terlambat {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.scan-feedback-status.status-error {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.scan-feedback-status.status-pulang {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 

@@ -5,20 +5,28 @@
  * ============================================================================
  */
 
+const env = (typeof import.meta !== "undefined" && import.meta.env) ? import.meta.env : {};
+
+// Auto-migration: bersihkan cache localStorage jika masih menyimpan Script ID lama
+const storedSpreadsheetId = localStorage.getItem("SIPRESMATA_SPREADSHEET_ID");
+if (storedSpreadsheetId === "1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh") {
+  localStorage.setItem("SIPRESMATA_SPREADSHEET_ID", "1omNmjeUB29BGNeNRlwPM2TSgTd4CLgQarT9EB_93a5A");
+}
+
 export const CONFIG = {
   APP_NAME: "SIPRESMATA",
   APP_SUBTITLE: "Sistem Informasi Presensi Siswa Madrasah Terpadu",
-  SCHOOL_NAME: localStorage.getItem("SIPRESMATA_SCHOOL_NAME") || "MIN 5 TULUNGAGUNG",
-  SLOGAN: localStorage.getItem("SIPRESMATA_SLOGAN") || "MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI",
+  SCHOOL_NAME: localStorage.getItem("SIPRESMATA_SCHOOL_NAME") || env.VITE_SCHOOL_NAME || "MIN 5 TULUNGAGUNG",
+  SLOGAN: localStorage.getItem("SIPRESMATA_SLOGAN") || env.VITE_SLOGAN || "MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI",
   LOGO_URL: "/logo-min5.png",
-  SPREADSHEET_ID: "1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh",
+  SPREADSHEET_ID: localStorage.getItem("SIPRESMATA_SPREADSHEET_ID") || env.VITE_SPREADSHEET_ID || "1omNmjeUB29BGNeNRlwPM2TSgTd4CLgQarT9EB_93a5A",
   
-  // Default GAS API URL (Dapat diubah via menu Pengaturan Sistem atau localStorage)
-  DEFAULT_API_URL: localStorage.getItem("SIPRESMATA_API_URL") || "https://script.google.com/macros/s/AKfycbywpbbkTu7vdckRTDZpCmUiv0UzeRsca70OFCeCp6rDzBtOx3T3aIG_9KSD6RCFJi9m9A/exec",
-  CLIENT_KEY: localStorage.getItem("SIPRESMATA_CLIENT_KEY") || "MIN5_SIPRESMATA_2026",
+  // Default GAS API URL (Dapat diubah via menu Pengaturan Sistem, Vercel Env, atau localStorage)
+  DEFAULT_API_URL: localStorage.getItem("SIPRESMATA_API_URL") || env.VITE_API_URL || "https://script.google.com/macros/s/AKfycbwLRGYZjWZPcBKxkb1UbKX4-Z2ycYn3qRCD9O9eBggpQf4Aa2PzbtZaYPvbk7VWlbPgdA/exec",
+  CLIENT_KEY: localStorage.getItem("SIPRESMATA_CLIENT_KEY") || env.VITE_CLIENT_KEY || "MIN5_SIPRESMATA_2026",
   
   // WhatsApp Gateway (Fonnte) & Notifikasi Anti-Banned
-  FONNTE_TOKEN: localStorage.getItem("SIPRESMATA_FONNTE_TOKEN") || "",
+  FONNTE_TOKEN: localStorage.getItem("SIPRESMATA_FONNTE_TOKEN") || env.VITE_FONNTE_TOKEN || "",
   WA_NOTIF_ENABLED: localStorage.getItem("SIPRESMATA_WA_NOTIF_ENABLED") === "true",
   WA_DELAY_SECONDS: parseInt(localStorage.getItem("SIPRESMATA_WA_DELAY_SECONDS") || "10", 10),
   
@@ -59,6 +67,12 @@ export const CONFIG = {
     { id: "KLS-6D", nama: "Kelas 6D", tingkat: 6 }
   ]
 };
+
+export function saveSpreadsheetId(id) {
+  if (!id) return;
+  CONFIG.SPREADSHEET_ID = id.trim();
+  localStorage.setItem("SIPRESMATA_SPREADSHEET_ID", id.trim());
+}
 
 export function saveApiUrl(url) {
   CONFIG.DEFAULT_API_URL = url.trim();
@@ -114,4 +128,3 @@ function formatTimeWithSeconds(val) {
   if (parts.length === 2) return `${val}:00`;
   return val;
 }
-

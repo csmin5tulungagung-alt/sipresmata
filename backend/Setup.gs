@@ -14,7 +14,7 @@
  * 6. Seluruh 6 sheet beserta header, format, dan data awal akan otomatis dibuat!
  */
 
-var SPREADSHEET_ID = "1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh";
+var SPREADSHEET_ID = "1omNmjeUB29BGNeNRlwPM2TSgTd4CLgQarT9EB_93a5A";
 
 function setupDatabaseSIPRESMATA() {
   var ss;

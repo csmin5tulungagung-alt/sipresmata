@@ -43,7 +43,28 @@ Panduan ini memandu Anda langkah-demi-langkah untuk menyiapkan backend API pada 
 3. Isi konfigurasi sebagai berikut:
    - **Description**: `SIPRESMATA Production API v1.0`
    - **Execute as**: `Me (email Anda)` *(PENTING!)*
-   - **Who has access**: `Anyone (Siapa saja)` *(PENTING! agar aplikasi web frontend dapat mengakses API)*
+   - **Who has access**: `Anyone (Siapa saja)` *(SANGAT PENTING! Jika diset "Only myself", Vercel akan diblokir CORS)*
 4. Klik tombol **Deploy**.
 5. Salin **Web app URL** yang muncul (contoh format: `https://script.google.com/macros/s/AKfycb.../exec`).
-6. Tempelkan URL tersebut ke pengaturan aplikasi frontend di file `src/js/config.js` atau pada menu Pengaturan Sistem di web app SIPRESMATA!
+6. Tempelkan URL tersebut ke:
+   - File `.env` (lokal): `VITE_API_URL=https://script.google.com/macros/s/.../exec`
+   - Vercel Dashboard: **Project Settings > Environment Variables > `VITE_API_URL`**
+   - Atau langsung di web app pada menu **Portal Admin > Pengaturan Sistem**.
+
+---
+
+### Langkah 5: Uji Koneksi dari Web App
+1. Buka aplikasi web SIPRESMATA (lokal atau di Vercel).
+2. Masuk ke **Portal Admin > Pengaturan Sistem**.
+3. Klik tombol **⚡ Uji Koneksi Database**.
+4. Sistem akan otomatis memverifikasi:
+   - ✅ Respons status HTTP 200 & latensi (ms)
+   - ✅ Keberadaan seluruh 6 tabel database
+   - ✅ Nama file spreadsheet yang terhubung
+
+---
+
+### ⚠️ Troubleshooting Masalah Umum:
+- **Error CORS / "Failed to fetch"**: Terjadi jika saat deploy Web App Anda memilih *Who has access: Only myself*. Solusinya: Klik **Deploy > Manage Deployments > Edit > Ubah "Who has access" menjadi "Anyone" > Deploy**.
+- **Data Tidak Masuk ke Spreadsheet**: Pastikan fungsi `setupDatabaseSIPRESMATA()` di `Setup.gs` telah dijalankan terlebih dahulu dan menghasilkan 6 sheet.
+- **Update Kode Tidak Berubah**: Di Google Apps Script, setiap kali Anda mengedit `Code.gs`, Anda **WAJIB** membuat deployment baru (**Deploy > New deployment**) atau mengupdate active deployment (**Manage deployments > Edit > New version**).

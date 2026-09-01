@@ -27,6 +27,29 @@ function saveLocalState() {
   localStorage.setItem("SIPRESMATA_LOCAL_ATTENDANCE", JSON.stringify(localAttendance));
 }
 
+function createApiError(json, fallbackMessage) {
+  const error = new Error(json && json.message ? json.message : fallbackMessage);
+  error.code = json && json.code ? json.code : "API_ERROR";
+  return error;
+}
+
+async function parseApiResponse(response, action) {
+  const responseText = await response.text();
+  let json;
+
+  try {
+    json = JSON.parse(responseText);
+  } catch (error) {
+    throw new Error(`Respons ${action} tidak valid. Periksa deployment Web App Google Apps Script.`);
+  }
+
+  if (!response.ok) {
+    throw createApiError(json, `Server menolak permintaan ${action} (HTTP ${response.status}).`);
+  }
+
+  return json;
+}
+
 export const API = {
   // 1. Scan Absensi
   async scanBarcode(barcode) {
@@ -635,56 +658,101 @@ export const API = {
   },
 
   // 6c. Hapus Catatan Presensi (Single & Multiple Bulk)
-  async deleteAbsensi(idAbsensi) {
+  async deleteAbsensi(idAbsensi, extraData = {}) {
+    const cleanId = String(idAbsensi || "").trim();
+    const cleanNisn = String(extraData.nisn || "").trim();
+    const cleanIdSiswa = String(extraData.id_siswa || "").trim();
+    const cleanTgl = String(extraData.tanggal || "").trim();
+
+    if (!cleanId && !cleanNisn && !cleanIdSiswa) {
+      throw new Error("ID presensi, NISN, atau ID siswa tidak valid.");
+    }
+
+    // Always delete from local state first
+    this._deleteLocalAbsensi(cleanId, extraData);
+
     if (CONFIG.DEFAULT_API_URL) {
       try {
+        const payload = Object.assign({}, extraData, { 
+          id_absensi: cleanId,
+          nisn: cleanNisn,
+          id_siswa: cleanIdSiswa,
+          tanggal: cleanTgl
+        });
         const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=delete_absensi`, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ id_absensi: idAbsensi })
+          body: JSON.stringify(payload)
         });
-        const json = await res.json();
-        if (json.status === "success") {
-          this._deleteLocalAbsensi(idAbsensi);
-          return json;
+        const json = await parseApiResponse(res, "delete_absensi");
+        if (json.status !== "success") {
+          throw createApiError(json, "Data presensi gagal dihapus.");
         }
+        return json;
       } catch (err) {
-        console.warn("GAS delete_absensi error, fallback to local:", err);
+        console.warn("GAS delete_absensi error:", err);
+        throw err;
       }
     }
 
-    this._deleteLocalAbsensi(idAbsensi);
-    return { status: "success", message: `Data presensi ${idAbsensi} berhasil dihapus.` };
+    return { status: "success", message: `Data presensi berhasil dihapus dari data lokal.` };
   },
 
-  async deleteMultipleAbsensi(idList) {
+  async deleteMultipleAbsensi(idList, extraItems = []) {
+    if ((!Array.isArray(idList) || idList.length === 0) && (!Array.isArray(extraItems) || extraItems.length === 0)) {
+      throw new Error("Tidak ada data presensi yang dipilih.");
+    }
+
+    const cleanIds = Array.isArray(idList) 
+      ? [...new Set(idList.map(id => String(id || "").trim()).filter(Boolean))] 
+      : [];
+
+    // Always delete from local state
+    cleanIds.forEach(id => this._deleteLocalAbsensi(id));
+    if (Array.isArray(extraItems)) {
+      extraItems.forEach(item => this._deleteLocalAbsensi(item.id_absensi, item));
+    }
+
     if (CONFIG.DEFAULT_API_URL) {
       try {
         const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=delete_multiple_absensi`, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ id_list: idList })
+          body: JSON.stringify({ id_list: cleanIds, items: extraItems })
         });
-        const json = await res.json();
-        if (json.status === "success") {
-          idList.forEach(id => this._deleteLocalAbsensi(id));
-          return json;
+        const json = await parseApiResponse(res, "delete_multiple_absensi");
+        if (json.status !== "success") {
+          throw createApiError(json, "Data presensi gagal dihapus.");
         }
+        return json;
       } catch (err) {
-        console.warn("GAS delete_multiple_absensi error, fallback to local:", err);
+        console.warn("GAS delete_multiple_absensi error:", err);
+        throw err;
       }
     }
 
-    idList.forEach(id => this._deleteLocalAbsensi(id));
-    return { status: "success", message: `${idList.length} data presensi berhasil dihapus.` };
+    return { status: "success", message: `${cleanIds.length || extraItems.length} data presensi berhasil dihapus dari data lokal.` };
   },
 
-  _deleteLocalAbsensi(idAbsensi) {
-    const idx = localAttendance.findIndex(a => a.id_absensi === idAbsensi);
-    if (idx !== -1) {
-      localAttendance.splice(idx, 1);
-      saveLocalState();
-    }
+  _deleteLocalAbsensi(idAbsensi, extraData = {}) {
+    const cleanId = String(idAbsensi || "").trim().toUpperCase();
+    const nisn = String(extraData.nisn || "").trim().toUpperCase();
+    const idSiswa = String(extraData.id_siswa || "").trim().toUpperCase();
+    const tgl = String(extraData.tanggal || "").trim();
+
+    localAttendance = localAttendance.filter(a => {
+      const aId = String(a.id_absensi || "").trim().toUpperCase();
+      const aNisn = String(a.nisn || "").trim().toUpperCase();
+      const aSiswaId = String(a.id_siswa || "").trim().toUpperCase();
+      const aTgl = String(a.tanggal || "").trim();
+
+      if (cleanId && aId && aId === cleanId) return false;
+      if (tgl && aTgl === tgl && ((nisn && aNisn === nisn) || (idSiswa && aSiswaId === idSiswa))) return false;
+      if (!tgl && !cleanId && ((nisn && aNisn === nisn) || (idSiswa && aSiswaId === idSiswa))) return false;
+
+      return true;
+    });
+    saveLocalState();
   },
 
   // 7. Pengaturan Sistem & Jadwal Operasional
@@ -779,6 +847,186 @@ export const API = {
     } catch (e) {
       return { status: "error", message: "Gagal terhubung ke API Fonnte: " + e.message };
     }
+  },
+
+  // 8B. Cek Status Perangkat Fonnte (Device Status & Kuota)
+  async checkFonnteStatus(fonnteToken, customUrl = null) {
+    const token = (fonnteToken || CONFIG.FONNTE_TOKEN || "").trim();
+    if (!token) {
+      return {
+        status: "error",
+        code: "EMPTY_TOKEN",
+        message: "Token API Fonnte belum diisi. Masukkan token pada form pengaturan."
+      };
+    }
+
+    const targetUrl = customUrl || CONFIG.DEFAULT_API_URL;
+    if (targetUrl) {
+      try {
+        const res = await fetch(`${targetUrl}?action=check_fonnte_status`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ fonnte_token: token })
+        });
+        const json = await res.json();
+        if (json && json.status) return json;
+      } catch (err) {
+        console.warn("GAS check_fonnte_status fetch error, trying direct Fonnte API:", err);
+      }
+    }
+
+    // Direct Browser Fallback to Fonnte API
+    try {
+      const response = await fetch("https://api.fonnte.com/get-devices", {
+        method: "POST",
+        headers: { "Authorization": token }
+      });
+      const data = await response.json();
+      if (data.status === true || data.status === "true" || (data.data && data.data.length > 0)) {
+        const dev = (data.data && data.data.length > 0) ? data.data[0] : (data.device || data);
+        const isConnected = (dev.device_status === "connect" || dev.status === "connect" || data.device_status === "connect");
+        return {
+          status: "success",
+          is_connected: isConnected,
+          device_status: dev.device_status || (isConnected ? "connect" : "disconnect"),
+          device_name: dev.name || dev.device || "WhatsApp Gateway",
+          device_number: dev.device || dev.sender || "-",
+          quota: dev.quota || data.quota || "-",
+          expired: dev.expired || data.expired || "-",
+          message: isConnected
+            ? `✓ WhatsApp Gateway Fonnte TERHUBUNG & Siap Mengirim Notifikasi (Nomor: ${dev.device || dev.name || "-"})`
+            : "⚠️ Token Fonnte Valid, namun Perangkat WhatsApp TERPUTUS / Belum scan QR.",
+          data
+        };
+      } else {
+        return {
+          status: "error",
+          code: "FONNTE_AUTH_FAILED",
+          message: data.reason || data.message || "Token Fonnte tidak valid atau akun Fonnte tidak aktif.",
+          data
+        };
+      }
+    } catch (e) {
+      return {
+        status: "error",
+        code: "FETCH_ERROR",
+        message: "Gagal menghubungi API Fonnte: " + e.message
+      };
+    }
+  },
+
+  // 8C. Bersihkan Cache Memory Google Apps Script
+  async clearCache(customUrl = null) {
+    const targetUrl = customUrl || CONFIG.DEFAULT_API_URL;
+    if (!targetUrl) {
+      return { status: "error", message: "URL Google Apps Script belum diisi." };
+    }
+    try {
+      const res = await fetch(`${targetUrl}?action=clear_cache`, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ client_key: CONFIG.CLIENT_KEY })
+      });
+      return await res.json();
+    } catch (err) {
+      return { status: "error", message: "Gagal membersihkan cache: " + err.message };
+    }
+  },
+
+  // 9. Diagnostik & Uji Koneksi Google Apps Script / Spreadsheet
+  async pingBackend(customUrl = null) {
+    const targetUrl = customUrl || CONFIG.DEFAULT_API_URL;
+    if (!targetUrl) {
+      return {
+        status: "error",
+        code: "EMPTY_URL",
+        message: "URL Google Apps Script Web App belum diisi."
+      };
+    }
+
+    const startTime = performance.now();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+      const res = await fetch(`${targetUrl}?action=ping&_t=${Date.now()}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      const latency = Math.round(performance.now() - startTime);
+
+      if (!res.ok) {
+        return {
+          status: "error",
+          code: `HTTP_${res.status}`,
+          latencyMs: latency,
+          message: `Server mengembalikan status HTTP ${res.status}: ${res.statusText}`
+        };
+      }
+
+      const json = await res.json();
+      return {
+        status: "success",
+        code: "ONLINE",
+        latencyMs: latency,
+        data: json,
+        message: `Koneksi Google Apps Script BERHASIL aktif! Latensi: ${latency} ms`
+      };
+    } catch (err) {
+      const latency = Math.round(performance.now() - startTime);
+      let errMsg = err.message;
+      if (err.name === "AbortError") {
+        errMsg = "Koneksi timeout (> 12 detik). Server Google Apps Script lambat atau tidak merespons.";
+      } else if (errMsg.includes("Failed to fetch") || errMsg.includes("NetworkError")) {
+        errMsg = "Gagal menghubungi Web App (CORS / Network Error). Pastikan pengaturan deployment di Apps Script diset: 'Who has access: Anyone'.";
+      }
+      return {
+        status: "error",
+        code: "CONNECTION_FAILED",
+        latencyMs: latency,
+        message: errMsg
+      };
+    }
+  },
+
+  async checkDbHealth(customUrl = null) {
+    const targetUrl = customUrl || CONFIG.DEFAULT_API_URL;
+    if (!targetUrl) {
+      return {
+        status: "error",
+        code: "EMPTY_URL",
+        message: "URL Google Apps Script Web App belum diisi."
+      };
+    }
+
+    const startTime = performance.now();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const res = await fetch(`${targetUrl}?action=check_db_health&_t=${Date.now()}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      const latency = Math.round(performance.now() - startTime);
+
+      const json = await res.json();
+      json.latencyMs = latency;
+      return json;
+    } catch (err) {
+      const latency = Math.round(performance.now() - startTime);
+      let errMsg = err.message;
+      if (err.name === "AbortError") {
+        errMsg = "Koneksi timeout (> 15 detik).";
+      } else if (errMsg.includes("Failed to fetch")) {
+        errMsg = "Gagal mengakses Web App (CORS Error). Pastikan Web App di-deploy dengan opsi 'Who has access: Anyone'.";
+      }
+      return {
+        status: "error",
+        code: "HEALTH_CHECK_FAILED",
+        latencyMs: latency,
+        message: errMsg
+      };
+    }
   }
 };
-

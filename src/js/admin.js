@@ -160,9 +160,20 @@ export const ADMIN = {
   // ==========================================================================
   // 2. DASHBOARD METRICS & LIVE MONITORING
   // ==========================================================================
-  async loadDashboard() {
+  async loadDashboard(showToastFeedback = false) {
     const statsContainer = document.getElementById("dashboard-stats-grid");
     if (!statsContainer) return;
+
+    if (showToastFeedback) {
+      showToast("🔄 Memperbarui statistik presensi...", "info");
+    }
+
+    // Auto-check database connection status & Fonnte WhatsApp Gateway status
+    this.checkDbConnection();
+    this.checkFonnteConnection();
+
+    // Initialize dashboard scan input (Enter key support)
+    this.initDashboardScanInput();
 
     try {
       const res = await API.getDashboardStats();
@@ -199,9 +210,25 @@ export const ADMIN = {
       this.dashboardState.currentPage = 1;
       this.renderDashboardFeed();
 
+      if (showToastFeedback) {
+        showToast("✓ Data statistik hari ini berhasil diperbarui!", "success");
+      }
     } catch (e) {
       console.error("Dashboard error:", e);
+      if (showToastFeedback) {
+        showToast("Gagal memperbarui data: " + e.message, "danger");
+      }
     }
+  },
+
+  startAutoSync() {
+    if (this._syncInterval) clearInterval(this._syncInterval);
+    this._syncInterval = setInterval(() => {
+      const dashSec = document.getElementById("section-dashboard");
+      if (dashSec && dashSec.style.display !== "none" && !dashSec.classList.contains("hidden")) {
+        this.loadDashboard(false);
+      }
+    }, 20000);
   },
 
   renderDashboardFeed() {
@@ -231,6 +258,8 @@ export const ADMIN = {
       const badgeClass = s.status_kehadiran === 'HADIR' ? 'badge-success' : s.status_kehadiran === 'TERLAMBAT' ? 'badge-warning' : 'badge-danger';
       const badgeText = isPulang ? `${s.status_kehadiran} (PULANG)` : s.status_kehadiran;
 
+      const safeEncodedNama = encodeURIComponent(s.nama_lengkap || "").replace(/'/g, "%27");
+      const scanId = s.id_absensi || `TEMP-SCAN-${s.nisn || s.id_siswa}`;
       return `
         <tr>
           <td><strong>${s.nama_lengkap}</strong></td>
@@ -242,7 +271,7 @@ export const ADMIN = {
             </span>
           </td>
           <td style="text-align: center;">
-            <button class="btn btn-secondary btn-icon" onclick="ADMIN.deleteDashboardScan('${s.id_absensi}', '${encodeURIComponent(s.nama_lengkap)}')" title="Hapus Catatan Presensi Ini" style="color: #f87171; padding: 0.35rem 0.5rem;">
+            <button type="button" class="btn btn-secondary btn-icon" onclick="ADMIN.deleteDashboardScan('${scanId}', '${safeEncodedNama}', '${s.tanggal || ''}', '${s.nisn || ''}', '${s.id_siswa || ''}')" title="Hapus Catatan Presensi Ini" style="color: #f87171; padding: 0.35rem 0.5rem; cursor: pointer;">
               🗑️
             </button>
           </td>
@@ -267,26 +296,300 @@ export const ADMIN = {
     );
   },
 
-  async deleteDashboardScan(idAbsensi, encodedNama) {
+  async deleteDashboardScan(idAbsensi, encodedNama, tanggal = "", nisn = "", idSiswa = "") {
     const namaSiswa = decodeURIComponent(encodedNama || "siswa ini");
     const confirmDelete = confirm(`Apakah Anda yakin ingin menghapus data presensi hari ini untuk ${namaSiswa}?`);
     if (!confirmDelete) return;
 
-    // Optimistic UI Removal
-    const idx = this.dashboardState.scans.findIndex(s => s.id_absensi === idAbsensi);
-    if (idx !== -1) {
-      this.dashboardState.scans.splice(idx, 1);
-      this.renderDashboardFeed();
-    }
+    const todayStr = tanggal || new Date().toISOString().split("T")[0];
+    const deletedScan = this.dashboardState.scans.find(s => 
+      (idAbsensi && s.id_absensi === idAbsensi) ||
+      (nisn && s.nisn === nisn) ||
+      (idSiswa && s.id_siswa === idSiswa)
+    );
 
-    showToast(`Data presensi ${namaSiswa} berhasil dihapus.`, "success");
+    const actualId = (deletedScan && deletedScan.id_absensi) ? deletedScan.id_absensi : idAbsensi;
+    const actualNisn = (deletedScan && deletedScan.nisn) ? deletedScan.nisn : nisn;
+    const actualIdSiswa = (deletedScan && deletedScan.id_siswa) ? deletedScan.id_siswa : idSiswa;
 
-    // Sync in background
+    // 1. OPTIMISTIC INSTANT UPDATE (0 ms)
+    this.dashboardState.scans = this.dashboardState.scans.filter(s => {
+      if (actualId && s.id_absensi && s.id_absensi === actualId) return false;
+      if (actualNisn && s.nisn && s.nisn === actualNisn) return false;
+      if (actualIdSiswa && s.id_siswa && s.id_siswa === actualIdSiswa) return false;
+      return true;
+    });
+    this.renderDashboardFeed();
+    showToast(`✓ Data presensi ${namaSiswa} berhasil dihapus.`, "success");
+
+    // 2. Background sync ke Backend
     try {
-      await API.deleteAbsensi(idAbsensi);
+      await API.deleteAbsensi(actualId, {
+        id_siswa: actualIdSiswa,
+        nisn: actualNisn,
+        tanggal: todayStr
+      });
       this.loadDashboard();
     } catch (e) {
-      console.warn("Delete dashboard scan error:", e);
+      console.warn("Delete dashboard scan sync error:", e);
+      showToast(`Catatan: Terhapus lokal. Sinkronisasi server: ${e.message}`, "warning");
+    }
+  },
+
+  // --------------------------------------------------------------------------
+  // 2B. DASHBOARD QUICK SCANNER (Scan Barcode langsung dari Portal CMS)
+  // --------------------------------------------------------------------------
+  _dashboardScanInputBound: false,
+
+  initDashboardScanInput() {
+    if (this._dashboardScanInputBound) return;
+    const input = document.getElementById("dashboard-scan-input");
+    if (!input) return;
+
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.handleDashboardQuickScan();
+      }
+    });
+
+    this._dashboardScanInputBound = true;
+  },
+
+  async handleDashboardQuickScan() {
+    const input = document.getElementById("dashboard-scan-input");
+    const feedback = document.getElementById("dashboard-scan-feedback");
+    const btn = document.getElementById("btn-dashboard-scan");
+    
+    if (!input || !feedback) return;
+
+    const barcode = input.value.trim();
+    if (!barcode) {
+      showToast("Masukkan kode barcode atau NISN siswa terlebih dahulu.", "warning");
+      input.focus();
+      return;
+    }
+
+    // Disable button sementara
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "⏳ Memproses...";
+    }
+
+    try {
+      const res = await API.scanBarcode(barcode);
+      feedback.style.display = "block";
+
+      if (res.status === "success") {
+        const data = res.data;
+        const isPulang = data.jenis_sesi === "PULANG";
+        const isLate = !isPulang && data.status_kehadiran === "TERLAMBAT";
+
+        let statusLabel, statusClass, avatarClass, feedbackClass;
+
+        if (isPulang) {
+          statusLabel = "🏠 HADIR (SUDAH PULANG)";
+          statusClass = "status-pulang";
+          avatarClass = "pulang";
+          feedbackClass = "feedback-success";
+        } else if (isLate) {
+          statusLabel = `⚠️ TERLAMBAT (${data.keterlambatan_menit || 0} menit)`;
+          statusClass = "status-terlambat";
+          avatarClass = "late";
+          feedbackClass = "feedback-warning";
+        } else {
+          statusLabel = "✅ HADIR TEPAT WAKTU";
+          statusClass = "status-hadir";
+          avatarClass = "";
+          feedbackClass = "feedback-success";
+        }
+
+        feedback.className = `quick-scan-feedback ${feedbackClass}`;
+        feedback.innerHTML = `
+          <div class="scan-feedback-header">
+            <div class="scan-feedback-avatar ${avatarClass}">${data.nama_lengkap.charAt(0)}</div>
+            <div class="scan-feedback-info">
+              <h4>${data.nama_lengkap}</h4>
+              <p>${data.kelas || '-'} • NISN: ${data.nisn || '-'} • ${data.jam_scan} WIB</p>
+            </div>
+          </div>
+          <span class="scan-feedback-status ${statusClass}">${statusLabel}</span>
+          <div style="margin-top: 0.4rem; font-size: 0.78rem; color: var(--text-muted);">${res.message}</div>
+        `;
+
+        showToast(`Presensi Berhasil: ${data.nama_lengkap} (${isPulang ? 'Pulang' : 'Masuk'})`, "success");
+
+        // Auto-refresh dashboard setelah 1 detik
+        setTimeout(() => this.loadDashboard(), 1000);
+      } else {
+        feedback.className = "quick-scan-feedback feedback-error";
+        feedback.innerHTML = `
+          <div class="scan-feedback-header">
+            <div class="scan-feedback-avatar error">✕</div>
+            <div class="scan-feedback-info">
+              <h4 style="color: #fca5a5;">Presensi Ditolak</h4>
+              <p>${res.message}</p>
+            </div>
+          </div>
+          <span class="scan-feedback-status status-error">${res.code || 'GAGAL'}</span>
+        `;
+
+        showToast(res.message, "danger");
+      }
+
+      // Kosongkan input dan fokus kembali untuk scan berikutnya
+      input.value = "";
+      input.focus();
+
+    } catch (err) {
+      feedback.style.display = "block";
+      feedback.className = "quick-scan-feedback feedback-error";
+      feedback.innerHTML = `
+        <div class="scan-feedback-header">
+          <div class="scan-feedback-avatar error">!</div>
+          <div class="scan-feedback-info">
+            <h4 style="color: #fca5a5;">Kesalahan Sistem</h4>
+            <p>Gagal memproses barcode: ${err.message || 'Unknown error'}</p>
+          </div>
+        </div>
+      `;
+      showToast("Gagal memproses scan: " + (err.message || ""), "danger");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "📡 Scan";
+      }
+    }
+  },
+
+  // --------------------------------------------------------------------------
+  // 2C. AUTO-DIAGNOSTIK KONEKSI DATABASE GOOGLE SHEETS
+  // --------------------------------------------------------------------------
+  async checkDbConnection(forceToast = false) {
+    const dot = document.getElementById("dashboard-db-dot");
+    const label = document.getElementById("dashboard-db-label");
+    const detail = document.getElementById("dashboard-db-detail");
+    
+    if (!dot || !label) return;
+
+    // Reset ke status checking
+    dot.className = "db-dot checking";
+    label.className = "db-label";
+    label.textContent = "Memeriksa database...";
+    if (detail) detail.style.display = "none";
+
+    try {
+      const res = await API.checkDbHealth();
+
+      if (res.status === "success" && res.data) {
+        const d = res.data;
+        const latency = res.latencyMs || 0;
+        dot.className = "db-dot online";
+        label.className = "db-label online";
+        label.textContent = `✅ DB Google Sheets (${latency}ms)`;
+        
+        if (detail) {
+          detail.style.display = "block";
+          detail.innerHTML = `Spreadsheet: <strong>${d.spreadsheet_name || "DATABASE ABSENSI SISWA"}</strong> • Latensi: <strong>${latency}ms</strong> • ${d.sheets ? d.sheets.length : 6} Tabel Siap Sinkron.`;
+        }
+        if (forceToast) showToast(`✅ Database Google Sheets Terhubung (${latency}ms)!`, "success");
+      } else {
+        const pingRes = await API.pingBackend();
+        if (pingRes.status === "success") {
+          dot.className = "db-dot online";
+          label.className = "db-label online";
+          label.textContent = `✅ Server GAS (${pingRes.latencyMs || 0}ms)`;
+          if (detail) {
+            detail.style.display = "block";
+            detail.innerHTML = `Server Web App aktif (Latensi: ${pingRes.latencyMs}ms).`;
+          }
+          if (forceToast) showToast(`✅ Server Google Apps Script Terhubung (${pingRes.latencyMs}ms)!`, "success");
+        } else {
+          throw new Error(res.message || pingRes.message || "Gagal menghubungi database");
+        }
+      }
+    } catch (err) {
+      dot.className = "db-dot offline";
+      label.className = "db-label offline";
+      label.textContent = "⚠️ DB Offline (Lokal)";
+      
+      if (detail) {
+        detail.style.display = "block";
+        detail.innerHTML = `<span style="color: #fbbf24;">Gagal terhubung ke Google Spreadsheet:</span> ${err.message}. Buka menu <strong>Pengaturan → Uji Koneksi Database</strong>.`;
+      }
+      if (forceToast) showToast(`⚠️ Database Offline: ${err.message}`, "danger");
+    }
+  },
+
+  // --------------------------------------------------------------------------
+  // 2D. AUTO-DIAGNOSTIK KONEKSI WHATSAPP GATEWAY (FONNTE)
+  // --------------------------------------------------------------------------
+  async checkFonnteConnection(forceToast = false) {
+    const dot = document.getElementById("dashboard-wa-dot");
+    const label = document.getElementById("dashboard-wa-label");
+    
+    if (!dot || !label) return;
+
+    if (!CONFIG.WA_NOTIF_ENABLED && !CONFIG.FONNTE_TOKEN) {
+      dot.className = "db-dot";
+      dot.style.background = "#94a3b8";
+      label.className = "db-label";
+      label.style.color = "#94a3b8";
+      label.textContent = "⚪ WA Gateway Nonaktif";
+      return;
+    }
+
+    // Reset ke status checking
+    dot.className = "db-dot checking";
+    label.className = "db-label";
+    label.textContent = "Memeriksa Fonnte...";
+
+    try {
+      const res = await API.checkFonnteStatus(CONFIG.FONNTE_TOKEN);
+      if (res.status === "success") {
+        if (res.is_connected) {
+          dot.className = "db-dot online";
+          label.className = "db-label online";
+          label.textContent = `🟢 WA Fonnte (${res.device_number || "Terhubung"})`;
+          if (forceToast) showToast(`✅ ${res.message || "WhatsApp Fonnte Terhubung!"}`, "success");
+        } else {
+          dot.className = "db-dot checking";
+          label.className = "db-label";
+          label.style.color = "#fbbf24";
+          label.textContent = `🟡 WA Disconnect (Scan QR)`;
+          if (forceToast) showToast(`⚠️ Token Valid tapi WhatsApp Disconnected: Silakan scan QR di Fonnte.com`, "warning");
+        }
+      } else {
+        dot.className = "db-dot offline";
+        label.className = "db-label offline";
+        label.textContent = "🔴 WA Error (Token Invalid)";
+        if (forceToast) showToast(`❌ Fonnte Error: ${res.message}`, "danger");
+      }
+    } catch (err) {
+      dot.className = "db-dot offline";
+      label.className = "db-label offline";
+      label.textContent = "🔴 WA Gagal";
+      if (forceToast) showToast(`❌ Gagal memeriksa Fonnte: ${err.message}`, "danger");
+    }
+  },
+
+  // --------------------------------------------------------------------------
+  // 2E. BERSIHKAN CACHE & SINKRONKAN ULANG DATA DARI GOOGLE SHEETS
+  // --------------------------------------------------------------------------
+  async syncAndClearCache() {
+    showToast("⏳ Membersihkan cache memory & menyinkronkan database...", "info");
+    try {
+      const res = await API.clearCache();
+      if (res.status === "success") {
+        showToast("✅ Cache Google Apps Script berhasil dibersihkan!", "success");
+      }
+      await this.loadStudents("", "", true);
+      await this.loadDashboard();
+      this.checkDbConnection(false);
+      this.checkFonnteConnection(false);
+      showToast("✓ Seluruh data siswa & presensi telah disinkronkan dari Google Sheets!", "success");
+    } catch (err) {
+      showToast("⚠️ Gagal sinkronkan cache: " + err.message, "danger");
     }
   },
 
@@ -614,10 +917,10 @@ export const ADMIN = {
             <button class="btn btn-secondary btn-icon" onclick="window.editStudent('${s.id_siswa}')" title="Edit Data Siswa">
               ✏️
             </button>
-            <button class="btn btn-secondary btn-icon" onclick="ADMIN.previewStudentCard('${s.id_siswa}')" title="Cetak / Pratinjau Kartu Siswa">
+            <button type="button" class="btn btn-secondary btn-icon" onclick="ADMIN.previewStudentCard('${s.id_siswa}')" title="Cetak / Pratinjau Kartu Siswa">
               🪪
             </button>
-            <button class="btn btn-secondary btn-icon" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap)}')" title="Hapus Siswa" style="color: #f87171;">
+            <button type="button" class="btn btn-secondary btn-icon" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap || '').replace(/'/g, '%27')}')" title="Hapus Siswa" style="color: #f87171; cursor: pointer;">
               🗑️
             </button>
           </td>
@@ -776,10 +1079,10 @@ export const ADMIN = {
             <button class="btn btn-secondary btn-icon" onclick="window.editStudent('${s.id_siswa}')" title="Edit Siswa">
               ✏️
             </button>
-            <button class="btn btn-secondary btn-icon" onclick="ADMIN.previewStudentCard('${s.id_siswa}')" title="Cetak / Pratinjau Kartu Siswa">
+            <button type="button" class="btn btn-secondary btn-icon" onclick="ADMIN.previewStudentCard('${s.id_siswa}')" title="Cetak / Pratinjau Kartu Siswa">
               🪪
             </button>
-            <button class="btn btn-secondary btn-icon" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap)}')" title="Hapus Siswa" style="color: #f87171;">
+            <button type="button" class="btn btn-secondary btn-icon" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap || '').replace(/'/g, '%27')}')" title="Hapus Siswa" style="color: #f87171; cursor: pointer;">
               🗑️
             </button>
           </td>
@@ -1028,7 +1331,9 @@ export const ADMIN = {
     const isSelection = this.rekapState.isSelectionMode;
 
     tableBody.innerHTML = pageItems.map((item, idx) => {
-      const isChecked = this.rekapState.selectedIds.has(item.id_absensi);
+      const isChecked = this.rekapState.selectedIds.has(item.id_absensi) || 
+                        (item.id_siswa && this.rekapState.selectedIds.has(item.id_siswa)) ||
+                        (item.nisn && this.rekapState.selectedIds.has(item.nisn));
       const isPulang = Boolean(item.jam_pulang);
       const statusBadgeClass = item.status_kehadiran === 'HADIR' ? 'badge-success' :
                                item.status_kehadiran === 'TERLAMBAT' ? 'badge-warning' :
@@ -1036,10 +1341,13 @@ export const ADMIN = {
                                item.status_kehadiran === 'SAKIT' ? 'badge-purple' : 'badge-danger';
       const statusLabel = isPulang ? `${item.status_kehadiran} (PULANG)` : item.status_kehadiran;
 
+      const safeEncodedNama = encodeURIComponent(item.nama_lengkap || "").replace(/'/g, "%27");
+      const itemId = item.id_absensi || `TEMP-${item.tanggal}-${item.nisn || item.id_siswa}`;
+
       return `
         <tr style="${isChecked ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
           <td class="col-checkbox-rekap" style="text-align: center; ${isSelection ? '' : 'display: none;'}">
-            <input type="checkbox" class="table-checkbox rekap-row-check" value="${item.id_absensi}" ${isChecked ? 'checked' : ''} onchange="ADMIN.toggleRekapItemSelection('${item.id_absensi}', this.checked)">
+            <input type="checkbox" class="table-checkbox rekap-row-check" value="${itemId}" ${isChecked ? 'checked' : ''} onchange="ADMIN.toggleRekapItemSelection('${itemId}', this.checked)">
           </td>
           <td>${start + idx + 1}</td>
           <td>${item.tanggal}</td>
@@ -1054,7 +1362,7 @@ export const ADMIN = {
             </span>
           </td>
           <td style="text-align: center;">
-            <button class="btn btn-secondary btn-icon" onclick="ADMIN.deleteRekapItem('${item.id_absensi}', '${encodeURIComponent(item.nama_lengkap)}', '${item.tanggal}')" title="Hapus Data Presensi Ini" style="color: #f87171; padding: 0.35rem 0.5rem;">
+            <button type="button" class="btn btn-secondary btn-icon" onclick="ADMIN.deleteRekapItem('${itemId}', '${safeEncodedNama}', '${item.tanggal || ''}', '${item.nisn || ''}', '${item.id_siswa || ''}')" title="Hapus Data Presensi Ini" style="color: #f87171; padding: 0.35rem 0.5rem; cursor: pointer;">
               🗑️
             </button>
           </td>
@@ -1067,7 +1375,7 @@ export const ADMIN = {
     if (thCheckbox) thCheckbox.style.display = isSelection ? "table-cell" : "none";
 
     const headerCheck = document.getElementById("check-all-rekap");
-    const visibleIds = pageItems.map(item => item.id_absensi);
+    const visibleIds = pageItems.map(item => item.id_absensi || `TEMP-${item.tanggal}-${item.nisn || item.id_siswa}`);
     const allVisibleChecked = visibleIds.length > 0 && visibleIds.every(id => this.rekapState.selectedIds.has(id));
 
     if (headerCheck) {
@@ -1125,12 +1433,12 @@ export const ADMIN = {
     const items = this.rekapState.items || [];
     if (items.length === 0) return;
 
-    const allChecked = items.every(item => this.rekapState.selectedIds.has(item.id_absensi));
+    const allChecked = items.every(item => this.rekapState.selectedIds.has(item.id_absensi || `TEMP-${item.tanggal}-${item.nisn || item.id_siswa}`));
 
     if (allChecked) {
-      items.forEach(item => this.rekapState.selectedIds.delete(item.id_absensi));
+      items.forEach(item => this.rekapState.selectedIds.delete(item.id_absensi || `TEMP-${item.tanggal}-${item.nisn || item.id_siswa}`));
     } else {
-      items.forEach(item => this.rekapState.selectedIds.add(item.id_absensi));
+      items.forEach(item => this.rekapState.selectedIds.add(item.id_absensi || `TEMP-${item.tanggal}-${item.nisn || item.id_siswa}`));
     }
 
     this.renderRekapTable();
@@ -1176,24 +1484,61 @@ export const ADMIN = {
     }
   },
 
-  async deleteRekapItem(idAbsensi, encodedNama, tanggal) {
+  async deleteRekapItem(idAbsensi, encodedNama, tanggal, nisn = "", idSiswa = "") {
     const namaSiswa = decodeURIComponent(encodedNama || "siswa ini");
-    const confirmDelete = confirm(`Apakah Anda yakin ingin menghapus data presensi ${namaSiswa} pada tanggal ${tanggal}?`);
+    const confirmDelete = confirm(`Apakah Anda yakin ingin menghapus data presensi ${namaSiswa}${tanggal ? ' pada tanggal ' + tanggal : ''}?`);
     if (!confirmDelete) return;
 
-    // Optimistic UI
-    const idx = this.rekapState.items.findIndex(item => item.id_absensi === idAbsensi);
-    if (idx !== -1) {
-      this.rekapState.items.splice(idx, 1);
-      this.renderRekapTable();
+    // 1. Temukan item yang akan dihapus
+    const deletedItem = this.rekapState.items.find(item => 
+      (idAbsensi && item.id_absensi === idAbsensi) ||
+      (idAbsensi && `TEMP-${item.tanggal}-${item.nisn || item.id_siswa}` === idAbsensi) ||
+      (tanggal && item.tanggal === tanggal && (
+        (nisn && item.nisn === nisn) || 
+        (idSiswa && item.id_siswa === idSiswa)
+      ))
+    );
+
+    const actualId = (deletedItem && deletedItem.id_absensi && !deletedItem.id_absensi.startsWith("TEMP-")) ? deletedItem.id_absensi : idAbsensi;
+    const actualNisn = (deletedItem && deletedItem.nisn) ? deletedItem.nisn : nisn;
+    const actualIdSiswa = (deletedItem && deletedItem.id_siswa) ? deletedItem.id_siswa : idSiswa;
+    const actualTgl = (deletedItem && deletedItem.tanggal) ? deletedItem.tanggal : tanggal;
+
+    // 2. OPTIMISTIC INSTANT UPDATE (0 ms: Tabel langsung bersih seketika)
+    this.rekapState.items = this.rekapState.items.filter(item => {
+      if (actualId && item.id_absensi && item.id_absensi === actualId) return false;
+      if (actualTgl && item.tanggal === actualTgl && (
+        (actualNisn && item.nisn === actualNisn) || 
+        (actualIdSiswa && item.id_siswa === actualIdSiswa)
+      )) return false;
+      if (idAbsensi && `TEMP-${item.tanggal}-${item.nisn || item.id_siswa}` === idAbsensi) return false;
+      return true;
+    });
+
+    if (deletedItem && this.rekapState.summary) {
+      const s = (deletedItem.status_kehadiran || "").toUpperCase();
+      if (s === "HADIR" && this.rekapState.summary.hadir > 0) this.rekapState.summary.hadir--;
+      else if (s === "TERLAMBAT" && this.rekapState.summary.terlambat > 0) this.rekapState.summary.terlambat--;
+      else if (s === "IZIN" && this.rekapState.summary.izin > 0) this.rekapState.summary.izin--;
+      else if (s === "SAKIT" && this.rekapState.summary.sakit > 0) this.rekapState.summary.sakit--;
+      else if (s === "ALPA" && this.rekapState.summary.alpa > 0) this.rekapState.summary.alpa--;
+      if (this.rekapState.summary.total > 0) this.rekapState.summary.total--;
     }
 
-    showToast(`Data presensi ${namaSiswa} (${tanggal}) berhasil dihapus.`, "success");
+    this.renderRekapTable();
+    showToast(`✓ Data presensi ${namaSiswa} berhasil dihapus.`, "success");
 
-    // Background sync
-    API.deleteAbsensi(idAbsensi).catch(err => {
-      console.warn("Delete rekap error:", err);
-    });
+    // 3. Sinkronisasi ke server di latar belakang
+    try {
+      await API.deleteAbsensi(actualId, {
+        tanggal: actualTgl,
+        id_siswa: actualIdSiswa,
+        nisn: actualNisn
+      });
+    } catch (err) {
+      console.warn("Delete rekap sync error:", err);
+      showToast(`Catatan: Terhapus lokal. Sinkronisasi server: ${err.message}`, "warning");
+    }
   },
 
   async deleteSelectedRekap() {
@@ -1208,19 +1553,28 @@ export const ADMIN = {
 
     const ids = Array.from(this.rekapState.selectedIds);
     const idSet = new Set(ids);
+    const selectedItems = this.rekapState.items.filter(item => 
+      idSet.has(item.id_absensi) || 
+      idSet.has(`TEMP-${item.tanggal}-${item.nisn || item.id_siswa}`)
+    );
 
-    // Optimistic UI
-    this.rekapState.items = this.rekapState.items.filter(item => !idSet.has(item.id_absensi));
+    // 1. OPTIMISTIC INSTANT UPDATE (0 ms)
+    this.rekapState.items = this.rekapState.items.filter(item => 
+      !idSet.has(item.id_absensi) && 
+      !idSet.has(`TEMP-${item.tanggal}-${item.nisn || item.id_siswa}`)
+    );
     this.rekapState.selectedIds.clear();
     this.rekapState.isSelectionMode = false;
     this.renderRekapTable();
-
     showToast(`✓ ${count} data presensi berhasil dihapus.`, "success");
 
-    // Background sync
-    API.deleteMultipleAbsensi(ids).catch(err => {
-      console.warn("Bulk delete rekap error:", err);
-    });
+    // 2. Background sync ke server
+    try {
+      await API.deleteMultipleAbsensi(ids, selectedItems);
+    } catch (err) {
+      console.warn("Bulk delete rekap sync error:", err);
+      showToast(`Catatan: Terhapus lokal. Sinkronisasi server: ${err.message}`, "warning");
+    }
   },
 
   // ==========================================================================
@@ -1324,6 +1678,24 @@ export const ADMIN = {
     return { id: "KLS-1A", nama: "Kelas 1A" };
   },
 
+  deleteStudent(idSiswa, encodedNama) {
+    if (typeof window.deleteStudent === "function") {
+      window.deleteStudent(idSiswa, encodedNama);
+    } else {
+      const nama = decodeURIComponent(encodedNama || "siswa ini");
+      if (confirm(`Apakah Anda yakin ingin menghapus data siswa ${nama}?`)) {
+        const cleanId = String(idSiswa || "").trim().toUpperCase();
+        this.studentsState.allList = (this.studentsState.allList || []).filter(s => 
+          String(s.id_siswa || "").trim().toUpperCase() !== cleanId && 
+          String(s.nisn || "").trim().toUpperCase() !== cleanId
+        );
+        this.refreshCurrentStudentView();
+        showToast(`✓ Siswa ${nama} berhasil dihapus.`, "success");
+        API.deleteSiswa(idSiswa).catch(e => console.warn(e));
+      }
+    }
+  },
+
   async populateStudentSelect(idKelas = "") {
     const select = document.getElementById("manual-absen-siswa");
     if (!select) return;
@@ -1337,4 +1709,3 @@ export const ADMIN = {
 };
 
 window.ADMIN = ADMIN;
-

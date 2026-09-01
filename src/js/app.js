@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-import { CONFIG, saveApiUrl, saveClientKey, saveSchedule, saveWaSettings } from './config.js';
+import { CONFIG, saveApiUrl, saveSpreadsheetId, saveClientKey, saveSchedule, saveWaSettings } from './config.js';
 import { API } from './api.js';
 import { SCANNER, playAudioBeep } from './scanner.js';
 import { ADMIN } from './admin.js';
@@ -319,6 +319,7 @@ function initAdminForms() {
   // Global Bridges
   window.ADMIN = ADMIN;
   window.CARD_GENERATOR = CARD_GENERATOR;
+  ADMIN.startAutoSync();
 
   // Student Form Modal Add/Edit
   const formStudent = document.getElementById("form-student-modal");
@@ -550,6 +551,8 @@ async function initSettingsView() {
   const inputMasukMaks = document.getElementById("setting-jam-masuk-maks");
   const inputPulangMulai = document.getElementById("setting-jam-pulang-mulai");
   const inputPulangBatas = document.getElementById("setting-jam-pulang-batas");
+  const inputSpreadsheetId = document.getElementById("setting-spreadsheet-id");
+  const linkOpenSpreadsheet = document.getElementById("link-open-spreadsheet");
   const inputUrl = document.getElementById("setting-api-url");
   const inputKey = document.getElementById("setting-client-key");
   const inputFonnteToken = document.getElementById("setting-fonnte-token");
@@ -561,6 +564,9 @@ async function initSettingsView() {
   const btnTestWa = document.getElementById("btn-test-wa-send");
   const inputTestPhone = document.getElementById("input-test-wa-phone");
   const waTestFeedback = document.getElementById("wa-test-feedback");
+  const btnTestDb = document.getElementById("btn-test-db-connection");
+  const dbTestFeedback = document.getElementById("db-test-feedback");
+  const badgeDbStatus = document.getElementById("badge-db-connection-status");
 
   // Isi form dari config lokal saat ini
   if (inputMasukMulai) inputMasukMulai.value = (CONFIG.SCHEDULE.MASUK_MULAI || "06:00:00").substring(0, 5);
@@ -568,6 +574,18 @@ async function initSettingsView() {
   if (inputMasukMaks) inputMasukMaks.value = (CONFIG.SCHEDULE.MASUK_MAKSIMAL || "08:30:00").substring(0, 5);
   if (inputPulangMulai) inputPulangMulai.value = (CONFIG.SCHEDULE.PULANG_MULAI || "12:30:00").substring(0, 5);
   if (inputPulangBatas) inputPulangBatas.value = (CONFIG.SCHEDULE.PULANG_BATAS || "16:00:00").substring(0, 5);
+  if (inputSpreadsheetId) {
+    inputSpreadsheetId.value = CONFIG.SPREADSHEET_ID;
+    inputSpreadsheetId.oninput = () => {
+      const val = inputSpreadsheetId.value.trim();
+      if (linkOpenSpreadsheet && val) {
+        linkOpenSpreadsheet.href = `https://docs.google.com/spreadsheets/d/${val}/edit`;
+      }
+    };
+  }
+  if (linkOpenSpreadsheet && CONFIG.SPREADSHEET_ID) {
+    linkOpenSpreadsheet.href = `https://docs.google.com/spreadsheets/d/${CONFIG.SPREADSHEET_ID}/edit`;
+  }
   if (inputUrl) inputUrl.value = CONFIG.DEFAULT_API_URL;
   if (inputKey) inputKey.value = CONFIG.CLIENT_KEY;
   if (inputFonnteToken) inputFonnteToken.value = CONFIG.FONNTE_TOKEN;
@@ -583,6 +601,276 @@ async function initSettingsView() {
       } else {
         inputFonnteToken.type = "password";
         btnToggleToken.textContent = "👁️";
+      }
+    };
+  }
+
+  // Tombol Diagnostik & Uji Koneksi Database Google Sheets
+  if (btnTestDb) {
+    btnTestDb.onclick = async () => {
+      const targetUrl = inputUrl ? inputUrl.value.trim() : CONFIG.DEFAULT_API_URL;
+      if (!targetUrl) {
+        showToast("Masukkan URL Google Apps Script Web App terlebih dahulu.", "warning");
+        if (inputUrl) inputUrl.focus();
+        return;
+      }
+
+      btnTestDb.disabled = true;
+      btnTestDb.textContent = "⏳ Memeriksa Server...";
+      if (badgeDbStatus) {
+        badgeDbStatus.innerHTML = `<span style="width: 8px; height: 8px; border-radius: 50%; background: #fbbf24;"></span><span>Memeriksa...</span>`;
+        badgeDbStatus.style.borderColor = "rgba(251, 191, 36, 0.4)";
+        badgeDbStatus.style.color = "#fbbf24";
+      }
+
+      if (dbTestFeedback) {
+        dbTestFeedback.style.display = "block";
+        dbTestFeedback.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.5rem; color: #38bdf8;">
+            <span>🔄</span> <strong>Mengirim ping ke Google Apps Script Web App...</strong>
+          </div>
+        `;
+      }
+
+      try {
+        const res = await API.checkDbHealth(targetUrl);
+        if (res.status === "success" && res.data) {
+          const d = res.data;
+          const latency = res.latencyMs || 0;
+
+          if (badgeDbStatus) {
+            badgeDbStatus.innerHTML = `<span style="width: 8px; height: 8px; border-radius: 50%; background: #34d399;"></span><span>Terhubung (${latency}ms)</span>`;
+            badgeDbStatus.style.borderColor = "rgba(52, 211, 153, 0.4)";
+            badgeDbStatus.style.color = "#34d399";
+          }
+
+          let sheetListHtml = "";
+          if (d.sheets && d.sheets.length > 0) {
+            sheetListHtml = `
+              <div style="margin-top: 0.5rem; background: rgba(0,0,0,0.25); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 0.25rem;">Tabel / Sheet Terdeteksi (${d.sheets.length}):</div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.35rem;">
+                  ${d.sheets.map(s => `
+                    <div style="font-size: 0.72rem; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 0.2rem 0.4rem; border-radius: 4px;">
+                      📄 <strong>${s.nama_sheet}</strong>: ${s.baris} baris
+                    </div>
+                  `).join("")}
+                </div>
+              </div>
+            `;
+          }
+
+          let missingAlert = "";
+          if (d.missing_required_sheets && d.missing_required_sheets.length > 0) {
+            missingAlert = `
+              <div style="margin-top: 0.5rem; color: #f87171; background: rgba(239, 68, 68, 0.15); padding: 0.4rem 0.6rem; border-radius: var(--radius-sm);">
+                ⚠️ <strong>Sheet Belum Lengkap:</strong> ${d.missing_required_sheets.join(", ")}. Buka Apps Script dan jalankan <code>setupDatabaseSIPRESMATA()</code> di Setup.gs.
+              </div>
+            `;
+          }
+
+          if (dbTestFeedback) {
+            dbTestFeedback.innerHTML = `
+              <div style="color: #34d399; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.35rem;">
+                ✅ Koneksi Cloud Database Google Sheets Berhasil Aktif!
+              </div>
+              <div style="color: #cbd5e1; font-size: 0.8rem; line-height: 1.5;">
+                • <strong>Nama File:</strong> ${d.spreadsheet_name || "Google Spreadsheet"}<br>
+                • <strong>Waktu Server:</strong> ${d.server_time || "-"}<br>
+                • <strong>Latensi:</strong> ${latency} ms
+              </div>
+              ${sheetListHtml}
+              ${missingAlert}
+            `;
+          }
+          showToast("Koneksi Google Spreadsheet & Apps Script BERHASIL!", "success");
+
+        } else {
+          // Fallback ke ping biasa jika handler check_db_health belum ter-deploy di GAS lama
+          const pingRes = await API.pingBackend(targetUrl);
+          if (pingRes.status === "success") {
+            if (badgeDbStatus) {
+              badgeDbStatus.innerHTML = `<span style="width: 8px; height: 8px; border-radius: 50%; background: #34d399;"></span><span>Terhubung (${pingRes.latencyMs}ms)</span>`;
+              badgeDbStatus.style.borderColor = "rgba(52, 211, 153, 0.4)";
+              badgeDbStatus.style.color = "#34d399";
+            }
+            if (dbTestFeedback) {
+              dbTestFeedback.innerHTML = `
+                <div style="color: #34d399; font-weight: 700;">
+                  ✅ Server Google Apps Script Merespons (${pingRes.latencyMs} ms)
+                </div>
+                <div style="color: #cbd5e1; font-size: 0.78rem; margin-top: 0.25rem;">
+                  Web App aktif. Untuk mendapatkan rincian nama tabel otomatis, salin update <code>Code.gs</code> terbaru ke Apps Script editor Anda.
+                </div>
+              `;
+            }
+            showToast("Server Google Apps Script terhubung!", "success");
+          } else {
+            throw new Error(res.message || pingRes.message || "Gagal menghubungi Web App");
+          }
+        }
+      } catch (err) {
+        if (badgeDbStatus) {
+          badgeDbStatus.innerHTML = `<span style="width: 8px; height: 8px; border-radius: 50%; background: #f87171;"></span><span>Terputus</span>`;
+          badgeDbStatus.style.borderColor = "rgba(248, 113, 113, 0.4)";
+          badgeDbStatus.style.color = "#f87171";
+        }
+        if (dbTestFeedback) {
+          dbTestFeedback.innerHTML = `
+            <div style="color: #f87171; font-weight: 700; margin-bottom: 0.35rem;">
+              ❌ Koneksi Gagal / Terputus
+            </div>
+            <div style="color: #e2e8f0; font-size: 0.78rem; line-height: 1.4;">
+              <strong>Penyebab:</strong> ${err.message}<br><br>
+              <strong>Panduan Solusi:</strong><br>
+              1. Buka Apps Script &gt; klik <strong>Deploy &gt; Manage Deployments</strong>.<br>
+              2. Pastikan <strong>Who has access</strong> diatur ke <strong>Anyone</strong> (bukan Only myself).<br>
+              3. Buat deployment versi baru jika ada perubahan kode di <code>Code.gs</code>.
+            </div>
+          `;
+        }
+        showToast("Koneksi gagal: " + err.message, "danger");
+      } finally {
+        btnTestDb.disabled = false;
+        btnTestDb.textContent = "⚡ Uji Koneksi Database";
+      }
+    };
+  }
+
+  // Tombol Bersihkan Cache Memory Google Apps Script
+  const btnSyncCache = document.getElementById("btn-sync-clear-cache");
+  if (btnSyncCache) {
+    btnSyncCache.onclick = async () => {
+      const targetUrl = inputUrl ? inputUrl.value.trim() : CONFIG.DEFAULT_API_URL;
+      btnSyncCache.disabled = true;
+      btnSyncCache.textContent = "⏳ Membersihkan...";
+      try {
+        const res = await API.clearCache(targetUrl);
+        if (res.status === "success") {
+          showToast("✅ Cache Google Apps Script berhasil dibersihkan!", "success");
+          if (dbTestFeedback) {
+            dbTestFeedback.style.display = "block";
+            dbTestFeedback.innerHTML = `
+              <div style="color: #34d399; font-weight: 700;">
+                ✅ Cache Database Berhasil Direset
+              </div>
+              <div style="color: #cbd5e1; font-size: 0.78rem; margin-top: 0.25rem;">
+                ${res.message || "Data spreadsheet akan dimuat ulang secara real-time."}
+              </div>
+            `;
+          }
+          if (window.ADMIN && window.ADMIN.loadStudents) {
+            await window.ADMIN.loadStudents("", "", true);
+          }
+        } else {
+          throw new Error(res.message || "Gagal membersihkan cache.");
+        }
+      } catch (err) {
+        showToast("Gagal reset cache: " + err.message, "danger");
+      } finally {
+        btnSyncCache.disabled = false;
+        btnSyncCache.textContent = "🔄 Bersihkan Cache & Sync";
+      }
+    };
+  }
+
+  // Tombol Diagnostik Status Device WhatsApp Gateway (Fonnte)
+  const btnCheckFonnte = document.getElementById("btn-check-fonnte");
+  const waDeviceFeedback = document.getElementById("wa-device-feedback");
+  const badgeWaStatus = document.getElementById("badge-wa-connection-status");
+
+  if (btnCheckFonnte) {
+    btnCheckFonnte.onclick = async () => {
+      const token = inputFonnteToken ? inputFonnteToken.value.trim() : CONFIG.FONNTE_TOKEN;
+      const targetUrl = inputUrl ? inputUrl.value.trim() : CONFIG.DEFAULT_API_URL;
+
+      if (!token) {
+        showToast("Masukkan Token Fonnte terlebih dahulu pada form input.", "warning");
+        if (inputFonnteToken) inputFonnteToken.focus();
+        return;
+      }
+
+      btnCheckFonnte.disabled = true;
+      btnCheckFonnte.textContent = "⏳ Memeriksa...";
+      if (badgeWaStatus) {
+        badgeWaStatus.innerHTML = `<span style="width: 8px; height: 8px; border-radius: 50%; background: #fbbf24;"></span><span>Memeriksa...</span>`;
+        badgeWaStatus.style.borderColor = "rgba(251, 191, 36, 0.4)";
+        badgeWaStatus.style.color = "#fbbf24";
+      }
+
+      if (waDeviceFeedback) {
+        waDeviceFeedback.style.display = "block";
+        waDeviceFeedback.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.5rem; color: #38bdf8;">
+            <span>🔄</span> <strong>Menghubungi API Fonnte & memeriksa status pairing device WhatsApp...</strong>
+          </div>
+        `;
+      }
+
+      try {
+        const res = await API.checkFonnteStatus(token, targetUrl);
+        if (res.status === "success") {
+          const isConn = Boolean(res.is_connected);
+          if (badgeWaStatus) {
+            if (isConn) {
+              badgeWaStatus.innerHTML = `<span style="width: 8px; height: 8px; border-radius: 50%; background: #34d399;"></span><span>Terhubung</span>`;
+              badgeWaStatus.style.borderColor = "rgba(52, 211, 153, 0.4)";
+              badgeWaStatus.style.color = "#34d399";
+            } else {
+              badgeWaStatus.innerHTML = `<span style="width: 8px; height: 8px; border-radius: 50%; background: #fbbf24;"></span><span>Terputus / Scan QR</span>`;
+              badgeWaStatus.style.borderColor = "rgba(251, 191, 36, 0.4)";
+              badgeWaStatus.style.color = "#fbbf24";
+            }
+          }
+
+          if (waDeviceFeedback) {
+            waDeviceFeedback.innerHTML = `
+              <div style="color: ${isConn ? '#34d399' : '#fbbf24'}; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.35rem;">
+                ${isConn ? '✅ Perangkat WhatsApp Fonnte Berhasil Terhubung!' : '⚠️ Token Valid, namun Perangkat WhatsApp Terputus'}
+              </div>
+              <div style="color: #cbd5e1; font-size: 0.8rem; line-height: 1.6;">
+                • <strong>Nama Device:</strong> ${res.device_name || "-"}<br>
+                • <strong>Nomor WhatsApp:</strong> ${res.device_number || "-"}<br>
+                • <strong>Status Device:</strong> <span style="color: ${isConn ? '#34d399' : '#f87171'}; font-weight: 700;">${res.device_status || (isConn ? 'connect' : 'disconnect')}</span><br>
+                • <strong>Sisa Kuota Pesan:</strong> ${res.quota || "-"}<br>
+                • <strong>Masa Aktif Akun:</strong> ${res.expired || "-"}
+              </div>
+              ${!isConn ? `
+                <div style="margin-top: 0.5rem; color: #fbbf24; background: rgba(245, 158, 11, 0.15); padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); font-size: 0.75rem;">
+                  ℹ️ Buka <a href="https://fonnte.com" target="_blank" style="color: #38bdf8; text-decoration: underline;">dashboard Fonnte.com</a> dan lakukan scan QR Code nomor WhatsApp madrasah untuk mengaktifkan pengiriman.
+                </div>
+              ` : ''}
+            `;
+          }
+          showToast(res.message || (isConn ? "WhatsApp Gateway Fonnte TERHUBUNG!" : "Perangkat WhatsApp Fonnte Terputus"), isConn ? "success" : "warning");
+
+          if (window.ADMIN && window.ADMIN.checkFonnteConnection) {
+            window.ADMIN.checkFonnteConnection(false);
+          }
+        } else {
+          throw new Error(res.message || "Token Fonnte tidak valid.");
+        }
+      } catch (err) {
+        if (badgeWaStatus) {
+          badgeWaStatus.innerHTML = `<span style="width: 8px; height: 8px; border-radius: 50%; background: #f87171;"></span><span>Token Tidak Valid</span>`;
+          badgeWaStatus.style.borderColor = "rgba(248, 113, 113, 0.4)";
+          badgeWaStatus.style.color = "#f87171";
+        }
+        if (waDeviceFeedback) {
+          waDeviceFeedback.innerHTML = `
+            <div style="color: #f87171; font-weight: 700; margin-bottom: 0.35rem;">
+              ❌ Pemeriksaan Fonnte Gagal
+            </div>
+            <div style="color: #cbd5e1; font-size: 0.78rem; line-height: 1.4;">
+              <strong>Penyebab:</strong> ${err.message}<br>
+              Pastikan token API sudah benar disalin dari dashboard <a href="https://fonnte.com" target="_blank" style="color: #38bdf8;">Fonnte.com</a>.
+            </div>
+          `;
+        }
+        showToast("Fonnte gagal: " + err.message, "danger");
+      } finally {
+        btnCheckFonnte.disabled = false;
+        btnCheckFonnte.textContent = "🔍 Cek Koneksi & Kuota Fonnte";
       }
     };
   }
@@ -687,6 +975,7 @@ async function initSettingsView() {
 
       // Simpan ke local config
       saveSchedule(scheduleData);
+      if (inputSpreadsheetId) saveSpreadsheetId(inputSpreadsheetId.value);
       if (inputUrl) saveApiUrl(inputUrl.value);
       if (inputKey) saveClientKey(inputKey.value);
       saveWaSettings(waSettings);
@@ -733,6 +1022,7 @@ export function closeModal(id) {
 window.closeModal = closeModal;
 
 export function showToast(message, type = "info") {
+  // NOTE: Also exposed as window.showToast below for global access
   const container = document.getElementById("toast-container");
   if (!container) return;
 
@@ -749,6 +1039,9 @@ export function showToast(message, type = "info") {
     setTimeout(() => toast.remove(), 300);
   }, 3500);
 }
+
+// Global Bridge: showToast tersedia di admin.js & inline onclick handlers
+window.showToast = showToast;
 
 // 9. Update CMS User UI
 function updateCmsUserUI() {

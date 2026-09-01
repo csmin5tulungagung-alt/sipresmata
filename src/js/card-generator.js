@@ -203,7 +203,7 @@ export const CARD_GENERATOR = {
               <button type="button" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 700; color: #34d399;" onclick="CARD_GENERATOR.downloadSingleCardById('${s.id_siswa}')">
                 📥 Unduh PNG
               </button>
-              <button type="button" class="btn btn-secondary btn-icon" style="color: #f87171; padding: 0.3rem;" onclick="CARD_GENERATOR.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap)}')" title="Hapus Siswa">
+              <button type="button" class="btn btn-secondary btn-icon" style="color: #f87171; padding: 0.3rem; cursor: pointer;" onclick="CARD_GENERATOR.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap || '').replace(/'/g, '%27')}')" title="Hapus Siswa">
                 🗑️
               </button>
             </div>
