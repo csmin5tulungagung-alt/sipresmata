@@ -358,12 +358,24 @@ export const API = {
   async _fetchSiswaFromBackend(idKelas = "") {
     if (CONFIG.DEFAULT_API_URL) {
       try {
-        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=get_siswa`);
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=get_siswa&_t=${Date.now()}`);
         const json = await res.json();
         if (json.status === "success" && Array.isArray(json.data)) {
-          this._cachedStudents = json.data;
+          const normalized = json.data.map((s, idx) => ({
+            id_siswa: String(s.id_siswa || `SISWA-${String(idx + 1).padStart(3, '0')}`).trim(),
+            nisn: String(s.nisn || "").trim(),
+            nama_lengkap: String(s.nama_lengkap || "").trim(),
+            id_kelas: String(s.id_kelas || "KLS-1A").trim(),
+            nama_kelas: String(s.nama_kelas || s.id_kelas || "Kelas 1A").trim(),
+            jenis_kelamin: String(s.jenis_kelamin || "L").toUpperCase().trim(),
+            kode_barcode: String(s.kode_barcode || (s.nisn ? `MIN5-${s.nisn}` : "")).trim(),
+            no_hp_ortu: String(s.no_hp_ortu !== undefined && s.no_hp_ortu !== null ? s.no_hp_ortu : "").trim(),
+            status_aktif: s.status_aktif !== false
+          }));
+
+          this._cachedStudents = normalized;
           this._cachedStudentsTime = Date.now();
-          localStudents = json.data;
+          localStudents = normalized;
           saveLocalState();
 
           let list = this._cachedStudents;

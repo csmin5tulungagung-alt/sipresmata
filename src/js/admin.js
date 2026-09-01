@@ -841,21 +841,21 @@ export const ADMIN = {
     const term = (this.studentsState.classStudentSearch || "").toLowerCase().trim();
     if (term) {
       list = list.filter(s => 
-        (s.nama_lengkap && s.nama_lengkap.toLowerCase().includes(term)) || 
-        (s.nisn && s.nisn.includes(term)) ||
-        (s.no_hp_ortu && s.no_hp_ortu.includes(term))
+        (s.nama_lengkap && String(s.nama_lengkap).toLowerCase().includes(term)) || 
+        (s.nisn && String(s.nisn).includes(term)) ||
+        (s.no_hp_ortu && String(s.no_hp_ortu).includes(term))
       );
     }
 
     const gender = this.studentsState.selectedGenderFilter;
     if (gender && gender !== "ALL") {
-      list = list.filter(s => (s.jenis_kelamin || "L").toUpperCase() === gender);
+      list = list.filter(s => String(s.jenis_kelamin || "L").toUpperCase() === gender);
     }
 
     // Update Subtitle Statistik L/P
     const allInClass = (this.studentsState.allList || []).filter(s => s.id_kelas === classId);
-    const lCount = allInClass.filter(s => (s.jenis_kelamin || "L").toUpperCase() === "L").length;
-    const pCount = allInClass.filter(s => (s.jenis_kelamin || "L").toUpperCase() === "P").length;
+    const lCount = allInClass.filter(s => String(s.jenis_kelamin || "L").toUpperCase() === "L").length;
+    const pCount = allInClass.filter(s => String(s.jenis_kelamin || "L").toUpperCase() === "P").length;
 
     const subtitleEl = document.getElementById("student-detail-class-subtitle");
     if (subtitleEl) {
@@ -893,10 +893,12 @@ export const ADMIN = {
     tableBody.innerHTML = pageItems.map((s, idx) => {
       const isChecked = this.studentsState.selectedIds.has(s.id_siswa);
       const rowNumber = start + idx + 1;
-      const barcodeCode = s.kode_barcode || `MIN5-${s.nisn}`;
-      const hp = s.no_hp_ortu || "";
-      const waNumber = hp.startsWith("0") ? "62" + hp.substring(1) : hp.startsWith("+62") ? hp.substring(1) : hp;
-      const waLink = hp ? `<a href="https://wa.me/${waNumber.replace(/[^0-9]/g, '')}" target="_blank" class="btn-wa-link" title="Kirim Pesan WhatsApp">💬 ${hp}</a>` : `<span style="color: var(--text-muted); font-size: 0.8rem;">-</span>`;
+      const nisn = String(s.nisn || "").trim();
+      const barcodeCode = String(s.kode_barcode || (nisn ? `MIN5-${nisn}` : "")).trim();
+      const hp = String(s.no_hp_ortu !== undefined && s.no_hp_ortu !== null ? s.no_hp_ortu : "").trim();
+      const cleanHp = hp.replace(/[^0-9]/g, "");
+      const waNumber = cleanHp.startsWith("0") ? "62" + cleanHp.substring(1) : cleanHp.startsWith("62") ? cleanHp : cleanHp ? "62" + cleanHp : "";
+      const waLink = cleanHp ? `<a href="https://wa.me/${waNumber}" target="_blank" class="btn-wa-link" title="Kirim Pesan WhatsApp">💬 ${hp}</a>` : `<span style="color: var(--text-muted); font-size: 0.8rem;">-</span>`;
 
       return `
         <tr style="${isChecked ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
@@ -904,8 +906,8 @@ export const ADMIN = {
             <input type="checkbox" class="table-checkbox student-row-check" value="${s.id_siswa}" ${isChecked ? 'checked' : ''} onchange="ADMIN.toggleStudentSelection('${s.id_siswa}', this.checked)">
           </td>
           <td>${rowNumber}</td>
-          <td><code style="color: #38bdf8; font-weight: 700;">${s.nisn}</code></td>
-          <td><strong>${s.nama_lengkap}</strong></td>
+          <td><code style="color: #38bdf8; font-weight: 700;">${nisn}</code></td>
+          <td><strong>${s.nama_lengkap || '-'}</strong></td>
           <td>
             <span class="badge ${s.jenis_kelamin === 'P' ? 'badge-purple' : 'badge-info'}" style="font-size: 0.75rem;">
               ${s.jenis_kelamin === 'P' ? '👧 Perempuan' : '👦 Laki-laki'}
@@ -1056,9 +1058,11 @@ export const ADMIN = {
     tableBody.innerHTML = pageItems.map((s, idx) => {
       const isChecked = this.studentsState.selectedIds.has(s.id_siswa);
       const rowNumber = start + idx + 1;
-      const hp = s.no_hp_ortu || "";
-      const waNumber = hp.startsWith("0") ? "62" + hp.substring(1) : hp.startsWith("+62") ? hp.substring(1) : hp;
-      const waLink = hp ? `<a href="https://wa.me/${waNumber.replace(/[^0-9]/g, '')}" target="_blank" class="btn-wa-link" title="Kirim Pesan WhatsApp">💬 ${hp}</a>` : `<span style="color: var(--text-muted); font-size: 0.8rem;">-</span>`;
+      const nisn = String(s.nisn || "").trim();
+      const hp = String(s.no_hp_ortu !== undefined && s.no_hp_ortu !== null ? s.no_hp_ortu : "").trim();
+      const cleanHp = hp.replace(/[^0-9]/g, "");
+      const waNumber = cleanHp.startsWith("0") ? "62" + cleanHp.substring(1) : cleanHp.startsWith("62") ? cleanHp : cleanHp ? "62" + cleanHp : "";
+      const waLink = cleanHp ? `<a href="https://wa.me/${waNumber}" target="_blank" class="btn-wa-link" title="Kirim Pesan WhatsApp">💬 ${hp}</a>` : `<span style="color: var(--text-muted); font-size: 0.8rem;">-</span>`;
 
       return `
         <tr style="${isChecked ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
@@ -1066,8 +1070,8 @@ export const ADMIN = {
             <input type="checkbox" class="table-checkbox student-row-check" value="${s.id_siswa}" ${isChecked ? 'checked' : ''} onchange="ADMIN.toggleStudentSelection('${s.id_siswa}', this.checked)">
           </td>
           <td>${rowNumber}</td>
-          <td><code style="color: #38bdf8; font-weight: 700;">${s.nisn}</code></td>
-          <td><strong>${s.nama_lengkap}</strong></td>
+          <td><code style="color: #38bdf8; font-weight: 700;">${nisn}</code></td>
+          <td><strong>${s.nama_lengkap || '-'}</strong></td>
           <td><span class="badge badge-info">${s.nama_kelas || s.id_kelas}</span></td>
           <td>
             <span class="badge ${s.jenis_kelamin === 'P' ? 'badge-purple' : 'badge-info'}" style="font-size: 0.75rem;">
