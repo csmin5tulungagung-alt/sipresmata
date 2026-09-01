@@ -271,7 +271,7 @@ export const ADMIN = {
             </span>
           </td>
           <td style="text-align: center;">
-            <button type="button" class="btn btn-secondary btn-icon" onclick="ADMIN.deleteDashboardScan('${scanId}', '${safeEncodedNama}', '${s.tanggal || ''}', '${s.nisn || ''}', '${s.id_siswa || ''}')" title="Hapus Catatan Presensi Ini" style="color: #f87171; padding: 0.35rem 0.5rem; cursor: pointer;">
+            <button type="button" class="btn-action-icon-danger" onclick="ADMIN.deleteDashboardScan('${scanId}', '${safeEncodedNama}', '${s.tanggal || ''}', '${s.nisn || ''}', '${s.id_siswa || ''}')" title="Hapus Catatan Presensi Ini">
               🗑️
             </button>
           </td>
@@ -915,16 +915,18 @@ export const ADMIN = {
           </td>
           <td>${waLink}</td>
           <td><span class="badge badge-purple" style="font-family: monospace; font-size: 0.75rem;">${barcodeCode}</span></td>
-          <td style="display: flex; gap: 0.4rem;">
-            <button class="btn btn-secondary btn-icon" onclick="window.editStudent('${s.id_siswa}')" title="Edit Data Siswa">
-              ✏️
-            </button>
-            <button type="button" class="btn btn-secondary btn-icon" onclick="ADMIN.previewStudentCard('${s.id_siswa}')" title="Cetak / Pratinjau Kartu Siswa">
-              🪪
-            </button>
-            <button type="button" class="btn btn-secondary btn-icon" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap || '').replace(/'/g, '%27')}')" title="Hapus Siswa" style="color: #f87171; cursor: pointer;">
-              🗑️
-            </button>
+          <td>
+            <div class="table-action-group">
+              <button type="button" class="btn-action-icon-secondary" onclick="window.editStudent('${s.id_siswa}')" title="Edit Data Siswa">
+                ✏️
+              </button>
+              <button type="button" class="btn-action-pill btn-action-pill-cyan" onclick="ADMIN.previewStudentCard('${s.id_siswa}')" title="Pratinjau / Cetak Kartu Siswa">
+                🪪 Kartu
+              </button>
+              <button type="button" class="btn-action-icon-danger" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap || '').replace(/'/g, '%27')}')" title="Hapus Siswa">
+                🗑️
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -1079,16 +1081,18 @@ export const ADMIN = {
             </span>
           </td>
           <td>${waLink}</td>
-          <td style="display: flex; gap: 0.4rem;">
-            <button class="btn btn-secondary btn-icon" onclick="window.editStudent('${s.id_siswa}')" title="Edit Siswa">
-              ✏️
-            </button>
-            <button type="button" class="btn btn-secondary btn-icon" onclick="ADMIN.previewStudentCard('${s.id_siswa}')" title="Cetak / Pratinjau Kartu Siswa">
-              🪪
-            </button>
-            <button type="button" class="btn btn-secondary btn-icon" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap || '').replace(/'/g, '%27')}')" title="Hapus Siswa" style="color: #f87171; cursor: pointer;">
-              🗑️
-            </button>
+          <td>
+            <div class="table-action-group">
+              <button type="button" class="btn-action-icon-secondary" onclick="window.editStudent('${s.id_siswa}')" title="Edit Siswa">
+                ✏️
+              </button>
+              <button type="button" class="btn-action-pill btn-action-pill-cyan" onclick="ADMIN.previewStudentCard('${s.id_siswa}')" title="Pratinjau / Cetak Kartu Siswa">
+                🪪 Kartu
+              </button>
+              <button type="button" class="btn-action-icon-danger" onclick="window.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap || '').replace(/'/g, '%27')}')" title="Hapus Siswa">
+                🗑️
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -1366,7 +1370,7 @@ export const ADMIN = {
             </span>
           </td>
           <td style="text-align: center;">
-            <button type="button" class="btn btn-secondary btn-icon" onclick="ADMIN.deleteRekapItem('${itemId}', '${safeEncodedNama}', '${item.tanggal || ''}', '${item.nisn || ''}', '${item.id_siswa || ''}')" title="Hapus Data Presensi Ini" style="color: #f87171; padding: 0.35rem 0.5rem; cursor: pointer;">
+            <button type="button" class="btn-action-icon-danger" onclick="ADMIN.deleteRekapItem('${itemId}', '${safeEncodedNama}', '${item.tanggal || ''}', '${item.nisn || ''}', '${item.id_siswa || ''}')" title="Hapus Data Presensi Ini">
               🗑️
             </button>
           </td>

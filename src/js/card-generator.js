@@ -196,14 +196,14 @@ export const CARD_GENERATOR = {
           <td><span class="badge badge-info">${s.nama_kelas || this.state.selectedClassName}</span></td>
           <td><span class="badge badge-purple" style="font-family: monospace;">${barcodeCode}</span></td>
           <td>
-            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
-              <button type="button" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 700; color: #38bdf8;" onclick="CARD_GENERATOR.previewCard('${s.id_siswa}')">
-                👁️ View PNG
+            <div class="table-action-group">
+              <button type="button" class="btn-action-pill btn-action-pill-cyan" onclick="CARD_GENERATOR.previewCard('${s.id_siswa}')" title="Lihat Pratinjau Kartu Siswa">
+                👁️ Lihat
               </button>
-              <button type="button" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.78rem; font-weight: 700; color: #34d399;" onclick="CARD_GENERATOR.downloadSingleCardById('${s.id_siswa}')">
-                📥 Unduh PNG
+              <button type="button" class="btn-action-pill btn-action-pill-emerald" onclick="CARD_GENERATOR.downloadSingleCardById('${s.id_siswa}')" title="Unduh Kartu PNG">
+                📥 Unduh
               </button>
-              <button type="button" class="btn btn-secondary btn-icon" style="color: #f87171; padding: 0.3rem; cursor: pointer;" onclick="CARD_GENERATOR.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap || '').replace(/'/g, '%27')}')" title="Hapus Siswa">
+              <button type="button" class="btn-action-icon-danger" onclick="CARD_GENERATOR.deleteStudent('${s.id_siswa}', '${encodeURIComponent(s.nama_lengkap || '').replace(/'/g, '%27')}')" title="Hapus Siswa">
                 🗑️
               </button>
             </div>
