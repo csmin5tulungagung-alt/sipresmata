@@ -47,6 +47,9 @@ export const ADMIN = {
       year: new Date().getFullYear(),
       idKelas: "",
       daysInMonth: 31,
+      currentPage: 1,
+      pageSize: 10,
+      searchQuery: "",
       matrixStudents: [],
       summary: { totalStudents: 0, avgAttendance: 0, hadir: 0, terlambat: 0, izin: 0, sakit: 0, alpa: 0 }
     }
@@ -1844,11 +1847,17 @@ export const ADMIN = {
     }
   },
 
+  handleMonthlySearch(keyword) {
+    this.rekapState.monthly.searchQuery = (keyword || "").trim().toLowerCase();
+    this.rekapState.monthly.currentPage = 1;
+    this.renderMonthlyMatrixTable();
+  },
+
   renderMonthlyMatrixTable() {
     const container = document.getElementById("monthly-matrix-wrapper");
     if (!container) return;
 
-    const { daysInMonth, matrixStudents, summary } = this.rekapState.monthly;
+    const { daysInMonth, matrixStudents, summary, currentPage, pageSize, searchQuery } = this.rekapState.monthly;
 
     if (!matrixStudents || matrixStudents.length === 0) {
       container.innerHTML = `
@@ -1856,8 +1865,35 @@ export const ADMIN = {
           Tidak ada data siswa ditemukan untuk kriteria kelas yang dipilih.
         </div>
       `;
+      this.renderPagination("monthly-rekap-pagination", 0, 1, 10, () => {}, () => {});
       return;
     }
+
+    // Filter berdasarkan search keyword jika ada
+    let filteredStudents = matrixStudents;
+    if (searchQuery) {
+      filteredStudents = matrixStudents.filter(s => 
+        (s.nama_lengkap || "").toLowerCase().includes(searchQuery) ||
+        (s.nisn || "").toLowerCase().includes(searchQuery) ||
+        (s.nama_kelas || "").toLowerCase().includes(searchQuery)
+      );
+    }
+
+    const total = filteredStudents.length;
+    if (total === 0) {
+      container.innerHTML = `
+        <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+          Tidak ada siswa yang cocok dengan pencarian "<strong>${searchQuery}</strong>".
+        </div>
+      `;
+      this.renderPagination("monthly-rekap-pagination", 0, 1, 10, () => {}, () => {});
+      return;
+    }
+
+    const isAll = pageSize === "ALL";
+    const effectivePageSize = isAll ? total : parseInt(pageSize, 10);
+    const start = isAll ? 0 : (currentPage - 1) * effectivePageSize;
+    const pageItems = isAll ? filteredStudents : filteredStudents.slice(start, start + effectivePageSize);
 
     const dayHeadersHTML = Array.from({ length: daysInMonth }, (_, i) => {
       const dayNum = i + 1;
@@ -1866,7 +1902,7 @@ export const ADMIN = {
       return `<th class="${isSunday ? 'matrix-cell-sunday' : ''}" style="width: 28px; min-width: 28px; font-size: 0.75rem; color: ${isSunday ? '#f87171' : ''};">${dayNum}</th>`;
     }).join("");
 
-    const rowsHTML = matrixStudents.map((student, idx) => {
+    const rowsHTML = pageItems.map((student, idx) => {
       const daysHTML = student.dailyStatus.map(d => {
         if (d.isHoliday) {
           return `<td class="matrix-cell-sunday"><span class="matrix-badge matrix-badge-holiday">—</span></td>`;
@@ -1881,7 +1917,7 @@ export const ADMIN = {
 
       return `
         <tr>
-          <td style="font-size: 0.78rem;">${idx + 1}</td>
+          <td style="font-size: 0.78rem;">${start + idx + 1}</td>
           <td style="font-family: monospace; font-size: 0.78rem;">${student.nisn}</td>
           <td class="col-sticky-nama"><strong>${student.nama_lengkap}</strong></td>
           <td><span class="badge badge-info" style="font-size: 0.7rem;">${student.nama_kelas}</span></td>
@@ -1922,6 +1958,22 @@ export const ADMIN = {
         </tbody>
       </table>
     `;
+
+    this.renderPagination(
+      "monthly-rekap-pagination",
+      total,
+      currentPage,
+      pageSize,
+      (newPage) => {
+        this.rekapState.monthly.currentPage = newPage;
+        this.renderMonthlyMatrixTable();
+      },
+      (newSize) => {
+        this.rekapState.monthly.pageSize = newSize;
+        this.rekapState.monthly.currentPage = 1;
+        this.renderMonthlyMatrixTable();
+      }
+    );
   },
 
   exportMonthlyCSV() {

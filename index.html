@@ -674,7 +674,8 @@
                   </div>
                 </div>
 
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                  <input type="text" id="search-monthly-student" class="form-control" placeholder="🔍 Cari nama / NISN siswa..." style="max-width: 230px;" oninput="ADMIN.handleMonthlySearch(this.value)">
                   <button type="button" id="btn-export-monthly-csv" class="btn btn-secondary" onclick="ADMIN.exportMonthlyCSV()">
                     📥 Ekspor Excel (.csv)
                   </button>
@@ -733,6 +734,9 @@
                 <span><strong class="matrix-badge matrix-badge-a" style="width:auto;padding:1px 5px;">A</strong> Alpa</span>
                 <span><strong style="color: #9ca3af;">—</strong> Hari Libur / Minggu</span>
               </div>
+
+              <!-- Pagination Rekap Matriks Bulanan -->
+              <div id="monthly-rekap-pagination" class="table-pagination-container"></div>
             </div>
           </div>
 
