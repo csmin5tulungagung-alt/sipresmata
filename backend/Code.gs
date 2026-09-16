@@ -9,8 +9,7 @@
  */
 
 var SPREADSHEET_ID = "1omNmjeUB29BGNeNRlwPM2TSgTd4CLgQarT9EB_93a5A";
-var SECRET_SALT = "SIPRESMATA_MIN5_SECRET_SALT_2026";
-var CACHE_TTL_SECONDS = 0; // 0 = REAL-TIME MODE (Bebas delay cache, data langsung terbaca secara live)
+var CACHE_TTL_SECONDS = 600; // 600 detik (10 menit) Cache Siswa di Memory agar pemindaian scan berkecepatan tinggi
 
 function getDB() {
   try {
@@ -230,9 +229,14 @@ function handleAbsenScan(req) {
   var existingRowIndex = -1;
   var existingRecord = null;
 
-  for (var i = 1; i < absData.length; i++) {
+  // Cari dari baris terbaru (bawah ke atas) agar tidak perlu membaca ribuan baris masa lalu
+  for (var i = absData.length - 1; i >= 1; i--) {
     var rowTgl = formatDateISO(absData[i][1]);
-    var rowIdSiswa = absData[i][2];
+    if (rowTgl < todayStr) {
+      // Baris kronologis sebelum hari ini, hentikan pencarian untuk kecepatan maksimal
+      break;
+    }
+    var rowIdSiswa = String(absData[i][2] || "").trim();
     if (rowTgl === todayStr && rowIdSiswa === siswa.id_siswa) {
       existingRowIndex = i + 1;
       existingRecord = {

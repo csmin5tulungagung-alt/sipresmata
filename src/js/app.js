@@ -254,6 +254,32 @@ function handleScanFeedback(res) {
   const resultCard = document.getElementById("scan-result-card");
   if (!resultCard) return;
 
+  if (res.status === "pending") {
+    const data = res.data;
+    const isPulang = data.jenis_sesi === "PULANG";
+    const isLate = !isPulang && data.status_kehadiran === "TERLAMBAT";
+
+    let statusLabel = isPulang ? "🏠 SELESAI / PULANG" : (isLate ? `⚠️ TERLAMBAT (${data.keterlambatan_menit || 0}m)` : "✅ HADIR TEPAT WAKTU");
+    let statusClass = isLate ? "terlambat" : "hadir";
+
+    resultCard.innerHTML = `
+      <div class="result-avatar-circle" style="${isPulang ? 'background: linear-gradient(135deg, #0284c7, #0369a1);' : isLate ? 'background: linear-gradient(135deg, #f59e0b, #d97706);' : ''}">
+        ${data.nama_lengkap.charAt(0)}
+      </div>
+      <h3 class="result-student-name">${data.nama_lengkap}</h3>
+      <p class="result-student-meta">${data.kelas || '-'} • NISN: ${data.nisn || '-'}</p>
+      
+      <div class="status-tag ${statusClass}">
+        ${statusLabel} (${data.jam_scan} WIB)
+      </div>
+
+      <p class="result-timestamp" style="color: #38bdf8; font-weight: 500;">
+        ⚡ Terbaca Instan • Menyinkronkan ke cloud...
+      </p>
+    `;
+    return;
+  }
+
   if (res.status === "success") {
     const data = res.data;
     const isPulang = data.jenis_sesi === "PULANG";
@@ -281,7 +307,9 @@ function handleScanFeedback(res) {
         ${statusLabel} (${data.jam_scan} WIB)
       </div>
 
-      <p class="result-timestamp">${res.message}</p>
+      <p class="result-timestamp" style="color: #34d399; font-weight: 500;">
+        ✓ ${res.message || 'Presensi berhasil dicatat di cloud database.'}
+      </p>
     `;
     showToast(`Presensi Berhasil: ${data.nama_lengkap} (${isPulang ? 'Sudah Pulang' : 'Hadir Masuk'})`, "success");
   } else {

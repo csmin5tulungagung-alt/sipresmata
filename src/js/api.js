@@ -51,6 +51,18 @@ async function parseApiResponse(response, action) {
 }
 
 export const API = {
+  // Helper pencarian instan siswa dari memory lokal (< 1ms)
+  findStudentLocally(barcode) {
+    if (!barcode) return null;
+    const clean = String(barcode).trim().toUpperCase();
+    const students = this._cachedStudents || localStudents || [];
+    return students.find(s => 
+      (s.kode_barcode && s.kode_barcode.toUpperCase() === clean) || 
+      (s.nisn && s.nisn.toUpperCase() === clean) ||
+      (s.id_siswa && s.id_siswa.toUpperCase() === clean)
+    ) || null;
+  },
+
   // 1. Scan Absensi
   async scanBarcode(barcode) {
     if (CONFIG.DEFAULT_API_URL) {
@@ -69,8 +81,7 @@ export const API = {
       }
     }
 
-    // Mock Local Engine Fallback
-    await new Promise(r => setTimeout(r, 450));
+    // Mock Local Engine Fallback (Instant 0 ms)
     const now = new Date();
     const todayStr = now.toISOString().split("T")[0];
     const timeStr = now.toTimeString().split(" ")[0];

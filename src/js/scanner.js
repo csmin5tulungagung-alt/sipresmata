@@ -6,13 +6,14 @@
  */
 
 import { API } from './api.js';
+import { CONFIG } from './config.js';
 
 let html5QrCode = null;
 let isScanning = false;
-let isProcessing = false;
 let lastScannedCode = "";
 let lastScannedTime = 0;
-const SCAN_COOLDOWN_MS = 2500; // 2.5 Detik jeda antar-scan kartu yang sama
+const SAME_CODE_COOLDOWN_MS = 1800; // 1.8 Detik jeda antar-scan untuk kartu yang SAMA
+const DIFF_CODE_COOLDOWN_MS = 500;  // Hanya 0.5 Detik jeda jika kartu siswa BERBEDA (antrean cepat)
 
 // Web Audio API Synthesizer (Lazy initialized to prevent browser Autoplay Policy warning)
 let audioCtx = null;
@@ -117,7 +118,24 @@ export const SCANNER = {
       return;
     }
 
-    html5QrCode = new Html5Qrcode("camera-reader");
+    // Aktifkan akselerasi hardware BarcodeDetector asli browser jika didukung
+    const formatsToSupport = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
+      Html5QrcodeSupportedFormats.QR_CODE,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39
+    ] : undefined;
+
+    try {
+      html5QrCode = new Html5Qrcode("camera-reader", {
+        formatsToSupport: formatsToSupport,
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        },
+        verbose: false
+      });
+    } catch (e) {
+      html5QrCode = new Html5Qrcode("camera-reader");
+    }
 
     try {
       const devices = await Html5Qrcode.getCameras();
@@ -143,9 +161,16 @@ export const SCANNER = {
   async start(cameraId, onScanSuccess) {
     if (!html5QrCode || isScanning) return;
 
+    // Konfigurasi 25 FPS dan qrbox responsif lebar agar barcode 1D dan QR terbaca secepat kilat
     const config = {
-      fps: 15,
-      qrbox: { width: 250, height: 250 },
+      fps: 25,
+      qrbox: (viewfinderWidth, viewfinderHeight) => {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        return {
+          width: Math.min(Math.floor(viewfinderWidth * 0.9), 380),
+          height: Math.min(Math.floor(minEdge * 0.72), 260)
+        };
+      },
       aspectRatio: 1.333333
     };
 
@@ -158,11 +183,16 @@ export const SCANNER = {
           const cleanCode = (decodedText || "").trim();
           if (!cleanCode) return;
 
-          if (cleanCode === lastScannedCode && (now - lastScannedTime) < SCAN_COOLDOWN_MS) {
-            return; // Hindari double trigger beruntun
-          }
+          const isSameCode = (cleanCode === lastScannedCode);
+          const elapsed = now - lastScannedTime;
 
-          if (isProcessing) return; // Mencegah tumpukan request
+          // Jeda: 1.8 detik jika kartu sama (mencegah double trigger), hanya 0.5 detik jika kartu siswa berikutnya
+          if (isSameCode && elapsed < SAME_CODE_COOLDOWN_MS) {
+            return;
+          }
+          if (!isSameCode && elapsed < DIFF_CODE_COOLDOWN_MS) {
+            return;
+          }
 
           lastScannedCode = cleanCode;
           lastScannedTime = now;
@@ -194,34 +224,86 @@ export const SCANNER = {
     const cleanBarcode = (barcode || "").trim();
     if (!cleanBarcode) return;
 
-    if (isProcessing) return;
-    isProcessing = true;
+    const now = new Date();
+    const timeStr = now.toTimeString().substring(0, 8);
+    const dayOfWeek = now.getDay();
+    const s = CONFIG.SCHEDULE;
 
-    try {
-      playAudioBeep("success");
+    // Evaluasi waktu presensi secara lokal (0 ms)
+    let isSesiMasuk = timeStr >= s.MASUK_MULAI && timeStr <= s.MASUK_MAKSIMAL;
+    let isSesiPulang = timeStr >= s.PULANG_MULAI && timeStr <= s.PULANG_BATAS;
+    if (dayOfWeek === 5 && s.JUMAT_KHUSUS_ENABLED) {
+      isSesiPulang = timeStr >= s.JAM_PULANG_JUMAT_MULAI && timeStr <= s.JAM_PULANG_JUMAT_BATAS;
+    }
+    if (s.BYPASS_SCHEDULE_TEST_MODE && !isSesiMasuk && !isSesiPulang) {
+      isSesiMasuk = timeStr < (s.PULANG_MULAI || "12:00:00");
+      isSesiPulang = !isSesiMasuk;
+    }
 
-      const response = await API.scanBarcode(cleanBarcode);
-      if (response && response.status === "success") {
-        if (response.data && response.data.status_kehadiran === "TERLAMBAT") {
-          playAudioBeep("warning");
-        } else {
-          playAudioBeep("success");
-        }
+    const isTerlambat = isSesiMasuk && timeStr > s.MASUK_BATAS;
+    let keterlambatanMenit = 0;
+    if (isTerlambat) {
+      try {
+        const [hA, mA] = s.MASUK_BATAS.split(":").map(Number);
+        const [hB, mB] = timeStr.split(":").map(Number);
+        keterlambatanMenit = Math.max(0, (hB * 60 + mB) - (hA * 60 + mA));
+      } catch (e) {}
+    }
 
-        if (response.data && response.data.audio_prompt) {
-          speakText(response.data.audio_prompt);
-        }
-      } else {
-        playAudioBeep("error");
-        speakText(response ? (response.message || "Peringatan presensi.") : "Presensi tidak dikenali.");
+    // Cari data siswa di memori lokal untuk respon instan 0ms
+    const instantStudent = (typeof API.findStudentLocally === 'function') 
+      ? API.findStudentLocally(cleanBarcode) 
+      : null;
+
+    if (instantStudent) {
+      // 1. Instan Bunyi Beep (< 5ms)
+      playAudioBeep(isTerlambat ? "warning" : "success");
+
+      // 2. Instan Render Tampilan di Layar (0 ms, Zero Delay!)
+      if (callback) {
+        callback({
+          status: "pending",
+          data: {
+            nama_lengkap: instantStudent.nama_lengkap,
+            kelas: instantStudent.nama_kelas || instantStudent.id_kelas,
+            nisn: instantStudent.nisn,
+            jenis_sesi: isSesiPulang ? "PULANG" : "MASUK",
+            status_kehadiran: isTerlambat ? "TERLAMBAT" : "HADIR",
+            jam_scan: timeStr,
+            keterlambatan_menit: keterlambatanMenit
+          }
+        });
       }
 
-      if (callback) callback(response);
+      // 3. Suara Text-to-Speech Langsung Menyapa Nama Siswa (< 15ms)
+      const voiceGreeting = isSesiMasuk
+        ? (isTerlambat 
+            ? `Selamat pagi ${instantStudent.nama_lengkap}. Anda terlambat ${keterlambatanMenit} menit.`
+            : `Selamat pagi ${instantStudent.nama_lengkap}. Tepat waktu.`)
+        : `Terima kasih ${instantStudent.nama_lengkap}. Selamat jalan dan hati-hati.`;
+      speakText(voiceGreeting);
+    } else {
+      playAudioBeep("success");
+    }
+
+    // 4. Sinkronisasi Presensi ke Cloud Database di Latar Belakang
+    try {
+      const response = await API.scanBarcode(cleanBarcode);
+      if (response && response.status === "success") {
+        if (callback) callback(response);
+      } else {
+        // Jika server menolak (misal: sudah pernah scan hari ini atau di luar jadwal)
+        playAudioBeep("error");
+        if (response && response.message) {
+          speakText(response.message);
+        }
+        if (callback) callback(response);
+      }
     } catch (err) {
-      playAudioBeep("error");
-      if (callback) callback({ status: "error", message: "Gagal menghubungi server database." });
-    } finally {
-      isProcessing = false;
+      if (!instantStudent && callback) {
+        playAudioBeep("error");
+        callback({ status: "error", message: "Gagal menghubungi server database." });
+      }
     }
   }
 };
