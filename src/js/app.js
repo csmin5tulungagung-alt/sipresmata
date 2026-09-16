@@ -210,6 +210,44 @@ function initScannerView() {
       }
     });
   }
+
+  // 4.1 Global Hardware USB/Bluetooth Barcode Scanner Wedge Listener (Kiosk Mode)
+  let barcodeBuffer = "";
+  let lastKeyTime = 0;
+
+  window.addEventListener("keydown", (e) => {
+    // Hanya aktif saat tampilan Kiosk aktif
+    const kioskLayout = document.getElementById("public-kiosk-layout");
+    if (!kioskLayout || !kioskLayout.classList.contains("active")) return;
+
+    // Abaikan jika pengguna sedang fokus di input field atau modal
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable)) {
+      return;
+    }
+
+    // Abaikan tombol modifier khusus (Shift, Ctrl, Alt, Meta, dll)
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+    const now = Date.now();
+    if (now - lastKeyTime > 250) {
+      barcodeBuffer = ""; // Reset buffer jika bukan ketikan kilat scanner mesin
+    }
+    lastKeyTime = now;
+
+    if (e.key === "Enter") {
+      if (barcodeBuffer.length >= 3) {
+        e.preventDefault();
+        const scannedCode = barcodeBuffer.trim();
+        barcodeBuffer = "";
+        if (manualBarcodeInput) manualBarcodeInput.value = scannedCode;
+        SCANNER.processBarcode(scannedCode, handleScanFeedback);
+      }
+      barcodeBuffer = "";
+    } else if (e.key.length === 1) {
+      barcodeBuffer += e.key;
+    }
+  });
 }
 
 function handleScanFeedback(res) {

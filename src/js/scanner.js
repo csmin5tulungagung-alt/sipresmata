@@ -9,24 +9,37 @@ import { API } from './api.js';
 
 let html5QrCode = null;
 let isScanning = false;
+let isProcessing = false;
 let lastScannedCode = "";
 let lastScannedTime = 0;
 const SCAN_COOLDOWN_MS = 2500; // 2.5 Detik jeda antar-scan kartu yang sama
 
-// Web Audio API Synthesizer (Zero External File Dependency)
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// Web Audio API Synthesizer (Lazy initialized to prevent browser Autoplay Policy warning)
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx && (typeof window !== "undefined")) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
+}
 
 export function playAudioBeep(type = "success") {
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
+  const ctx = getAudioContext();
+  if (!ctx) return;
 
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
   osc.connect(gain);
-  gain.connect(audioCtx.destination);
+  gain.connect(ctx.destination);
 
-  const now = audioCtx.currentTime;
+  const now = ctx.currentTime;
 
   if (type === "success") {
     // 2-tone bright melodic chime
@@ -58,26 +71,47 @@ export function playAudioBeep(type = "success") {
   }
 }
 
-// Indonesian Text-to-Speech (Web Speech API)
-export function speakText(text) {
-  if (!('speechSynthesis' in window)) return;
-  
-  window.speechSynthesis.cancel(); // Hentikan suara sebelumnya jika masih ada
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "id-ID";
-  utterance.rate = 1.05;
-  utterance.pitch = 1.0;
+// Indonesian Text-to-Speech (Web Speech API) with Voice Preloader
+let cachedIdVoice = null;
 
-  // Pilih suara Bahasa Indonesia jika ada di sistem
+function resolveIndonesianVoice() {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
   const voices = window.speechSynthesis.getVoices();
-  const idVoice = voices.find(v => v.lang.includes("id") || v.lang.includes("ID") || v.name.includes("Indonesian"));
-  if (idVoice) utterance.voice = idVoice;
+  return voices.find(v => v.lang.includes("id") || v.lang.includes("ID") || v.name.toLowerCase().includes("indonesian")) || null;
+}
 
-  window.speechSynthesis.speak(utterance);
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  cachedIdVoice = resolveIndonesianVoice();
+  window.speechSynthesis.onvoiceschanged = () => {
+    cachedIdVoice = resolveIndonesianVoice();
+  };
+}
+
+export function speakText(text) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window) || !text) return;
+  
+  try {
+    window.speechSynthesis.cancel(); // Hentikan suara sebelumnya jika masih ada
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "id-ID";
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+
+    if (!cachedIdVoice) {
+      cachedIdVoice = resolveIndonesianVoice();
+    }
+    if (cachedIdVoice) {
+      utterance.voice = cachedIdVoice;
+    }
+
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.warn("Speech synthesis error:", err);
+  }
 }
 
 export const SCANNER = {
-  async init(cameraSelectElement, onScanResultCallback) {
+  async init(cameraSelectElement) {
     if (typeof Html5Qrcode === 'undefined') {
       console.warn("Html5Qrcode library not loaded yet.");
       return;
@@ -121,16 +155,21 @@ export const SCANNER = {
         config,
         async (decodedText) => {
           const now = Date.now();
-          if (decodedText === lastScannedCode && (now - lastScannedTime) < SCAN_COOLDOWN_MS) {
-            return; // Hindari double trigger beruntun dalam hitungan milidetik
+          const cleanCode = (decodedText || "").trim();
+          if (!cleanCode) return;
+
+          if (cleanCode === lastScannedCode && (now - lastScannedTime) < SCAN_COOLDOWN_MS) {
+            return; // Hindari double trigger beruntun
           }
 
-          lastScannedCode = decodedText;
+          if (isProcessing) return; // Mencegah tumpukan request
+
+          lastScannedCode = cleanCode;
           lastScannedTime = now;
 
-          await this.processBarcode(decodedText, onScanSuccess);
+          await this.processBarcode(cleanCode, onScanSuccess);
         },
-        (errorMessage) => {
+        () => {
           // Frame scanner decoding, ignore standard frame drops
         }
       );
@@ -152,29 +191,37 @@ export const SCANNER = {
   },
 
   async processBarcode(barcode, callback) {
-    playAudioBeep("success");
+    const cleanBarcode = (barcode || "").trim();
+    if (!cleanBarcode) return;
+
+    if (isProcessing) return;
+    isProcessing = true;
 
     try {
-      const response = await API.scanBarcode(barcode);
-      if (response.status === "success") {
-        if (response.data.status_kehadiran === "TERLAMBAT") {
+      playAudioBeep("success");
+
+      const response = await API.scanBarcode(cleanBarcode);
+      if (response && response.status === "success") {
+        if (response.data && response.data.status_kehadiran === "TERLAMBAT") {
           playAudioBeep("warning");
         } else {
           playAudioBeep("success");
         }
 
-        if (response.data.audio_prompt) {
+        if (response.data && response.data.audio_prompt) {
           speakText(response.data.audio_prompt);
         }
       } else {
         playAudioBeep("error");
-        speakText(response.message || "Peringatan presensi.");
+        speakText(response ? (response.message || "Peringatan presensi.") : "Presensi tidak dikenali.");
       }
 
       if (callback) callback(response);
     } catch (err) {
       playAudioBeep("error");
       if (callback) callback({ status: "error", message: "Gagal menghubungi server database." });
+    } finally {
+      isProcessing = false;
     }
   }
 };

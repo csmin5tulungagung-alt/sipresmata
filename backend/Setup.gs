@@ -6,7 +6,7 @@
  * ============================================================================
  * 
  * CARA MENGGUNAKAN:
- * 1. Buka Google Sheets ID: 1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh
+ * 1. Buka Google Sheets ID: 1omNmjeUB29BGNeNRlwPM2TSgTd4CLgQarT9EB_93a5A
  * 2. Klik menu "Extensions" (Ekstensi) > "Apps Script".
  * 3. Salin isi file ini ke file `Setup.gs` di Apps Script editor.
  * 4. Pilih fungsi `setupDatabaseSIPRESMATA` pada dropdown fungsi di bagian atas.

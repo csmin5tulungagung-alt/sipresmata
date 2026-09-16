@@ -262,7 +262,7 @@ function handleAbsenScan(req) {
       keterlambatanMenit = hitungSelisihMenit(jamMasukBatas, timeStr);
     }
 
-    var idAbsensi = "ABS-" + todayStr.replace(/-/g, "") + "-" + (absData.length);
+    var idAbsensi = generateIdAbsensi(todayStr, absData.length);
     var nowTimestamp = Utilities.formatDate(now, "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
 
     var rowBaru = [
@@ -311,7 +311,7 @@ function handleAbsenScan(req) {
   if (jenisSesi === "PULANG") {
     if (!existingRecord) {
       // Siswa belum scan masuk tapi scan pulang
-      var idAbsensiPulang = "ABS-" + todayStr.replace(/-/g, "") + "-" + (absData.length);
+      var idAbsensiPulang = generateIdAbsensi(todayStr, absData.length);
       var nowTimestampPulang = Utilities.formatDate(now, "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
       var rowPulang = [
         idAbsensiPulang,
@@ -427,7 +427,7 @@ function handleManualAbsen(req) {
     absensiSheet.getRange(existingRowIndex, 10).setValue(keterangan);
   } else {
     // Tambah record baru
-    var idAbsensi = "ABS-" + tanggal.replace(/-/g, "") + "-" + (absData.length);
+    var idAbsensi = generateIdAbsensi(tanggal, absData.length);
     var rowBaru = [
       idAbsensi,
       tanggal,
@@ -560,9 +560,11 @@ function handleDeleteMultipleAbsensi(req) {
     var isMatch = false;
     if (curId && targetMap[curId]) {
       isMatch = true;
-    } else if (targetMap[curIdSiswa] || (curNisn && targetMap[curNisn]) || (curSiswaId && targetMap[curSiswaId])) {
-      isMatch = true;
-    } else if (itemTargetMap[curTgl + "_" + curIdSiswa] || (curNisn && itemTargetMap[curTgl + "_" + curNisn])) {
+    } else if (
+      itemTargetMap[curTgl + "_" + curIdSiswa] || 
+      (curNisn && itemTargetMap[curTgl + "_" + curNisn]) || 
+      (curSiswaId && itemTargetMap[curTgl + "_" + curSiswaId])
+    ) {
       isMatch = true;
     }
 
@@ -930,7 +932,10 @@ function handleLoginAdmin(req) {
     var dbHash = String(data[i][2]).trim();
     var dbStatus = data[i][5];
 
-    if (dbUser === username && (dbHash === inputHash || password === "admin123" || password === "guru123")) {
+    var isPasswordValid = (dbHash && dbHash === inputHash) || 
+                          (!dbHash && (password === "admin123" || password === "guru123"));
+
+    if (dbUser === username && isPasswordValid) {
       if (!dbStatus) {
         return { status: "error", code: "USER_INACTIVE", message: "Akun ini telah dinonaktifkan." };
       }
@@ -1248,8 +1253,8 @@ function kirimNotifikasiWhatsApp(db, settings, siswa, jenisSesi, statusKehadiran
       cleanHp = "62" + cleanHp;
     }
 
-    // Validasi panjang nomor
-    if (cleanHp.length < 10 || cleanHp === "6281234567801") {
+    // Validasi panjang nomor dan abaikan nomor uji coba/sampel (6281234567801 - 6281234567809)
+    if (cleanHp.length < 10 || /^628123456780\d$/.test(cleanHp)) {
       return;
     }
 
@@ -1532,4 +1537,11 @@ function hitungSelisihMenit(jamA, jamB) {
   var minA = parseInt(pA[0], 10) * 60 + parseInt(pA[1], 10);
   var minB = parseInt(pB[0], 10) * 60 + parseInt(pB[1], 10);
   return Math.max(0, minB - minA);
+}
+
+function generateIdAbsensi(tglStr, rowCount) {
+  var cleanTgl = (tglStr || Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd")).replace(/-/g, "");
+  var timeHex = Utilities.formatDate(new Date(), "Asia/Jakarta", "HHmmss");
+  var rand = Math.floor(Math.random() * 900 + 100);
+  return "ABS-" + cleanTgl + "-" + timeHex + rand;
 }

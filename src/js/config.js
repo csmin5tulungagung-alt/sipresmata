@@ -7,12 +7,6 @@
 
 const env = (typeof import.meta !== "undefined" && import.meta.env) ? import.meta.env : {};
 
-// Auto-migration: bersihkan cache localStorage jika masih menyimpan Script ID lama
-const storedSpreadsheetId = localStorage.getItem("SIPRESMATA_SPREADSHEET_ID");
-if (storedSpreadsheetId === "1BbmMgggGUSOhnXfMW4VMzg7u_L9HGWfuPRbd7c1JM7ksOgEeF8_TwgXh") {
-  localStorage.setItem("SIPRESMATA_SPREADSHEET_ID", "1omNmjeUB29BGNeNRlwPM2TSgTd4CLgQarT9EB_93a5A");
-}
-
 export const CONFIG = {
   APP_NAME: "SIPRESMATA",
   APP_SUBTITLE: "Sistem Informasi Presensi Siswa Madrasah Terpadu",
