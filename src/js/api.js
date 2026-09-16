@@ -830,6 +830,11 @@ export const API = {
         jam_masuk_maksimal: CONFIG.SCHEDULE.MASUK_MAKSIMAL,
         jam_pulang_mulai: CONFIG.SCHEDULE.PULANG_MULAI,
         jam_pulang_batas: CONFIG.SCHEDULE.PULANG_BATAS,
+        jumat_khusus_enabled: CONFIG.SCHEDULE.JUMAT_KHUSUS_ENABLED,
+        jam_pulang_jumat_mulai: CONFIG.SCHEDULE.JAM_PULANG_JUMAT_MULAI,
+        jam_pulang_jumat_batas: CONFIG.SCHEDULE.JAM_PULANG_JUMAT_BATAS,
+        libur_minggu_enabled: CONFIG.SCHEDULE.LIBUR_MINGGU_ENABLED,
+        bypass_schedule_test_mode: CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE,
         client_key: CONFIG.CLIENT_KEY,
         fonnte_token: CONFIG.FONNTE_TOKEN,
         wa_notif_enabled: CONFIG.WA_NOTIF_ENABLED,
@@ -847,7 +852,7 @@ export const API = {
           body: JSON.stringify(settingsData)
         });
         const json = await res.json();
-        if (json.status === "success") {
+        if (json && json.status === "success") {
           return json;
         }
       } catch (err) {

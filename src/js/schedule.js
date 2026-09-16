@@ -5,7 +5,7 @@
  * ============================================================================
  */
 
-import { CONFIG, saveSchedule } from './config.js';
+import { CONFIG, saveSchedule, formatTimeWithSeconds } from './config.js';
 import { API } from './api.js';
 
 export const SCHEDULE_PAGE = {
@@ -25,16 +25,22 @@ export const SCHEDULE_PAGE = {
       if (res && res.data) {
         const d = res.data;
         const scheduleUpdates = {};
-        if (d.jam_masuk_mulai) scheduleUpdates.MASUK_MULAI = d.jam_masuk_mulai;
-        if (d.jam_masuk_batas) scheduleUpdates.MASUK_BATAS = d.jam_masuk_batas;
-        if (d.jam_masuk_maksimal) scheduleUpdates.MASUK_MAKSIMAL = d.jam_masuk_maksimal;
-        if (d.jam_pulang_mulai) scheduleUpdates.PULANG_MULAI = d.jam_pulang_mulai;
-        if (d.jam_pulang_batas) scheduleUpdates.PULANG_BATAS = d.jam_pulang_batas;
-        if (d.jumat_khusus_enabled !== undefined) scheduleUpdates.JUMAT_KHUSUS_ENABLED = (d.jumat_khusus_enabled === "true" || d.jumat_khusus_enabled === true);
-        if (d.jam_pulang_jumat_mulai) scheduleUpdates.JAM_PULANG_JUMAT_MULAI = d.jam_pulang_jumat_mulai;
-        if (d.jam_pulang_jumat_batas) scheduleUpdates.JAM_PULANG_JUMAT_BATAS = d.jam_pulang_jumat_batas;
-        if (d.libur_minggu_enabled !== undefined) scheduleUpdates.LIBUR_MINGGU_ENABLED = (d.libur_minggu_enabled === "true" || d.libur_minggu_enabled === true);
-        if (d.bypass_schedule_test_mode !== undefined) scheduleUpdates.BYPASS_SCHEDULE_TEST_MODE = (d.bypass_schedule_test_mode === "true" || d.bypass_schedule_test_mode === true);
+        if (d.jam_masuk_mulai) scheduleUpdates.MASUK_MULAI = formatTimeWithSeconds(d.jam_masuk_mulai, "06:00:00");
+        if (d.jam_masuk_batas) scheduleUpdates.MASUK_BATAS = formatTimeWithSeconds(d.jam_masuk_batas, "07:15:00");
+        if (d.jam_masuk_maksimal) scheduleUpdates.MASUK_MAKSIMAL = formatTimeWithSeconds(d.jam_masuk_maksimal, "08:30:00");
+        if (d.jam_pulang_mulai) scheduleUpdates.PULANG_MULAI = formatTimeWithSeconds(d.jam_pulang_mulai, "12:30:00");
+        if (d.jam_pulang_batas) scheduleUpdates.PULANG_BATAS = formatTimeWithSeconds(d.jam_pulang_batas, "16:00:00");
+        if (d.jumat_khusus_enabled !== undefined) {
+          scheduleUpdates.JUMAT_KHUSUS_ENABLED = (String(d.jumat_khusus_enabled).toLowerCase() === "true" || d.jumat_khusus_enabled === true);
+        }
+        if (d.jam_pulang_jumat_mulai) scheduleUpdates.JAM_PULANG_JUMAT_MULAI = formatTimeWithSeconds(d.jam_pulang_jumat_mulai, "11:00:00");
+        if (d.jam_pulang_jumat_batas) scheduleUpdates.JAM_PULANG_JUMAT_BATAS = formatTimeWithSeconds(d.jam_pulang_jumat_batas, "14:00:00");
+        if (d.libur_minggu_enabled !== undefined) {
+          scheduleUpdates.LIBUR_MINGGU_ENABLED = (String(d.libur_minggu_enabled).toLowerCase() === "true" || d.libur_minggu_enabled === true);
+        }
+        if (d.bypass_schedule_test_mode !== undefined) {
+          scheduleUpdates.BYPASS_SCHEDULE_TEST_MODE = (String(d.bypass_schedule_test_mode).toLowerCase() === "true" || d.bypass_schedule_test_mode === true);
+        }
 
         saveSchedule(scheduleUpdates);
         this.loadCurrentSettings();
@@ -160,23 +166,26 @@ export const SCHEDULE_PAGE = {
   loadCurrentSettings() {
     const s = CONFIG.SCHEDULE;
 
-    const setVal = (id, val) => {
+    const setVal = (id, val, defaultVal) => {
       const el = document.getElementById(id);
-      if (el) el.value = val ? val.substring(0, 5) : "";
+      if (el) {
+        const timeFormatted = formatTimeWithSeconds(val, defaultVal);
+        el.value = timeFormatted.substring(0, 5); // HTML5 <input type="time"> requires HH:mm
+      }
     };
 
-    setVal("sched-masuk-mulai", s.MASUK_MULAI);
-    setVal("sched-masuk-batas", s.MASUK_BATAS);
-    setVal("sched-masuk-maks", s.MASUK_MAKSIMAL);
-    setVal("sched-pulang-mulai", s.PULANG_MULAI);
-    setVal("sched-pulang-batas", s.PULANG_BATAS);
+    setVal("sched-masuk-mulai", s.MASUK_MULAI, "06:00:00");
+    setVal("sched-masuk-batas", s.MASUK_BATAS, "07:15:00");
+    setVal("sched-masuk-maks", s.MASUK_MAKSIMAL, "08:30:00");
+    setVal("sched-pulang-mulai", s.PULANG_MULAI, "12:30:00");
+    setVal("sched-pulang-batas", s.PULANG_BATAS, "16:00:00");
 
     // Jumat Khusus
     const jumatCheck = document.getElementById("sched-jumat-khusus-check");
     if (jumatCheck) jumatCheck.checked = Boolean(s.JUMAT_KHUSUS_ENABLED);
 
-    setVal("sched-jumat-pulang-mulai", s.JAM_PULANG_JUMAT_MULAI);
-    setVal("sched-jumat-pulang-batas", s.JAM_PULANG_JUMAT_BATAS);
+    setVal("sched-jumat-pulang-mulai", s.JAM_PULANG_JUMAT_MULAI, "11:00:00");
+    setVal("sched-jumat-pulang-batas", s.JAM_PULANG_JUMAT_BATAS, "14:00:00");
 
     // Opsi Tambahan
     const liburMingguCheck = document.getElementById("sched-libur-minggu-check");
@@ -199,11 +208,11 @@ export const SCHEDULE_PAGE = {
   // 3. Update Visual Timeline UI
   updateTimelineUI() {
     const s = CONFIG.SCHEDULE;
-    const tMasukMulai = (s.MASUK_MULAI || "06:00").substring(0, 5);
-    const tMasukBatas = (s.MASUK_BATAS || "07:15").substring(0, 5);
-    const tMasukMaks = (s.MASUK_MAKSIMAL || "08:30").substring(0, 5);
-    const tPulangMulai = (s.PULANG_MULAI || "12:30").substring(0, 5);
-    const tPulangBatas = (s.PULANG_BATAS || "16:00").substring(0, 5);
+    const tMasukMulai = formatTimeWithSeconds(s.MASUK_MULAI, "06:00:00").substring(0, 5);
+    const tMasukBatas = formatTimeWithSeconds(s.MASUK_BATAS, "07:15:00").substring(0, 5);
+    const tMasukMaks = formatTimeWithSeconds(s.MASUK_MAKSIMAL, "08:30:00").substring(0, 5);
+    const tPulangMulai = formatTimeWithSeconds(s.PULANG_MULAI, "12:30:00").substring(0, 5);
+    const tPulangBatas = formatTimeWithSeconds(s.PULANG_BATAS, "16:00:00").substring(0, 5);
 
     const el1 = document.getElementById("timeline-time-masuk-mulai");
     const el2 = document.getElementById("timeline-time-masuk-batas");
@@ -245,16 +254,16 @@ export const SCHEDULE_PAGE = {
         }
 
         const newSchedule = {
-          MASUK_MULAI: document.getElementById("sched-masuk-mulai")?.value || "06:00",
-          MASUK_BATAS: document.getElementById("sched-masuk-batas")?.value || "07:15",
-          MASUK_MAKSIMAL: document.getElementById("sched-masuk-maks")?.value || "08:30",
-          PULANG_MULAI: document.getElementById("sched-pulang-mulai")?.value || "12:30",
-          PULANG_BATAS: document.getElementById("sched-pulang-batas")?.value || "16:00",
-          JUMAT_KHUSUS_ENABLED: document.getElementById("sched-jumat-khusus-check")?.checked || false,
-          JAM_PULANG_JUMAT_MULAI: document.getElementById("sched-jumat-pulang-mulai")?.value || "11:00",
-          JAM_PULANG_JUMAT_BATAS: document.getElementById("sched-jumat-pulang-batas")?.value || "14:00",
-          LIBUR_MINGGU_ENABLED: document.getElementById("sched-libur-minggu-check")?.checked || false,
-          BYPASS_SCHEDULE_TEST_MODE: document.getElementById("sched-bypass-test-check")?.checked || false
+          MASUK_MULAI: formatTimeWithSeconds(document.getElementById("sched-masuk-mulai")?.value, "06:00:00"),
+          MASUK_BATAS: formatTimeWithSeconds(document.getElementById("sched-masuk-batas")?.value, "07:15:00"),
+          MASUK_MAKSIMAL: formatTimeWithSeconds(document.getElementById("sched-masuk-maks")?.value, "08:30:00"),
+          PULANG_MULAI: formatTimeWithSeconds(document.getElementById("sched-pulang-mulai")?.value, "12:30:00"),
+          PULANG_BATAS: formatTimeWithSeconds(document.getElementById("sched-pulang-batas")?.value, "16:00:00"),
+          JUMAT_KHUSUS_ENABLED: document.getElementById("sched-jumat-khusus-check")?.checked ?? true,
+          JAM_PULANG_JUMAT_MULAI: formatTimeWithSeconds(document.getElementById("sched-jumat-pulang-mulai")?.value, "11:00:00"),
+          JAM_PULANG_JUMAT_BATAS: formatTimeWithSeconds(document.getElementById("sched-jumat-pulang-batas")?.value, "14:00:00"),
+          LIBUR_MINGGU_ENABLED: document.getElementById("sched-libur-minggu-check")?.checked ?? true,
+          BYPASS_SCHEDULE_TEST_MODE: document.getElementById("sched-bypass-test-check")?.checked ?? false
         };
 
         // Simpan ke local config
@@ -263,26 +272,28 @@ export const SCHEDULE_PAGE = {
 
         // Kirim ke backend Spreadsheet tab pengaturan_sekolah
         const serverPayload = {
-          jam_masuk_mulai: `${newSchedule.MASUK_MULAI}:00`,
-          jam_masuk_batas: `${newSchedule.MASUK_BATAS}:00`,
-          jam_masuk_maksimal: `${newSchedule.MASUK_MAKSIMAL}:00`,
-          jam_pulang_mulai: `${newSchedule.PULANG_MULAI}:00`,
-          jam_pulang_batas: `${newSchedule.PULANG_BATAS}:00`,
+          jam_masuk_mulai: newSchedule.MASUK_MULAI,
+          jam_masuk_batas: newSchedule.MASUK_BATAS,
+          jam_masuk_maksimal: newSchedule.MASUK_MAKSIMAL,
+          jam_pulang_mulai: newSchedule.PULANG_MULAI,
+          jam_pulang_batas: newSchedule.PULANG_BATAS,
           jumat_khusus_enabled: String(newSchedule.JUMAT_KHUSUS_ENABLED),
-          jam_pulang_jumat_mulai: `${newSchedule.JAM_PULANG_JUMAT_MULAI}:00`,
-          jam_pulang_jumat_batas: `${newSchedule.JAM_PULANG_JUMAT_BATAS}:00`,
+          jam_pulang_jumat_mulai: newSchedule.JAM_PULANG_JUMAT_MULAI,
+          jam_pulang_jumat_batas: newSchedule.JAM_PULANG_JUMAT_BATAS,
           libur_minggu_enabled: String(newSchedule.LIBUR_MINGGU_ENABLED),
           bypass_schedule_test_mode: String(newSchedule.BYPASS_SCHEDULE_TEST_MODE)
         };
 
         try {
           const res = await API.updatePengaturan(serverPayload);
-          if (typeof showToast === 'function') {
-            showToast(res.message || "✓ Jadwal operasional presensi berhasil disimpan ke Cloud Spreadsheet.", "success");
+          const toastFn = (typeof window !== 'undefined' && window.showToast) ? window.showToast : null;
+          if (toastFn) {
+            toastFn(res.message || "✓ Jadwal operasional presensi berhasil disimpan ke Cloud Spreadsheet.", "success");
           }
         } catch (err) {
-          if (typeof showToast === 'function') {
-            showToast("✓ Jadwal berhasil disimpan di penyimpanan browser lokal.", "success");
+          const toastFn = (typeof window !== 'undefined' && window.showToast) ? window.showToast : null;
+          if (toastFn) {
+            toastFn("✓ Jadwal berhasil disimpan di penyimpanan browser lokal.", "success");
           }
         } finally {
           if (btnSave) {
@@ -299,22 +310,23 @@ export const SCHEDULE_PAGE = {
       btnReset.addEventListener("click", () => {
         if (confirm("Kembalikan seluruh jadwal operasional ke pengaturan standar MIN 5 Tulungagung?")) {
           const defaultSched = {
-            MASUK_MULAI: "06:00",
-            MASUK_BATAS: "07:15",
-            MASUK_MAKSIMAL: "08:30",
-            PULANG_MULAI: "12:30",
-            PULANG_BATAS: "16:00",
+            MASUK_MULAI: "06:00:00",
+            MASUK_BATAS: "07:15:00",
+            MASUK_MAKSIMAL: "08:30:00",
+            PULANG_MULAI: "12:30:00",
+            PULANG_BATAS: "16:00:00",
             JUMAT_KHUSUS_ENABLED: true,
-            JAM_PULANG_JUMAT_MULAI: "11:00",
-            JAM_PULANG_JUMAT_BATAS: "14:00",
+            JAM_PULANG_JUMAT_MULAI: "11:00:00",
+            JAM_PULANG_JUMAT_BATAS: "14:00:00",
             LIBUR_MINGGU_ENABLED: true,
             BYPASS_SCHEDULE_TEST_MODE: false
           };
           saveSchedule(defaultSched);
           this.loadCurrentSettings();
           this.updateTimelineUI();
-          if (typeof showToast === 'function') {
-            showToast("Jadwal dikembalikan ke standar default. Klik 'Simpan' untuk mengirim ke server.", "info");
+          const toastFn = (typeof window !== 'undefined' && window.showToast) ? window.showToast : null;
+          if (toastFn) {
+            toastFn("Jadwal dikembalikan ke standar default. Klik 'Simpan' untuk mengirim ke server.", "info");
           }
         }
       });

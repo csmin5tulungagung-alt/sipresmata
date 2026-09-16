@@ -182,8 +182,8 @@ function handleAbsenScan(req) {
   var dayOfWeek = now.getDay(); // 0 = Minggu, 5 = Jumat
 
   // Cek Hari Libur Minggu
-  var liburMingguEnabled = (settings.libur_minggu_enabled !== "false");
-  var bypassTestMode = (settings.bypass_schedule_test_mode === "true" || req.bypass_schedule === "true");
+  var liburMingguEnabled = (String(settings.libur_minggu_enabled || "true").toLowerCase() !== "false");
+  var bypassTestMode = (String(settings.bypass_schedule_test_mode || "false").toLowerCase() === "true" || req.bypass_schedule === "true");
 
   if (dayOfWeek === 0 && liburMingguEnabled && !bypassTestMode) {
     return {
@@ -200,7 +200,8 @@ function handleAbsenScan(req) {
   var jamPulangBatas = settings.jam_pulang_batas || "16:00:00";
 
   // Penyesuaian Jadwal Khusus Hari Jumat
-  if (dayOfWeek === 5 && settings.jumat_khusus_enabled !== "false") {
+  var jumatKhususEnabled = (String(settings.jumat_khusus_enabled || "true").toLowerCase() !== "false");
+  if (dayOfWeek === 5 && jumatKhususEnabled) {
     jamPulangMulai = settings.jam_pulang_jumat_mulai || "11:00:00";
     jamPulangBatas = settings.jam_pulang_jumat_batas || "14:00:00";
   }
@@ -973,22 +974,26 @@ function handleUpdatePengaturan(req) {
   var existingKeys = {};
 
   for (var i = 1; i < data.length; i++) {
-    var key = data[i][0];
+    var key = String(data[i][0] || "").trim();
+    if (!key) continue;
     existingKeys[key] = i + 1;
     if (req[key] !== undefined) {
-      sheet.getRange(i + 1, 2).setValue(String(req[key]));
+      var valToSet = String(req[key]).trim();
+      sheet.getRange(i + 1, 2).setNumberFormat("@").setValue(valToSet);
     }
   }
 
   // Auto-append key baru jika belum ada di spreadsheet
   for (var prop in req) {
     if (prop !== "action" && req[prop] !== undefined && !existingKeys[prop]) {
-      sheet.appendRow([prop, String(req[prop]), "Pengaturan " + prop]);
+      var newValToSet = String(req[prop]).trim();
+      sheet.appendRow([prop, newValToSet, "Pengaturan " + prop]);
+      sheet.getRange(sheet.getLastRow(), 2).setNumberFormat("@");
     }
   }
 
   clearCache();
-  return { status: "success", message: "Pengaturan madrasah berhasil diperbarui." };
+  return { status: "success", message: "Pengaturan madrasah berhasil diperbarui dan disinkronkan." };
 }
 
 // ----------------------------------------------------------------------------
@@ -1455,7 +1460,35 @@ function getPengaturanMap(db) {
   var data = sheet.getDataRange().getValues();
   var map = {};
   for (var i = 1; i < data.length; i++) {
-    map[data[i][0]] = String(data[i][1]);
+    var key = String(data[i][0] || "").trim();
+    if (!key) continue;
+    var rawVal = data[i][1];
+    var valStr = "";
+
+    if (rawVal instanceof Date) {
+      if (key.indexOf("jam_") === 0 || key.indexOf("jam") !== -1) {
+        valStr = Utilities.formatDate(rawVal, "Asia/Jakarta", "HH:mm:ss");
+      } else {
+        valStr = Utilities.formatDate(rawVal, "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
+      }
+    } else if (typeof rawVal === "boolean") {
+      valStr = String(rawVal);
+    } else {
+      valStr = String(rawVal !== undefined && rawVal !== null ? rawVal : "").trim();
+    }
+
+    // Normalisasi format jam jika masih terbaca string Date
+    if (key.indexOf("jam_") === 0) {
+      var matchTime = valStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+      if (matchTime) {
+        var hh = ("0" + matchTime[1]).slice(-2);
+        var mm = matchTime[2];
+        var ss = matchTime[3] || "00";
+        valStr = hh + ":" + mm + ":" + ss;
+      }
+    }
+
+    map[key] = valStr;
   }
   return map;
 }
