@@ -22,7 +22,20 @@ export const CARD_GENERATOR = {
     selectedIds: new Set(),
     searchTerm: "",
     isSelectionMode: false,
-    previewStudent: null
+    previewStudent: null,
+
+    // TEACHER CARDS EXTENSION
+    activeCardTab: "SISWA", // "SISWA" | "GURU"
+    teacherList: [],
+    filteredTeachers: [],
+    teacherCurrentPage: 1,
+    teacherPageSize: 10,
+    teacherSearchTerm: "",
+    teacherJabatanFilter: "ALL",
+    teacherStatusFilter: "ALL",
+    selectedTeacherIds: new Set(),
+    isTeacherSelectionMode: false,
+    previewTeacher: null
   },
 
   // ==========================================================================
@@ -880,6 +893,705 @@ export const CARD_GENERATOR = {
       window.print();
       printContainer.style.display = "none";
     }, 400);
+  },
+
+  // ==========================================================================
+  // 8. TAB SWITCHER: SISWA VS GURU
+  // ==========================================================================
+  switchTargetTab(target) {
+    this.state.activeCardTab = target;
+    const btnSiswa = document.getElementById("btn-tab-cards-siswa");
+    const btnGuru = document.getElementById("btn-tab-cards-guru");
+    const subviewSiswa = document.getElementById("cards-subview-siswa");
+    const subviewGuru = document.getElementById("cards-subview-guru");
+
+    if (target === "GURU") {
+      if (btnSiswa) { btnSiswa.classList.remove("btn-primary", "active"); btnSiswa.classList.add("btn-secondary"); }
+      if (btnGuru) { btnGuru.classList.remove("btn-secondary"); btnGuru.classList.add("btn-primary", "active"); }
+      if (subviewSiswa) subviewSiswa.style.display = "none";
+      if (subviewGuru) subviewGuru.style.display = "block";
+      this.renderTeacherCardsView();
+    } else {
+      if (btnGuru) { btnGuru.classList.remove("btn-primary", "active"); btnGuru.classList.add("btn-secondary"); }
+      if (btnSiswa) { btnSiswa.classList.remove("btn-secondary"); btnSiswa.classList.add("btn-primary", "active"); }
+      if (subviewSiswa) subviewSiswa.style.display = "block";
+      if (subviewGuru) subviewGuru.style.display = "none";
+    }
+  },
+
+  // ==========================================================================
+  // 9. TEACHER CARDS ENGINE (DATA, FILTER, TABEL, SELECTION)
+  // ==========================================================================
+  async renderTeacherCardsView(forceRefresh = false) {
+    const tbody = document.getElementById("teacher-cards-table-body");
+    if (!tbody) return;
+
+    if (this.state.teacherList && this.state.teacherList.length > 0 && !forceRefresh) {
+      this.applyTeacherFiltersAndRender();
+      return;
+    }
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem; animation: pulse 1.5s infinite;">⏳</div>
+          Memuat data guru & tenaga kependidikan...
+        </td>
+      </tr>
+    `;
+
+    try {
+      const res = await API.getGuru(forceRefresh);
+      this.state.teacherList = res.data || [];
+      this.applyTeacherFiltersAndRender();
+    } catch (err) {
+      console.error("Gagal memuat kartu guru:", err);
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2rem; color: #f87171;">
+            Gagal memuat data guru: ${err.message}
+          </td>
+        </tr>
+      `;
+    }
+  },
+
+  handleTeacherSearch(term) {
+    this.state.teacherSearchTerm = (term || "").trim().toLowerCase();
+    this.state.teacherCurrentPage = 1;
+    this.applyTeacherFiltersAndRender();
+  },
+
+  handleTeacherFilter() {
+    const elJabatan = document.getElementById("filter-card-teacher-jabatan");
+    const elStatus = document.getElementById("filter-card-teacher-status");
+    this.state.teacherJabatanFilter = elJabatan ? elJabatan.value : "ALL";
+    this.state.teacherStatusFilter = elStatus ? elStatus.value : "ALL";
+    this.state.teacherCurrentPage = 1;
+    this.applyTeacherFiltersAndRender();
+  },
+
+  applyTeacherFiltersAndRender() {
+    let list = this.state.teacherList || [];
+    const q = this.state.teacherSearchTerm;
+    const j = this.state.teacherJabatanFilter;
+    const s = this.state.teacherStatusFilter;
+
+    if (q) {
+      list = list.filter(g => 
+        (g.nama_guru && g.nama_guru.toLowerCase().includes(q)) ||
+        (g.nip && g.nip.toLowerCase().includes(q)) ||
+        (g.jabatan && g.jabatan.toLowerCase().includes(q)) ||
+        (g.tugas_tambahan && g.tugas_tambahan.toLowerCase().includes(q))
+      );
+    }
+
+    if (j && j !== "ALL") {
+      list = list.filter(g => g.jabatan === j);
+    }
+
+    if (s && s !== "ALL") {
+      list = list.filter(g => g.status_kepegawaian === s);
+    }
+
+    this.state.filteredTeachers = list;
+    this.renderTeacherCardsTable();
+  },
+
+  renderTeacherCardsTable() {
+    const tbody = document.getElementById("teacher-cards-table-body");
+    if (!tbody) return;
+
+    const list = this.state.filteredTeachers || [];
+    const total = list.length;
+
+    if (total === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">👨‍🏫</div>
+            Tidak ada data guru yang cocok dengan pencarian / filter.
+          </td>
+        </tr>
+      `;
+      ADMIN.renderPagination("teacher-cards-pagination", 0, 1, 10, () => {}, () => {});
+      return;
+    }
+
+    const page = this.state.teacherCurrentPage || 1;
+    const size = this.state.teacherPageSize || 10;
+    const startIndex = (page - 1) * size;
+    const paged = list.slice(startIndex, startIndex + size);
+    const isSelection = this.state.isTeacherSelectionMode;
+
+    tbody.innerHTML = paged.map((g, idx) => {
+      const isChecked = this.state.selectedTeacherIds.has(g.id_guru);
+      const rowNum = startIndex + idx + 1;
+      const initial = (g.nama_guru || "G").charAt(0).toUpperCase();
+
+      let badgePegawai = `<span class="badge badge-success">PNS</span>`;
+      if (g.status_kepegawaian === "PPPK") badgePegawai = `<span class="badge" style="background:#3b82f6;color:#fff;">PPPK</span>`;
+      else if (g.status_kepegawaian === "GTT") badgePegawai = `<span class="badge" style="background:#f59e0b;color:#fff;">GTT</span>`;
+      else if (g.status_kepegawaian === "Honorer") badgePegawai = `<span class="badge" style="background:#64748b;color:#fff;">Honor</span>`;
+
+      return `
+        <tr style="${isChecked ? 'background: rgba(5, 150, 105, 0.08);' : ''}">
+          <td class="col-checkbox-teacher-cards" style="text-align: center; ${isSelection ? '' : 'display: none;'}">
+            <input type="checkbox" class="table-checkbox" value="${g.id_guru}" ${isChecked ? 'checked' : ''} onchange="CARD_GENERATOR.toggleTeacherItemSelection('${g.id_guru}', this.checked)">
+          </td>
+          <td style="text-align: center; font-weight: 600;">${rowNum}</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #059669, #10b981); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; flex-shrink: 0;">
+                ${initial}
+              </div>
+              <div>
+                <strong style="color: var(--text-main); font-size: 0.9rem; display: block;">${g.nama_guru}</strong>
+                <span style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">NIP: ${g.nip || '-'}</span>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span style="font-weight: 600; color: #34d399;">${g.jabatan || 'Guru'}</span>
+          </td>
+          <td>
+            <span style="font-size: 0.85rem; color: var(--text-main);">${g.tugas_tambahan || '-'}</span>
+          </td>
+          <td style="text-align: center;">${badgePegawai}</td>
+          <td>
+            <code style="font-size: 0.78rem; background: rgba(0,0,0,0.2); padding: 0.2rem 0.4rem; border-radius: 4px; color: #38bdf8;">
+              ${g.kode_barcode || 'GURU-' + (g.nip !== '-' ? g.nip : g.id_guru)}
+            </code>
+          </td>
+          <td style="text-align: center;">
+            <div style="display: inline-flex; gap: 0.4rem;">
+              <button type="button" class="btn-action-pill btn-action-pill-cyan" onclick="CARD_GENERATOR.previewTeacherCard('${g.id_guru}')" title="Lihat Pratinjau Kartu Guru">
+                👁️ Preview
+              </button>
+              <button type="button" class="btn-action-pill btn-action-pill-emerald" onclick="CARD_GENERATOR.downloadSingleTeacherCardById('${g.id_guru}')" title="Unduh Kartu PNG HD">
+                ⬇️ Unduh
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    // Update Header Checkbox & Header Column Visibility
+    const thCheckbox = document.getElementById("th-checkbox-teacher-cards");
+    if (thCheckbox) thCheckbox.style.display = isSelection ? "table-cell" : "none";
+
+    const headerCheck = document.getElementById("check-all-card-teachers");
+    const visibleIds = paged.map(g => g.id_guru);
+    const allVisibleChecked = visibleIds.length > 0 && visibleIds.every(id => this.state.selectedTeacherIds.has(id));
+
+    if (headerCheck) {
+      headerCheck.checked = allVisibleChecked;
+      headerCheck.onchange = (e) => this.toggleSelectAllVisibleTeachers(visibleIds, e.target.checked);
+    }
+
+    const selectAllText = document.getElementById("btn-teacher-cards-select-all-text");
+    if (selectAllText) {
+      selectAllText.textContent = allVisibleChecked ? "Batalkan Semua" : "Pilih Semua";
+    }
+
+    const btnToggle = document.getElementById("btn-toggle-select-teacher-cards");
+    if (btnToggle) {
+      btnToggle.innerHTML = isSelection ? "✕ Selesai Memilih" : "🔘 Pilih Guru";
+      btnToggle.style.background = isSelection ? "rgba(2, 132, 199, 0.15)" : "";
+      btnToggle.style.borderColor = isSelection ? "rgba(2, 132, 199, 0.4)" : "";
+      btnToggle.style.color = isSelection ? "#38bdf8" : "";
+    }
+
+    this.updateTeacherBulkBar();
+
+    // Render Pagination Controls
+    ADMIN.renderPagination(
+      "teacher-cards-pagination",
+      total,
+      page,
+      size,
+      (newPage) => {
+        this.state.teacherCurrentPage = newPage;
+        this.renderTeacherCardsTable();
+      },
+      (newSize) => {
+        this.state.teacherPageSize = newSize;
+        this.state.teacherCurrentPage = 1;
+        this.renderTeacherCardsTable();
+      }
+    );
+  },
+
+  toggleTeacherSelectionMode() {
+    this.state.isTeacherSelectionMode = !this.state.isTeacherSelectionMode;
+    if (!this.state.isTeacherSelectionMode) {
+      this.state.selectedTeacherIds.clear();
+    }
+    this.renderTeacherCardsTable();
+  },
+
+  exitTeacherSelectionMode() {
+    this.state.isTeacherSelectionMode = false;
+    this.state.selectedTeacherIds.clear();
+    this.renderTeacherCardsTable();
+  },
+
+  toggleSelectAllVisibleTeachers(visibleIds = null, isChecked = null) {
+    const list = this.state.filteredTeachers || [];
+    const page = this.state.teacherCurrentPage || 1;
+    const size = this.state.teacherPageSize || 10;
+    const targetIds = visibleIds || list.slice((page - 1) * size, page * size).map(g => g.id_guru);
+
+    const shouldCheck = isChecked !== null ? isChecked : !targetIds.every(id => this.state.selectedTeacherIds.has(id));
+
+    targetIds.forEach(id => {
+      if (shouldCheck) {
+        this.state.selectedTeacherIds.add(id);
+      } else {
+        this.state.selectedTeacherIds.delete(id);
+      }
+    });
+
+    this.renderTeacherCardsTable();
+  },
+
+  toggleTeacherItemSelection(idGuru, isChecked) {
+    if (isChecked) {
+      this.state.selectedTeacherIds.add(idGuru);
+    } else {
+      this.state.selectedTeacherIds.delete(idGuru);
+    }
+    this.renderTeacherCardsTable();
+  },
+
+  updateTeacherBulkBar() {
+    const bulkBar = document.getElementById("teacher-cards-bulk-bar");
+    const countBadge = document.getElementById("teacher-cards-bulk-count");
+    const selectAllText = document.getElementById("btn-teacher-cards-select-all-text");
+    const selectedCount = this.state.selectedTeacherIds.size;
+    const totalFiltered = (this.state.filteredTeachers || []).length;
+
+    if (!bulkBar) return;
+
+    if (this.state.isTeacherSelectionMode) {
+      bulkBar.classList.add("active");
+      if (countBadge) countBadge.textContent = selectedCount;
+      if (selectAllText) {
+        selectAllText.textContent = (selectedCount > 0 && selectedCount === totalFiltered) ? "Batalkan Semua" : "Pilih Semua";
+      }
+    } else {
+      bulkBar.classList.remove("active");
+    }
+  },
+
+  // ==========================================================================
+  // 10. TEMPLATE KARTU GURU & PREVIEW / PRINT / EXPORT ENGINE
+  // ==========================================================================
+  createTeacherCardHTML(g) {
+    const jabatan = g.jabatan || "Guru";
+    const nipVal = (g.nip && g.nip !== "-") ? g.nip : (g.status_kepegawaian || "PTK");
+
+    return `
+      <div class="student-card-portrait" id="teacher-card-item-${g.id_guru}" data-teacher-id="${g.id_guru}" data-nama="${g.nama_guru}" data-jabatan="${jabatan}">
+        
+        <!-- Ornamen Sudut Emas Mewah (Top-Left & Bottom-Right) -->
+        <svg class="card-gold-corner tl" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="goldCornerGradTL_g_${g.id_guru}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fef08a" />
+              <stop offset="35%" stop-color="#eab308" />
+              <stop offset="70%" stop-color="#ca8a04" />
+              <stop offset="100%" stop-color="#854d0e" />
+            </linearGradient>
+          </defs>
+          <path d="M-15 45 L45 -15 L52 -15 L-15 52 Z" fill="url(#goldCornerGradTL_g_${g.id_guru})" opacity="0.95" />
+          <path d="M-15 65 L65 -15 L68 -15 L-15 68 Z" fill="url(#goldCornerGradTL_g_${g.id_guru})" opacity="0.75" />
+        </svg>
+
+        <svg class="card-gold-corner br" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="goldCornerGradBR_g_${g.id_guru}" x1="100%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#fef08a" />
+              <stop offset="35%" stop-color="#eab308" />
+              <stop offset="70%" stop-color="#ca8a04" />
+              <stop offset="100%" stop-color="#854d0e" />
+            </linearGradient>
+          </defs>
+          <path d="M95 35 L35 95 L28 95 L95 28 Z" fill="url(#goldCornerGradBR_g_${g.id_guru})" opacity="0.95" />
+          <path d="M95 15 L15 95 L12 95 L95 12 Z" fill="url(#goldCornerGradBR_g_${g.id_guru})" opacity="0.75" />
+        </svg>
+
+        <!-- 1. Header: Logo & Judul Madrasah -->
+        <div class="card-header-section">
+          <div class="card-logo-container">
+            <img src="/logo-min5.png" class="card-min5-logo" alt="Logo MIN 5 Tulungagung">
+          </div>
+
+          <div class="card-header-texts">
+            <div class="card-badge-subtitle">KARTU IDENTITAS GURU</div>
+            <div class="card-badge-line"></div>
+            <div class="card-badge-title">MIN 5 TULUNGAGUNG</div>
+          </div>
+        </div>
+
+        <!-- 2. Kotak QR Code Pemindai Presensi (Besar & Kontras Tinggi) -->
+        <div class="card-qr-box">
+          <div id="qrcode-teacher-${g.id_guru}" class="card-qr-render"></div>
+        </div>
+
+        <!-- 3. Identitas Guru & Footer -->
+        <div class="card-student-section">
+          <div class="card-student-fullname" title="${g.nama_guru}">${g.nama_guru}</div>
+          <div class="card-student-gold-line"></div>
+
+          <div class="card-student-meta-grid">
+            <div class="card-student-meta-item">
+              <svg class="card-meta-svg" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 21h18M3 7v14M21 7v14M6 7V3h12v4M10 11h4M10 16h4"></path>
+              </svg>
+              <div class="card-meta-detail">
+                <span class="card-meta-heading">JABATAN</span>
+                <span class="card-meta-value" style="font-size: 8.5pt; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${jabatan}</span>
+              </div>
+            </div>
+
+            <div class="card-meta-separator"></div>
+
+            <div class="card-student-meta-item">
+              <svg class="card-meta-svg" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+              <div class="card-meta-detail">
+                <span class="card-meta-heading">NIP / STATUS</span>
+                <span class="card-meta-value" style="font-size: 8.5pt; font-family: monospace;">${nipVal}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-footer-prompt">
+            <span class="card-footer-line"></span>
+            <span class="card-footer-text">SCAN UNTUK ABSENSI</span>
+            <span class="card-footer-line"></span>
+          </div>
+        </div>
+
+      </div>
+    `;
+  },
+
+  async previewTeacherCard(idGuru) {
+    const teacher = (this.state.teacherList || []).find(g => g.id_guru === idGuru) ||
+                    (window.ADMIN && (window.ADMIN.teachersState.allList || []).find(g => g.id_guru === idGuru));
+    if (!teacher) {
+      if (typeof showToast === 'function') showToast("Data guru tidak ditemukan untuk kartu.", "warning");
+      return;
+    }
+
+    this.state.previewTeacher = teacher;
+
+    const modal = document.getElementById("modal-card-preview");
+    const nameEl = document.getElementById("preview-modal-student-name");
+    const metaEl = document.getElementById("preview-modal-student-meta");
+    const container = document.getElementById("preview-card-container");
+    const btnDownload = document.getElementById("btn-modal-download-card");
+    const btnPrint = document.getElementById("btn-modal-print-card");
+
+    if (nameEl) nameEl.textContent = teacher.nama_guru;
+    if (metaEl) metaEl.textContent = `${teacher.jabatan || 'Guru'} • ${teacher.nip && teacher.nip !== '-' ? 'NIP: ' + teacher.nip : teacher.status_kepegawaian || 'PTK'}`;
+
+    if (container) {
+      container.innerHTML = this.createTeacherCardHTML(teacher);
+      const qrElem = container.querySelector(`#qrcode-teacher-${teacher.id_guru}`);
+      const qrText = teacher.kode_barcode || `GURU-${teacher.nip && teacher.nip !== '-' ? teacher.nip : teacher.id_guru}`;
+      await this.renderCardQRToImage(qrElem, qrText);
+    }
+
+    if (btnDownload) {
+      btnDownload.onclick = () => this.downloadSingleTeacherCardById(teacher.id_guru);
+    }
+
+    if (btnPrint) {
+      btnPrint.onclick = () => this.printSingleTeacherCard(teacher);
+    }
+
+    if (typeof openModal === 'function') {
+      openModal("modal-card-preview");
+    } else if (modal) {
+      modal.classList.add("active");
+    }
+  },
+
+  async downloadSingleTeacherCardById(idGuru) {
+    const teacher = (this.state.teacherList || []).find(g => g.id_guru === idGuru) ||
+                    this.state.previewTeacher ||
+                    (window.ADMIN && (window.ADMIN.teachersState.allList || []).find(g => g.id_guru === idGuru));
+    if (!teacher) {
+      if (typeof showToast === 'function') showToast("Data guru tidak ditemukan untuk diunduh.", "warning");
+      return;
+    }
+
+    const captureWrapper = document.createElement("div");
+    captureWrapper.style.position = "fixed";
+    captureWrapper.style.left = "0";
+    captureWrapper.style.top = "0";
+    captureWrapper.style.width = "290px";
+    captureWrapper.style.height = "460px";
+    captureWrapper.style.opacity = "0.01";
+    captureWrapper.style.pointerEvents = "none";
+    captureWrapper.style.zIndex = "-999";
+    captureWrapper.style.background = "#ffffff";
+    captureWrapper.innerHTML = this.createTeacherCardHTML(teacher);
+    document.body.appendChild(captureWrapper);
+
+    const cardEl = captureWrapper.querySelector(".student-card-portrait");
+    const qrElem = captureWrapper.querySelector(`#qrcode-teacher-${teacher.id_guru}`);
+
+    const qrText = teacher.kode_barcode || `GURU-${teacher.nip && teacher.nip !== '-' ? teacher.nip : teacher.id_guru}`;
+    await this.renderCardQRToImage(qrElem, qrText);
+
+    const images = Array.from(captureWrapper.querySelectorAll("img"));
+    await Promise.all(images.map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(res => {
+        img.onload = () => res();
+        img.onerror = () => res();
+      });
+    }));
+
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+    await new Promise(r => setTimeout(r, 100));
+
+    try {
+      const targetElement = cardEl || captureWrapper;
+      const canvas = await html2canvas(targetElement, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false
+      });
+
+      const cleanNama = String(teacher.nama_guru || "Guru").replace(/[\\/:*?"<>|]/g, "_").trim();
+      const nip = String(teacher.nip && teacher.nip !== '-' ? teacher.nip : teacher.id_guru || "PTK");
+      const fileName = `Kartu_Guru_${nip}_${cleanNama}.png`;
+
+      const link = document.createElement("a");
+      link.download = fileName;
+      link.href = canvas.toDataURL("image/png");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      if (typeof showToast === 'function') {
+        showToast(`✓ Kartu ${teacher.nama_guru} berhasil diunduh.`, "success");
+      }
+    } catch (err) {
+      console.error("Gagal download PNG kartu guru:", err);
+      alert("Gagal mengunduh kartu guru: " + err.message);
+    } finally {
+      if (captureWrapper && captureWrapper.parentNode) {
+        document.body.removeChild(captureWrapper);
+      }
+    }
+  },
+
+  printSingleTeacherCard(teacher) {
+    const printContainer = document.getElementById("printable-cards-area");
+    if (!printContainer) return;
+
+    printContainer.style.display = "grid";
+    printContainer.innerHTML = this.createTeacherCardHTML(teacher);
+
+    const qrElem = printContainer.querySelector(`#qrcode-teacher-${teacher.id_guru}`);
+    if (qrElem && typeof QRCode !== 'undefined') {
+      new QRCode(qrElem, {
+        text: teacher.kode_barcode || `GURU-${teacher.nip && teacher.nip !== '-' ? teacher.nip : teacher.id_guru}`,
+        width: 156,
+        height: 156,
+        colorDark: "#ffffff",
+        colorLight: "#022b1d",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    setTimeout(() => {
+      window.print();
+      printContainer.style.display = "none";
+    }, 200);
+  },
+
+  printAllTeachers() {
+    this.printBatchTeacherCards(this.state.teacherList);
+  },
+
+  printSelectedTeachers() {
+    const selected = (this.state.teacherList || []).filter(g => this.state.selectedTeacherIds.has(g.id_guru));
+    if (selected.length === 0) {
+      alert("Pilih minimal 1 guru untuk dicetak.");
+      return;
+    }
+    this.printBatchTeacherCards(selected);
+  },
+
+  printBatchTeacherCards(teachersList) {
+    if (!teachersList || teachersList.length === 0) {
+      alert("Tidak ada kartu guru untuk dicetak.");
+      return;
+    }
+
+    const printContainer = document.getElementById("printable-cards-area");
+    if (!printContainer) return;
+
+    printContainer.style.display = "grid";
+    printContainer.innerHTML = teachersList.map(g => this.createTeacherCardHTML(g)).join("");
+
+    teachersList.forEach(g => {
+      const qrElem = printContainer.querySelector(`#qrcode-teacher-${g.id_guru}`);
+      if (qrElem && typeof QRCode !== 'undefined') {
+        new QRCode(qrElem, {
+          text: g.kode_barcode || `GURU-${g.nip && g.nip !== '-' ? g.nip : g.id_guru}`,
+          width: 156,
+          height: 156,
+          colorDark: "#ffffff",
+          colorLight: "#022b1d",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
+    });
+
+    setTimeout(() => {
+      window.print();
+      printContainer.style.display = "none";
+    }, 400);
+  },
+
+  async exportTeacherZip() {
+    return this.processTeacherZipExport(this.state.teacherList, "Semua_Guru");
+  },
+
+  async exportSelectedTeacherZip() {
+    const selected = (this.state.teacherList || []).filter(g => this.state.selectedTeacherIds.has(g.id_guru));
+    if (selected.length === 0) {
+      alert("Pilih minimal 1 guru untuk diekspor ke ZIP.");
+      return;
+    }
+    return this.processTeacherZipExport(selected, "Pilihan_Guru");
+  },
+
+  async processTeacherZipExport(teachersList, labelName) {
+    if (!teachersList || teachersList.length === 0) {
+      alert("Tidak ada data guru untuk diekspor ke ZIP.");
+      return;
+    }
+
+    if (typeof JSZip === 'undefined' || typeof html2canvas === 'undefined') {
+      alert("Pustaka JSZip atau html2canvas belum termuat.");
+      return;
+    }
+
+    const progressBar = document.getElementById("zip-progress-bar");
+    const progressStatus = document.getElementById("zip-progress-status");
+    const progressPercent = document.getElementById("zip-progress-percent");
+
+    if (typeof openModal === 'function') {
+      openModal("modal-zip-progress");
+    }
+
+    if (progressBar) progressBar.style.width = "0%";
+    if (progressStatus) progressStatus.textContent = "Menyiapkan kartu guru...";
+    if (progressPercent) progressPercent.textContent = "0%";
+
+    const zip = new JSZip();
+    const total = teachersList.length;
+
+    const tempContainer = document.createElement("div");
+    tempContainer.style.position = "fixed";
+    tempContainer.style.left = "0";
+    tempContainer.style.top = "0";
+    tempContainer.style.width = "290px";
+    tempContainer.style.height = "460px";
+    tempContainer.style.opacity = "0.01";
+    tempContainer.style.pointerEvents = "none";
+    tempContainer.style.zIndex = "-999";
+    tempContainer.style.background = "#ffffff";
+    document.body.appendChild(tempContainer);
+
+    try {
+      for (let i = 0; i < total; i++) {
+        const g = teachersList[i];
+        const percent = Math.round(((i + 1) / total) * 100);
+
+        if (progressBar) progressBar.style.width = `${percent}%`;
+        if (progressStatus) progressStatus.textContent = `Merender ${i + 1}/${total}: ${g.nama_guru}`;
+        if (progressPercent) progressPercent.textContent = `${percent}%`;
+
+        tempContainer.innerHTML = this.createTeacherCardHTML(g);
+        const cardEl = tempContainer.querySelector(".student-card-portrait");
+        const qrElem = tempContainer.querySelector(`#qrcode-teacher-${g.id_guru}`);
+
+        const qrText = g.kode_barcode || `GURU-${g.nip && g.nip !== '-' ? g.nip : g.id_guru}`;
+        await this.renderCardQRToImage(qrElem, qrText);
+
+        const images = Array.from(tempContainer.querySelectorAll("img"));
+        await Promise.all(images.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise(res => {
+            img.onload = () => res();
+            img.onerror = () => res();
+          });
+        }));
+
+        await new Promise(r => setTimeout(r, 60));
+
+        const canvas = await html2canvas(cardEl || tempContainer, {
+          scale: 3,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null,
+          logging: false
+        });
+
+        const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+        const cleanNama = g.nama_guru.replace(/[\\/:*?"<>|]/g, "_").trim();
+        const nip = String(g.nip && g.nip !== '-' ? g.nip : g.id_guru || "PTK");
+        const fileName = `${nip}_${cleanNama}.png`;
+
+        zip.file(fileName, base64Data, { base64: true });
+      }
+
+      if (progressStatus) progressStatus.textContent = "Mengompresi file ZIP...";
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+
+      const dateStr = new Date().toISOString().split("T")[0];
+      const zipFileName = `Kartu_Presensi_Guru_MIN5_${labelName}_${dateStr}.zip`;
+
+      const downloadUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = zipFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+
+      setTimeout(() => {
+        if (typeof closeModal === 'function') closeModal("modal-zip-progress");
+        if (typeof showToast === 'function') {
+          showToast(`Berhasil mengunduh ${total} kartu guru ke ${zipFileName}`, "success");
+        }
+      }, 400);
+
+    } catch (err) {
+      console.error("ZIP Export Error:", err);
+      if (typeof closeModal === 'function') closeModal("modal-zip-progress");
+      alert("Gagal membuat file ZIP kartu guru: " + err.message);
+    } finally {
+      if (tempContainer) document.body.removeChild(tempContainer);
+    }
   }
 };
 

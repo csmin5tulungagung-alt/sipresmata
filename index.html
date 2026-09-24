@@ -960,110 +960,221 @@
              ------------------------------------------------------------------ -->
         <section id="cms-view-cards" class="cms-view-section">
           
-          <!-- 1. TAMPILAN FOLDER VIEW (DAFTAR 24 ROMBEL) -->
-          <div id="cards-folders-view">
-            <div class="cms-page-header">
-              <div>
-                <h2>🪪 Generator & Cetak Kartu Barcode Siswa</h2>
-                <p>Pilih folder rombongan belajar (Kelas 1A-D s.d 6A-D) untuk melihat, mencetak, atau mengunduh kartu siswa.</p>
+          <!-- TAB SWITCHER: SISWA VS GURU -->
+          <div class="cards-target-tabs-bar" style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.85rem; flex-wrap: wrap;">
+            <button type="button" id="btn-tab-cards-siswa" class="btn btn-primary active" style="font-weight: 700; padding: 0.6rem 1.25rem; font-size: 0.95rem; border-radius: var(--radius-md);" onclick="CARD_GENERATOR.switchTargetTab('SISWA')">
+              🎒 Kartu Presensi Siswa (24 Rombel)
+            </button>
+            <button type="button" id="btn-tab-cards-guru" class="btn btn-secondary" style="font-weight: 700; padding: 0.6rem 1.25rem; font-size: 0.95rem; border-radius: var(--radius-md);" onclick="CARD_GENERATOR.switchTargetTab('GURU')">
+              👨‍🏫 Kartu Presensi Guru & Staf (PTK)
+            </button>
+          </div>
+
+          <!-- WRAPPER 1: KARTU SISWA -->
+          <div id="cards-subview-siswa">
+            <!-- 1. TAMPILAN FOLDER VIEW (DAFTAR 24 ROMBEL) -->
+            <div id="cards-folders-view">
+              <div class="cms-page-header">
+                <div>
+                  <h2>🪪 Generator & Cetak Kartu Barcode Siswa</h2>
+                  <p>Pilih folder rombongan belajar (Kelas 1A-D s.d 6A-D) untuk melihat, mencetak, atau mengunduh kartu siswa.</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <button id="btn-export-all-zip" class="btn btn-secondary" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-weight: 600;" onclick="CARD_GENERATOR.exportAllZip()">
+                    📦 Download ZIP Seluruh Siswa
+                  </button>
+                  <button id="btn-print-all-classes" class="btn btn-primary" onclick="CARD_GENERATOR.printAllCards()">
+                    🖨️ Cetak Seluruh Siswa (A4)
+                  </button>
+                </div>
               </div>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button id="btn-export-all-zip" class="btn btn-secondary" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-weight: 600;" onclick="CARD_GENERATOR.exportAllZip()">
-                  📦 Download ZIP Seluruh Siswa
-                </button>
-                <button id="btn-print-all-classes" class="btn btn-primary" onclick="CARD_GENERATOR.printAllCards()">
-                  🖨️ Cetak Seluruh Siswa (A4)
-                </button>
+
+              <!-- Grid 24 Folder Rombel -->
+              <div id="class-folders-grid" class="folder-grid">
+                <!-- Injected via JavaScript -->
               </div>
             </div>
 
-            <!-- Grid 24 Folder Rombel -->
-            <div id="class-folders-grid" class="folder-grid">
-              <!-- Injected via JavaScript -->
+            <!-- 2. TAMPILAN LIST VIEW SISWA DI DALAM FOLDER KELAS -->
+            <div id="cards-list-view" style="display: none;">
+              <div class="cms-page-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <button type="button" class="btn btn-secondary btn-icon" onclick="CARD_GENERATOR.backToFolders()" title="Kembali ke Daftar Folder">
+                    ⬅
+                  </button>
+                  <div>
+                    <h2 id="card-list-class-title">📁 Folder Kelas 1A</h2>
+                    <p id="card-list-class-subtitle">Daftar siswa dan kartu barcode presensi.</p>
+                  </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <button id="btn-class-export-zip" class="btn btn-secondary" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-weight: 600;" onclick="CARD_GENERATOR.exportClassZip()">
+                    📦 Unduh ZIP Kelas Ini
+                  </button>
+                  <button id="btn-class-print-a4" class="btn btn-primary" onclick="CARD_GENERATOR.printClassCards()">
+                    🖨️ Cetak Kelas Ini (A4)
+                  </button>
+                </div>
+              </div>
+
+              <div class="card-table-wrapper">
+                <!-- Bulk Action Bar -->
+                <div id="cards-bulk-bar" class="bulk-action-bar">
+                  <div class="bulk-selection-info">
+                    <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="CARD_GENERATOR.toggleSelectAllVisible()">
+                      ☑️ <span id="btn-cards-select-all-text">Pilih Semua</span>
+                    </button>
+                    <span class="bulk-selection-badge" id="cards-bulk-count">0</span>
+                    <span>Siswa dipilih</span>
+                  </div>
+                  <div class="bulk-action-buttons">
+                    <button type="button" class="btn-danger-bulk" onclick="CARD_GENERATOR.deleteSelectedStudents()">
+                      🗑️ Hapus Siswa Terpilih
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="background: rgba(2, 132, 199, 0.2); border-color: #0284c7; color: #38bdf8; padding: 0.45rem 0.85rem; font-size: 0.85rem; font-weight: 700;" onclick="CARD_GENERATOR.exportSelectedZip()">
+                      📦 Unduh ZIP Terpilih
+                    </button>
+                    <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="CARD_GENERATOR.exitSelectionMode()">
+                      ✕ Selesai
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Search Bar & Toggle Select -->
+                <div class="table-filter-bar">
+                  <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 450px;">
+                    <input type="text" id="search-card-student" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1;" oninput="CARD_GENERATOR.handleSearch(this.value)">
+                  </div>
+                  <div>
+                    <button type="button" id="btn-toggle-select-cards" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="CARD_GENERATOR.toggleSelectionMode()">
+                      🔘 Pilih Siswa
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Student Table -->
+                <div style="overflow-x: auto;">
+                  <table class="custom-data-table">
+                    <thead>
+                      <tr>
+                        <th id="th-checkbox-cards" style="width: 4%; text-align: center; display: none;">
+                          <input type="checkbox" id="check-all-card-students" class="table-checkbox" title="Pilih Semua Siswa">
+                        </th>
+                        <th style="width: 5%;">No</th>
+                        <th>NISN</th>
+                        <th>Nama Lengkap</th>
+                        <th>Kelas</th>
+                        <th>Kode Barcode</th>
+                        <th style="width: 25%;">Aksi Kartu</th>
+                      </tr>
+                    </thead>
+                    <tbody id="cards-table-body">
+                      <!-- Injected via JavaScript -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Pagination Container -->
+                <div id="cards-pagination" class="table-pagination-container"></div>
+              </div>
             </div>
           </div>
 
-          <!-- 2. TAMPILAN LIST VIEW SISWA DI DALAM FOLDER KELAS -->
-          <div id="cards-list-view" style="display: none;">
+          <!-- WRAPPER 2: KARTU GURU & STAF -->
+          <div id="cards-subview-guru" style="display: none;">
             <div class="cms-page-header">
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <button type="button" class="btn btn-secondary btn-icon" onclick="CARD_GENERATOR.backToFolders()" title="Kembali ke Daftar Folder">
-                  ⬅
-                </button>
-                <div>
-                  <h2 id="card-list-class-title">📁 Folder Kelas 1A</h2>
-                  <p id="card-list-class-subtitle">Daftar siswa dan kartu barcode presensi.</p>
-                </div>
+              <div>
+                <h2>👨‍🏫 Generator & Cetak Kartu Presensi Guru & Staf</h2>
+                <p>Cetak kartu ID barcode & QR Code untuk Kepala Madrasah, Guru Kelas, Guru Mapel, dan Tenaga Kependidikan MIN 5 Tulungagung.</p>
               </div>
               <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <button id="btn-class-export-zip" class="btn btn-secondary" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-weight: 600;" onclick="CARD_GENERATOR.exportClassZip()">
-                  📦 Unduh ZIP Kelas Ini
+                <button id="btn-teacher-export-zip" class="btn btn-secondary" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: none; font-weight: 600;" onclick="CARD_GENERATOR.exportTeacherZip()">
+                  📦 Download ZIP Semua Guru
                 </button>
-                <button id="btn-class-print-a4" class="btn btn-primary" onclick="CARD_GENERATOR.printClassCards()">
-                  🖨️ Cetak Kelas Ini (A4)
+                <button id="btn-teacher-print-a4" class="btn btn-primary" onclick="CARD_GENERATOR.printAllTeachers()">
+                  🖨️ Cetak Semua Guru (A4)
                 </button>
               </div>
             </div>
 
             <div class="card-table-wrapper">
-              <!-- Bulk Action Bar -->
-              <div id="cards-bulk-bar" class="bulk-action-bar">
+              <!-- Bulk Action Bar Guru -->
+              <div id="teacher-cards-bulk-bar" class="bulk-action-bar">
                 <div class="bulk-selection-info">
-                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="CARD_GENERATOR.toggleSelectAllVisible()">
-                    ☑️ <span id="btn-cards-select-all-text">Pilih Semua</span>
+                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 700;" onclick="CARD_GENERATOR.toggleSelectAllVisibleTeachers()">
+                    ☑️ <span id="btn-teacher-cards-select-all-text">Pilih Semua</span>
                   </button>
-                  <span class="bulk-selection-badge" id="cards-bulk-count">0</span>
-                  <span>Siswa dipilih</span>
+                  <span class="bulk-selection-badge" id="teacher-cards-bulk-count">0</span>
+                  <span>Guru dipilih</span>
                 </div>
                 <div class="bulk-action-buttons">
-                  <button type="button" class="btn-danger-bulk" onclick="CARD_GENERATOR.deleteSelectedStudents()">
-                    🗑️ Hapus Siswa Terpilih
+                  <button type="button" class="btn btn-primary" style="padding: 0.45rem 0.85rem; font-size: 0.85rem; font-weight: 700;" onclick="CARD_GENERATOR.printSelectedTeachers()">
+                    🖨️ Cetak Kartu Terpilih (A4)
                   </button>
-                  <button type="button" class="btn btn-secondary" style="background: rgba(2, 132, 199, 0.2); border-color: #0284c7; color: #38bdf8; padding: 0.45rem 0.85rem; font-size: 0.85rem; font-weight: 700;" onclick="CARD_GENERATOR.exportSelectedZip()">
+                  <button type="button" class="btn btn-secondary" style="background: rgba(2, 132, 199, 0.2); border-color: #0284c7; color: #38bdf8; padding: 0.45rem 0.85rem; font-size: 0.85rem; font-weight: 700;" onclick="CARD_GENERATOR.exportSelectedTeacherZip()">
                     📦 Unduh ZIP Terpilih
                   </button>
-                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="CARD_GENERATOR.exitSelectionMode()">
+                  <button type="button" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="CARD_GENERATOR.exitTeacherSelectionMode()">
                     ✕ Selesai
                   </button>
                 </div>
               </div>
 
-              <!-- Search Bar & Toggle Select -->
+              <!-- Search Bar & Filters -->
               <div class="table-filter-bar">
-                <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 450px;">
-                  <input type="text" id="search-card-student" class="form-control" placeholder="Cari nama siswa atau NISN..." style="flex: 1;" oninput="CARD_GENERATOR.handleSearch(this.value)">
+                <div style="display: flex; gap: 0.5rem; flex: 1; max-width: 320px;">
+                  <input type="text" id="search-card-teacher" class="form-control" placeholder="Cari nama guru atau NIP..." style="flex: 1;" oninput="CARD_GENERATOR.handleTeacherSearch(this.value)">
                 </div>
-                <div>
-                  <button type="button" id="btn-toggle-select-cards" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="CARD_GENERATOR.toggleSelectionMode()">
-                    🔘 Pilih Siswa
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                  <select id="filter-card-teacher-jabatan" class="form-control" style="width: auto; min-width: 150px;" onchange="CARD_GENERATOR.handleTeacherFilter()">
+                    <option value="ALL">Semua Jabatan</option>
+                    <option value="Guru Kelas">Guru Kelas</option>
+                    <option value="Guru Mapel">Guru Mapel</option>
+                    <option value="Guru PAI">Guru PAI</option>
+                    <option value="Guru PJOK">Guru PJOK</option>
+                    <option value="Guru Bahasa Arab">Guru Bahasa Arab</option>
+                    <option value="Guru Quran Hadits">Guru Quran Hadits</option>
+                    <option value="Kepala Madrasah">Kepala Madrasah</option>
+                    <option value="Tenaga Kependidikan">Tenaga Kependidikan / TU</option>
+                  </select>
+                  <select id="filter-card-teacher-status" class="form-control" style="width: auto; min-width: 140px;" onchange="CARD_GENERATOR.handleTeacherFilter()">
+                    <option value="ALL">Semua Status</option>
+                    <option value="PNS">PNS</option>
+                    <option value="PPPK">PPPK</option>
+                    <option value="GTT">GTT</option>
+                    <option value="Honorer">Honorer</option>
+                  </select>
+                  <button type="button" id="btn-toggle-select-teacher-cards" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem;" onclick="CARD_GENERATOR.toggleTeacherSelectionMode()">
+                    🔘 Pilih Guru
                   </button>
                 </div>
               </div>
 
-              <!-- Student Table -->
+              <!-- Teacher Cards Table -->
               <div style="overflow-x: auto;">
                 <table class="custom-data-table">
                   <thead>
                     <tr>
-                      <th id="th-checkbox-cards" style="width: 4%; text-align: center; display: none;">
-                        <input type="checkbox" id="check-all-card-students" class="table-checkbox" title="Pilih Semua Siswa">
+                      <th id="th-checkbox-teacher-cards" style="width: 4%; text-align: center; display: none;">
+                        <input type="checkbox" id="check-all-card-teachers" class="table-checkbox" title="Pilih Semua Guru">
                       </th>
-                      <th style="width: 5%;">No</th>
-                      <th>NISN</th>
-                      <th>Nama Lengkap</th>
-                      <th>Kelas</th>
+                      <th style="width: 5%; text-align: center;">No</th>
+                      <th>Nama Guru & NIP</th>
+                      <th>Jabatan</th>
+                      <th>Tugas Tambahan</th>
+                      <th style="text-align: center;">Status</th>
                       <th>Kode Barcode</th>
-                      <th style="width: 25%;">Aksi Kartu</th>
+                      <th style="width: 22%; text-align: center;">Aksi Kartu</th>
                     </tr>
                   </thead>
-                  <tbody id="cards-table-body">
+                  <tbody id="teacher-cards-table-body">
                     <!-- Injected via JavaScript -->
                   </tbody>
                 </table>
               </div>
 
               <!-- Pagination Container -->
-              <div id="cards-pagination" class="table-pagination-container"></div>
+              <div id="teacher-cards-pagination" class="table-pagination-container"></div>
             </div>
           </div>
 
