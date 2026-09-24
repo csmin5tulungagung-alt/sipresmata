@@ -67,12 +67,14 @@ export const API = {
   async scanBarcode(barcode) {
     if (CONFIG.DEFAULT_API_URL) {
       try {
+        const isBypass = CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE === true || String(CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE).toLowerCase() === "true";
         const response = await fetch(`${CONFIG.DEFAULT_API_URL}?action=absen_scan`, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" }, // text/plain prevents CORS preflight in GAS
           body: JSON.stringify({
             kode_barcode: barcode,
-            client_key: CONFIG.CLIENT_KEY
+            client_key: CONFIG.CLIENT_KEY,
+            bypass_schedule: isBypass ? "true" : "false"
           })
         });
         return await response.json();
@@ -98,9 +100,10 @@ export const API = {
     }
 
     const dayOfWeek = now.getDay(); // 0 = Minggu, 5 = Jumat
+    const isBypass = CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE === true || String(CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE).toLowerCase() === "true";
 
     // Cek Hari Libur Minggu
-    if (dayOfWeek === 0 && CONFIG.SCHEDULE.LIBUR_MINGGU_ENABLED && !CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE) {
+    if (dayOfWeek === 0 && CONFIG.SCHEDULE.LIBUR_MINGGU_ENABLED && !isBypass) {
       return {
         status: "error",
         code: "HOLIDAY_OFF",
@@ -124,7 +127,7 @@ export const API = {
     let isSesiPulang = timeStr >= pulangMulai && timeStr <= pulangBatas;
 
     // Mode Bypass Pengujian / Demo Scanner (Admin testing)
-    if (CONFIG.SCHEDULE.BYPASS_SCHEDULE_TEST_MODE && !isSesiMasuk && !isSesiPulang) {
+    if (isBypass && !isSesiMasuk && !isSesiPulang) {
       // Jika jam di bawah 12.00, anggap sesi masuk; jika 12.00 ke atas, anggap sesi pulang
       if (timeStr < (pulangMulai || "12:00:00")) {
         isSesiMasuk = true;
@@ -135,11 +138,17 @@ export const API = {
 
     // 1. Validasi Jadwal Operasional Terlebih Dahulu (OUT_OF_SCHEDULE)
     if (!isSesiMasuk && !isSesiPulang) {
-      const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][dayOfWeek];
+      let rejectMsg = "";
+      if (timeStr > masukMaksimal && timeStr < pulangMulai) {
+        rejectMsg = `Saat ini di luar jam operasional presensi (KBM belajar mengajar sedang berlangsung, ${timeStr.slice(0, 5)} WIB). Sesi kepulangan dibuka pukul ${pulangMulai.slice(0, 5)} WIB.`;
+      } else {
+        const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][dayOfWeek];
+        rejectMsg = `Saat ini di luar jam operasional presensi hari ${namaHari} (${timeStr.slice(0, 5)} WIB). Sesi Masuk: ${masukMulai.slice(0, 5)}–${masukMaksimal.slice(0, 5)} WIB. Sesi Pulang: ${pulangMulai.slice(0, 5)}–${pulangBatas.slice(0, 5)} WIB.`;
+      }
       return {
         status: "error",
         code: "OUT_OF_SCHEDULE",
-        message: `Saat ini di luar jam operasional presensi hari ${namaHari} (${timeStr} WIB). Sesi Masuk: ${masukMulai.slice(0, 5)}–${masukMaksimal.slice(0, 5)} WIB. Sesi Pulang: ${pulangMulai.slice(0, 5)}–${pulangBatas.slice(0, 5)} WIB.`
+        message: rejectMsg
       };
     }
 

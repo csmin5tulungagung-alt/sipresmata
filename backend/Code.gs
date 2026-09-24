@@ -180,9 +180,9 @@ function handleAbsenScan(req) {
   // 2. Evaluasi Sesi Waktu (Masuk vs Pulang)
   var dayOfWeek = now.getDay(); // 0 = Minggu, 5 = Jumat
 
-  // Cek Hari Libur Minggu
+  // Cek Hari Libur Minggu & Mode Bebas Uji Coba (Bypass 24 Jam)
   var liburMingguEnabled = (String(settings.libur_minggu_enabled || "true").toLowerCase() !== "false");
-  var bypassTestMode = (String(settings.bypass_schedule_test_mode || "false").toLowerCase() === "true" || req.bypass_schedule === "true");
+  var bypassTestMode = (String(settings.bypass_schedule_test_mode || "false").toLowerCase() === "true" || String(req.bypass_schedule || "false").toLowerCase() === "true");
 
   if (dayOfWeek === 0 && liburMingguEnabled && !bypassTestMode) {
     return {
@@ -192,17 +192,17 @@ function handleAbsenScan(req) {
     };
   }
 
-  var jamMasukMulai = settings.jam_masuk_mulai || "06:00:00";
-  var jamMasukBatas = settings.jam_masuk_batas || "07:15:00";
-  var jamMasukMaks = settings.jam_masuk_maksimal || "08:30:00";
-  var jamPulangMulai = settings.jam_pulang_mulai || "12:30:00";
-  var jamPulangBatas = settings.jam_pulang_batas || "16:00:00";
+  var jamMasukMulai = normalizeTimeString(settings.jam_masuk_mulai, "06:00:00");
+  var jamMasukBatas = normalizeTimeString(settings.jam_masuk_batas, "07:15:00");
+  var jamMasukMaks = normalizeTimeString(settings.jam_masuk_maksimal, "08:30:00");
+  var jamPulangMulai = normalizeTimeString(settings.jam_pulang_mulai, "12:30:00");
+  var jamPulangBatas = normalizeTimeString(settings.jam_pulang_batas, "16:00:00");
 
   // Penyesuaian Jadwal Khusus Hari Jumat
   var jumatKhususEnabled = (String(settings.jumat_khusus_enabled || "true").toLowerCase() !== "false");
   if (dayOfWeek === 5 && jumatKhususEnabled) {
-    jamPulangMulai = settings.jam_pulang_jumat_mulai || "11:00:00";
-    jamPulangBatas = settings.jam_pulang_jumat_batas || "14:00:00";
+    jamPulangMulai = normalizeTimeString(settings.jam_pulang_jumat_mulai, "11:00:00");
+    jamPulangBatas = normalizeTimeString(settings.jam_pulang_jumat_batas, "14:00:00");
   }
 
   var jenisSesi = "";
@@ -211,15 +211,21 @@ function handleAbsenScan(req) {
   } else if (timeStr >= jamPulangMulai && timeStr <= jamPulangBatas) {
     jenisSesi = "PULANG";
   } else if (bypassTestMode) {
-    // Mode Pengujian / Bypass
+    // Mode Pengujian / Bebas Uji Coba 24 Jam
     jenisSesi = (timeStr < (jamPulangMulai || "12:00:00")) ? "MASUK" : "PULANG";
   } else {
-    // Di luar jam scan normal
+    // Di luar jam scan normal (SOP Opsi A)
     var arrHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+    var pesanTolak = "";
+    if (timeStr > jamMasukMaks && timeStr < jamPulangMulai) {
+      pesanTolak = "Saat ini di luar jam operasional presensi (Kegiatan Belajar Mengajar sedang berlangsung, " + timeStr.substring(0, 5) + " WIB). Sesi Pulang dibuka pukul " + jamPulangMulai.substring(0, 5) + " WIB.";
+    } else {
+      pesanTolak = "Saat ini di luar jam operasional presensi hari " + arrHari[dayOfWeek] + " (" + timeStr.substring(0, 5) + " WIB). Sesi Masuk: " + jamMasukMulai.substring(0, 5) + "–" + jamMasukMaks.substring(0, 5) + " WIB. Sesi Pulang: " + jamPulangMulai.substring(0, 5) + "–" + jamPulangBatas.substring(0, 5) + " WIB.";
+    }
     return {
       status: "error",
       code: "OUT_OF_SCHEDULE",
-      message: "Saat ini di luar jam operasional presensi hari " + arrHari[dayOfWeek] + " (" + timeStr + " WIB). Sesi Masuk: " + jamMasukMulai.substring(0, 5) + "-" + jamMasukMaks.substring(0, 5) + " WIB. Sesi Pulang: " + jamPulangMulai.substring(0, 5) + "-" + jamPulangBatas.substring(0, 5) + " WIB."
+      message: pesanTolak
     };
   }
 
@@ -978,18 +984,23 @@ function handleUpdatePengaturan(req) {
   var existingKeys = {};
 
   for (var i = 1; i < data.length; i++) {
-    var key = String(data[i][0] || "").trim();
-    if (!key) continue;
-    existingKeys[key] = i + 1;
-    if (req[key] !== undefined) {
-      var valToSet = String(req[key]).trim();
+    var rawKey = String(data[i][0] || "").trim();
+    if (!rawKey) continue;
+    var lowKey = rawKey.toLowerCase();
+    existingKeys[rawKey] = i + 1;
+    existingKeys[lowKey] = i + 1;
+
+    var valToSet = req[rawKey] !== undefined ? req[rawKey] : req[lowKey];
+    if (valToSet !== undefined) {
+      valToSet = String(valToSet).trim();
       sheet.getRange(i + 1, 2).setNumberFormat("@").setValue(valToSet);
     }
   }
 
   // Auto-append key baru jika belum ada di spreadsheet
   for (var prop in req) {
-    if (prop !== "action" && req[prop] !== undefined && !existingKeys[prop]) {
+    var lowProp = prop.toLowerCase();
+    if (lowProp !== "action" && req[prop] !== undefined && !existingKeys[prop] && !existingKeys[lowProp]) {
       var newValToSet = String(req[prop]).trim();
       sheet.appendRow([prop, newValToSet, "Pengaturan " + prop]);
       sheet.getRange(sheet.getLastRow(), 2).setNumberFormat("@");
@@ -1464,13 +1475,14 @@ function getPengaturanMap(db) {
   var data = sheet.getDataRange().getValues();
   var map = {};
   for (var i = 1; i < data.length; i++) {
-    var key = String(data[i][0] || "").trim();
-    if (!key) continue;
+    var rawKey = String(data[i][0] || "").trim();
+    if (!rawKey) continue;
+    var key = rawKey.toLowerCase();
     var rawVal = data[i][1];
     var valStr = "";
 
-    if (rawVal instanceof Date) {
-      if (key.indexOf("jam_") === 0 || key.indexOf("jam") !== -1) {
+    if (rawVal instanceof Date || (typeof rawVal === "object" && rawVal !== null && typeof rawVal.getTime === "function")) {
+      if (key.indexOf("jam") !== -1) {
         valStr = Utilities.formatDate(rawVal, "Asia/Jakarta", "HH:mm:ss");
       } else {
         valStr = Utilities.formatDate(rawVal, "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
@@ -1481,20 +1493,36 @@ function getPengaturanMap(db) {
       valStr = String(rawVal !== undefined && rawVal !== null ? rawVal : "").trim();
     }
 
-    // Normalisasi format jam jika masih terbaca string Date
-    if (key.indexOf("jam_") === 0) {
-      var matchTime = valStr.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
-      if (matchTime) {
-        var hh = ("0" + matchTime[1]).slice(-2);
-        var mm = matchTime[2];
-        var ss = matchTime[3] || "00";
-        valStr = hh + ":" + mm + ":" + ss;
-      }
+    // Normalisasi format jam jika masih terbaca string Date bawaan Google Sheets
+    if (key.indexOf("jam") !== -1) {
+      valStr = normalizeTimeString(valStr, valStr);
+    }
+
+    // Normalisasi boolean string
+    if (valStr.toLowerCase() === "true" || valStr.toLowerCase() === "false") {
+      valStr = valStr.toLowerCase();
     }
 
     map[key] = valStr;
+    map[rawKey] = valStr; // simpan juga key aslinya
   }
   return map;
+}
+
+function normalizeTimeString(val, defaultVal) {
+  if (!val) return defaultVal || "00:00:00";
+  if (val instanceof Date || (typeof val === "object" && val !== null && typeof val.getTime === "function")) {
+    return Utilities.formatDate(val, "Asia/Jakarta", "HH:mm:ss");
+  }
+  var s = String(val).trim();
+  var match = s.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (match) {
+    var hh = ("0" + match[1]).slice(-2);
+    var mm = match[2];
+    var ss = match[3] || "00";
+    return hh + ":" + mm + ":" + ss;
+  }
+  return defaultVal || "00:00:00";
 }
 
 function clearCache() {

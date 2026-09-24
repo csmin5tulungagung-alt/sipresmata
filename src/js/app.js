@@ -52,17 +52,36 @@ function initLiveClock() {
     if (cmsClock) cmsClock.textContent = timeStr;
 
     const t = now.toTimeString().split(" ")[0];
+    const dayOfWeek = now.getDay();
+    const s = CONFIG.SCHEDULE;
+    const isBypass = s.BYPASS_SCHEDULE_TEST_MODE === true || String(s.BYPASS_SCHEDULE_TEST_MODE).toLowerCase() === "true";
+
     if (bannerSession) {
-      if (t >= CONFIG.SCHEDULE.MASUK_MULAI && t <= CONFIG.SCHEDULE.MASUK_MAKSIMAL) {
-        const isLate = t > CONFIG.SCHEDULE.MASUK_BATAS;
+      if (isBypass) {
+        bannerSession.className = "session-badge-banner";
+        bannerSession.style.background = "linear-gradient(135deg, #7c3aed, #4f46e5)";
+        bannerSession.innerHTML = `<span>🧪 Mode Bebas Uji Coba (24 Jam)</span> <span>Bebas Scan Kapan Saja</span>`;
+      } else if (dayOfWeek === 0 && (s.LIBUR_MINGGU_ENABLED === true || String(s.LIBUR_MINGGU_ENABLED).toLowerCase() === "true")) {
+        bannerSession.className = "session-badge-banner session-tutup";
+        bannerSession.style.background = "";
+        bannerSession.innerHTML = `<span>🏖️ Libur Mingguan Madrasah</span> <span>Scanner Non-Aktif</span>`;
+      } else if (t >= s.MASUK_MULAI && t <= s.MASUK_MAKSIMAL) {
+        const isLate = t > s.MASUK_BATAS;
         bannerSession.className = "session-badge-banner " + (isLate ? "session-tutup" : "session-masuk");
-        bannerSession.innerHTML = `<span>🔔 Sesi Masuk Pagi ${isLate ? '(TERLAMBAT)' : '(NORMAL)'}</span> <span>Batas: ${CONFIG.SCHEDULE.MASUK_BATAS.substring(0, 5)} WIB</span>`;
-      } else if (t >= CONFIG.SCHEDULE.PULANG_MULAI && t <= CONFIG.SCHEDULE.PULANG_BATAS) {
+        bannerSession.style.background = "";
+        bannerSession.innerHTML = `<span>🔔 Sesi Masuk Pagi ${isLate ? '(TERLAMBAT)' : '(NORMAL)'}</span> <span>Batas: ${s.MASUK_BATAS.substring(0, 5)} WIB</span>`;
+      } else if (t >= s.PULANG_MULAI && t <= s.PULANG_BATAS) {
         bannerSession.className = "session-badge-banner session-pulang";
-        bannerSession.innerHTML = `<span>🏠 Sesi Presensi Pulang</span> <span>Hingga: ${CONFIG.SCHEDULE.PULANG_BATAS.substring(0, 5)} WIB</span>`;
+        bannerSession.style.background = "";
+        bannerSession.innerHTML = `<span>🏠 Sesi Presensi Pulang</span> <span>Hingga: ${s.PULANG_BATAS.substring(0, 5)} WIB</span>`;
+      } else if (t > s.MASUK_MAKSIMAL && t < s.PULANG_MULAI) {
+        bannerSession.className = "session-badge-banner session-tutup";
+        bannerSession.style.background = "";
+        bannerSession.innerHTML = `<span>📖 Jam Belajar KBM Aktif</span> <span>Pulang: ${s.PULANG_MULAI.substring(0, 5)} WIB</span>`;
       } else {
         bannerSession.className = "session-badge-banner session-tutup";
-        bannerSession.innerHTML = `<span>⏳ Gerbang Presensi Ditutup</span> <span>Masuk: ${CONFIG.SCHEDULE.MASUK_MULAI.substring(0, 5)} WIB</span>`;
+        bannerSession.style.background = "";
+        bannerSession.innerHTML = `<span>⏳ Gerbang Presensi Ditutup</span> <span>Masuk: ${s.MASUK_MULAI.substring(0, 5)} WIB</span>`;
       }
     }
   }
@@ -313,15 +332,20 @@ function handleScanFeedback(res) {
     `;
     showToast(`Presensi Berhasil: ${data.nama_lengkap} (${isPulang ? 'Sudah Pulang' : 'Hadir Masuk'})`, "success");
   } else {
+    const student = res.student || res.data || null;
     resultCard.innerHTML = `
       <div class="result-avatar-circle" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">
         ✕
       </div>
-      <h3 class="result-student-name" style="color: #f87171;">Presensi Ditolak</h3>
-      <p class="result-student-meta">${res.message}</p>
+      <h3 class="result-student-name" style="color: #f87171;">
+        ${student ? student.nama_lengkap : 'Presensi Ditolak'}
+      </h3>
+      <p class="result-student-meta">
+        ${student ? `${student.nama_kelas || student.kelas || student.id_kelas || ''} • NISN: ${student.nisn || '-'} — ` : ''}${res.message}
+      </p>
       
       <div class="status-tag error">
-        ${res.code || 'GAGAL'}
+        ✕ ${res.code || 'DI LUAR JADWAL'}
       </div>
     `;
     showToast(res.message, "danger");

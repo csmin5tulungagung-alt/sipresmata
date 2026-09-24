@@ -230,14 +230,53 @@ export const SCANNER = {
     const s = CONFIG.SCHEDULE;
 
     // Evaluasi waktu presensi secara lokal (0 ms)
+    const isBypass = s.BYPASS_SCHEDULE_TEST_MODE === true || String(s.BYPASS_SCHEDULE_TEST_MODE).toLowerCase() === "true";
+    const isMinggu = dayOfWeek === 0 && (s.LIBUR_MINGGU_ENABLED === true || String(s.LIBUR_MINGGU_ENABLED).toLowerCase() === "true") && !isBypass;
+
     let isSesiMasuk = timeStr >= s.MASUK_MULAI && timeStr <= s.MASUK_MAKSIMAL;
     let isSesiPulang = timeStr >= s.PULANG_MULAI && timeStr <= s.PULANG_BATAS;
-    if (dayOfWeek === 5 && s.JUMAT_KHUSUS_ENABLED) {
+    if (dayOfWeek === 5 && (s.JUMAT_KHUSUS_ENABLED === true || String(s.JUMAT_KHUSUS_ENABLED).toLowerCase() === "true")) {
       isSesiPulang = timeStr >= s.JAM_PULANG_JUMAT_MULAI && timeStr <= s.JAM_PULANG_JUMAT_BATAS;
     }
-    if (s.BYPASS_SCHEDULE_TEST_MODE && !isSesiMasuk && !isSesiPulang) {
+
+    if (isBypass) {
+      // Mode Bebas Uji Coba 24 Jam Aktif
       isSesiMasuk = timeStr < (s.PULANG_MULAI || "12:00:00");
       isSesiPulang = !isSesiMasuk;
+    }
+
+    // 1. Validasi Jadwal Operasional (SOP Opsi A)
+    const isOutOfSchedule = isMinggu || (!isBypass && !isSesiMasuk && !isSesiPulang);
+
+    // Cari data siswa di memori lokal untuk respon instan 0ms
+    const instantStudent = (typeof API.findStudentLocally === 'function') 
+      ? API.findStudentLocally(cleanBarcode) 
+      : null;
+
+    if (isOutOfSchedule) {
+      playAudioBeep("error");
+
+      let rejectMsg = "";
+      if (isMinggu) {
+        rejectMsg = "Hari ini libur mingguan (Minggu). Pemindaian presensi dinonaktifkan.";
+      } else if (timeStr > s.MASUK_MAKSIMAL && timeStr < s.PULANG_MULAI) {
+        rejectMsg = `Saat ini di luar jam operasional (KBM belajar mengajar sedang berlangsung, ${timeStr.slice(0, 5)} WIB). Sesi kepulangan dibuka pukul ${s.PULANG_MULAI.slice(0, 5)} WIB.`;
+      } else {
+        const arrHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+        rejectMsg = `Saat ini di luar jam operasional hari ${arrHari[dayOfWeek]} (${timeStr.slice(0, 5)} WIB). Sesi Masuk: ${s.MASUK_MULAI.slice(0, 5)}–${s.MASUK_MAKSIMAL.slice(0, 5)} WIB. Sesi Pulang: ${s.PULANG_MULAI.slice(0, 5)}–${s.PULANG_BATAS.slice(0, 5)} WIB.`;
+      }
+
+      if (callback) {
+        callback({
+          status: "error",
+          code: isMinggu ? "HOLIDAY_OFF" : "OUT_OF_SCHEDULE",
+          message: rejectMsg,
+          student: instantStudent
+        });
+      }
+
+      speakText("Presensi ditolak. Saat ini di luar jam operasional.");
+      return;
     }
 
     const isTerlambat = isSesiMasuk && timeStr > s.MASUK_BATAS;
@@ -249,11 +288,6 @@ export const SCANNER = {
         keterlambatanMenit = Math.max(0, (hB * 60 + mB) - (hA * 60 + mA));
       } catch (e) {}
     }
-
-    // Cari data siswa di memori lokal untuk respon instan 0ms
-    const instantStudent = (typeof API.findStudentLocally === 'function') 
-      ? API.findStudentLocally(cleanBarcode) 
-      : null;
 
     if (instantStudent) {
       // 1. Instan Bunyi Beep (< 5ms)
@@ -270,17 +304,22 @@ export const SCANNER = {
             jenis_sesi: isSesiPulang ? "PULANG" : "MASUK",
             status_kehadiran: isTerlambat ? "TERLAMBAT" : "HADIR",
             jam_scan: timeStr,
-            keterlambatan_menit: keterlambatanMenit
+            keterlambatan_menit: keterlambatanMenit,
+            is_bypass: isBypass
           }
         });
       }
 
       // 3. Suara Text-to-Speech Langsung Menyapa Nama Siswa (< 15ms)
-      const voiceGreeting = isSesiMasuk
-        ? (isTerlambat 
-            ? `Selamat pagi ${instantStudent.nama_lengkap}. Anda terlambat ${keterlambatanMenit} menit.`
-            : `Selamat pagi ${instantStudent.nama_lengkap}. Tepat waktu.`)
-        : `Terima kasih ${instantStudent.nama_lengkap}. Selamat jalan dan hati-hati.`;
+      const voiceGreeting = isBypass
+        ? (isSesiMasuk 
+            ? `Halo ${instantStudent.nama_lengkap}. Mode uji coba presensi masuk berhasil.` 
+            : `Halo ${instantStudent.nama_lengkap}. Mode uji coba presensi pulang berhasil.`)
+        : (isSesiMasuk
+            ? (isTerlambat 
+                ? `Selamat pagi ${instantStudent.nama_lengkap}. Anda terlambat ${keterlambatanMenit} menit.`
+                : `Selamat pagi ${instantStudent.nama_lengkap}. Tepat waktu.`)
+            : `Terima kasih ${instantStudent.nama_lengkap}. Selamat jalan dan hati-hati.`);
       speakText(voiceGreeting);
     } else {
       playAudioBeep("success");
