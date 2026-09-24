@@ -178,6 +178,7 @@ function initCmsNavigation() {
       // Lifecycle hooks on CMS view enter
       if (targetViewId === "cms-view-dashboard") ADMIN.loadDashboard();
       if (targetViewId === "cms-view-students") ADMIN.loadStudents();
+      if (targetViewId === "cms-view-teachers") ADMIN.loadTeachers();
       if (targetViewId === "cms-view-cards") CARD_GENERATOR.renderFolderView();
       if (targetViewId === "cms-view-schedule") SCHEDULE_PAGE.init();
       if (targetViewId === "cms-view-rekap") {
@@ -655,6 +656,23 @@ window.openAddStudentModal = function(preselectedClassId = "") {
     if (select) select.value = preselectedClassId;
   }
   openModal("modal-student-form");
+};
+
+// Teacher Global Bridges
+window.openAddTeacherModal = function() {
+  if (window.ADMIN && window.ADMIN.openAddTeacherModal) window.ADMIN.openAddTeacherModal();
+};
+
+window.openImportTeacherModal = function() {
+  if (window.ADMIN && window.ADMIN.openImportTeacherModal) window.ADMIN.openImportTeacherModal();
+};
+
+window.editTeacher = function(idGuru) {
+  if (window.ADMIN && window.ADMIN.openEditTeacherModal) window.ADMIN.openEditTeacherModal(idGuru);
+};
+
+window.deleteTeacher = function(idGuru, encodedNama) {
+  if (window.ADMIN && window.ADMIN.deleteTeacher) window.ADMIN.deleteTeacher(idGuru, encodedNama);
 };
 
 // 7. Settings View

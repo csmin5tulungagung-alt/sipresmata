@@ -1,0 +1,9 @@
+nip,nama_guru,jenis_kelamin,jabatan,tugas_tambahan,id_kelas_wali,no_hp,status_kepegawaian
+197508122005011003,"Drs. H. Ahmad Fauzi, M.Pd.I",L,Kepala Madrasah,Penanggung Jawab,,081234567901,PNS
+198203152009012011,"Siti Nurjanah, S.Pd.I",P,Guru Kelas,Wali Kelas 1A,KLS-1A,081234567902,PNS
+198511202010011018,"Moch. Zainuri, S.Pd",L,Guru Kelas,Wali Kelas 6B,KLS-6B,081234567903,PNS
+199004182023212025,"Rina Wahyuni, S.Pd",P,Guru PJOK,Pembina UKS,,081234567904,PPPK
+-,"Fajar Shodiq, S.Hum",L,Guru Bahasa Arab,Guru Piket,,081234567905,GTT
+198807122019032014,"Nurul Hidayati, S.Pd.I",P,Guru PAI,Wali Kelas 3A,KLS-3A,081234567906,PNS
+-,"Bambang Supriyanto, S.Pd",L,Guru Kelas,Wali Kelas 4B,KLS-4B,081234567907,Honorer
+-,"Dewi Sartika, S.E",P,Tenaga Kependidikan,Staff Tata Usaha & Kepegawaian,,081234567908,Honorer

@@ -207,6 +207,10 @@
         <button class="cms-nav-link" data-target="cms-view-students">
           <span class="nav-icon">👥</span> Data Master Siswa
         </button>
+
+        <button class="cms-nav-link" data-target="cms-view-teachers">
+          <span class="nav-icon">👨‍🏫</span> Data Master Guru
+        </button>
         
         <button class="cms-nav-link" data-target="cms-view-rekap">
           <span class="nav-icon">📑</span> Rekapitulasi & Laporan
@@ -594,6 +598,126 @@
             </div>
           </div>
 
+        </section>
+
+        <!-- ------------------------------------------------------------------
+             CMS VIEW 2B: DATA MASTER GURU & TENAGA KEPENDIDIKAN
+             ------------------------------------------------------------------ -->
+        <section id="cms-view-teachers" class="cms-view-section">
+          <div class="cms-page-header">
+            <div>
+              <h2>👨‍🏫 Data Master Guru & Staf MIN 5</h2>
+              <p>Kelola data profil tenaga pendidik, wali kelas, NIP/NUPTK, dan kontak WhatsApp guru.</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary" onclick="ADMIN.exportTeachersExcel()" title="Ekspor data guru ke file Excel">
+                📤 Export Excel
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="ADMIN.openImportTeacherModal()" title="Import data guru dari file Excel / CSV">
+                📥 Import Excel / CSV
+              </button>
+              <button type="button" class="btn btn-primary" onclick="ADMIN.openAddTeacherModal()">
+                ➕ Tambah Guru Baru
+              </button>
+            </div>
+          </div>
+
+          <!-- Metrik Ringkasan Guru -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="stat-card" style="border-left: 4px solid #10b981;">
+              <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">👨‍🏫</div>
+              <div class="stat-info">
+                <span class="stat-label">Total Guru & Staf</span>
+                <h3 class="stat-value" id="stat-teacher-total">0</h3>
+                <span class="stat-sub" style="color: #34d399;">Tenaga Pendidik Aktif</span>
+              </div>
+            </div>
+
+            <div class="stat-card" style="border-left: 4px solid #3b82f6;">
+              <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">🏛️</div>
+              <div class="stat-info">
+                <span class="stat-label">Guru PNS / PPPK</span>
+                <h3 class="stat-value" id="stat-teacher-asn">0</h3>
+                <span class="stat-sub" style="color: #60a5fa;">Aparatur Sipil Negara</span>
+              </div>
+            </div>
+
+            <div class="stat-card" style="border-left: 4px solid #f59e0b;">
+              <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">💼</div>
+              <div class="stat-info">
+                <span class="stat-label">Guru Non-PNS / GTT</span>
+                <h3 class="stat-value" id="stat-teacher-gtt">0</h3>
+                <span class="stat-sub" style="color: #fbbf24;">GTT & Guru Yayasan/Honor</span>
+              </div>
+            </div>
+
+            <div class="stat-card" style="border-left: 4px solid #8b5cf6;">
+              <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">🏫</div>
+              <div class="stat-info">
+                <span class="stat-label">Wali Kelas Terisi</span>
+                <h3 class="stat-value" id="stat-teacher-wali">0</h3>
+                <span class="stat-sub" style="color: #a78bfa;">Dari 24 Rombel Madrasah</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Table Wrapper -->
+          <div class="card-table-wrapper">
+            <!-- Filter & Search Bar -->
+            <div class="table-filter-bar" style="margin-bottom: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; flex: 1;">
+                <input type="text" id="search-teacher-input" class="form-control" placeholder="Cari nama guru, NIP, atau wali kelas..." style="min-width: 250px; flex: 1;" oninput="ADMIN.handleTeacherSearch(this.value)">
+
+                <select id="filter-teacher-jabatan" class="form-control" style="font-weight: 600;" onchange="ADMIN.handleTeacherFilter()">
+                  <option value="ALL">Semua Jabatan</option>
+                  <option value="Kepala Madrasah">Kepala Madrasah</option>
+                  <option value="Guru Kelas">Guru Kelas</option>
+                  <option value="Guru Mapel">Guru Mapel</option>
+                  <option value="Guru PAI">Guru PAI</option>
+                  <option value="Guru PJOK">Guru PJOK</option>
+                  <option value="Guru Bahasa Arab">Guru Bahasa Arab</option>
+                  <option value="Tenaga Kependidikan">Tenaga Kependidikan / TU</option>
+                </select>
+
+                <select id="filter-teacher-status" class="form-control" style="font-weight: 600;" onchange="ADMIN.handleTeacherFilter()">
+                  <option value="ALL">Semua Status Pegawai</option>
+                  <option value="PNS">PNS</option>
+                  <option value="PPPK">PPPK</option>
+                  <option value="GTT">GTT / Non-PNS</option>
+                  <option value="Honorer">Honorer</option>
+                </select>
+              </div>
+
+              <button type="button" class="btn btn-secondary btn-icon" onclick="ADMIN.loadTeachers(true)" title="Refresh Data Guru">
+                🔄
+              </button>
+            </div>
+
+            <!-- Tabel Data Guru -->
+            <div style="overflow-x: auto;">
+              <table class="custom-data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 5%; text-align: center;">No</th>
+                    <th>Nama Lengkap & NIP</th>
+                    <th style="width: 8%; text-align: center;">L/P</th>
+                    <th>Jabatan Utama</th>
+                    <th>Tugas / Wali Kelas</th>
+                    <th>No. WhatsApp</th>
+                    <th style="text-align: center;">Status Pegawai</th>
+                    <th style="text-align: center;">Status</th>
+                    <th style="width: 12%; text-align: center;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="teachers-table-body">
+                  <!-- Injected via JavaScript -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Pagination Data Guru -->
+            <div id="teachers-pagination" class="table-pagination-container"></div>
+          </div>
         </section>
 
         <!-- ------------------------------------------------------------------
@@ -1751,6 +1875,175 @@
       <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
         <span id="zip-progress-status">Memulai perenderan...</span>
         <strong id="zip-progress-percent" style="color: #34d399;">0%</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Tambah / Edit Guru -->
+  <div id="modal-teacher-form" class="modal-overlay">
+    <div class="modal-card" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="teacher-modal-title">👨‍🏫 Tambah Guru Baru</h3>
+        <button type="button" class="btn btn-secondary btn-icon" onclick="window.closeModal('modal-teacher-form')">✕</button>
+      </div>
+
+      <form id="form-teacher-modal" onsubmit="ADMIN.saveTeacherForm(event)">
+        <input type="hidden" id="teacher-modal-id">
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div style="grid-column: span 2;">
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+              Nama Lengkap & Gelar: <span style="color: #f87171;">*</span>
+            </label>
+            <input type="text" id="teacher-modal-nama" class="form-control" style="width: 100%;" placeholder="Contoh: Drs. H. Ahmad Fauzi, M.Pd.I" required>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+              NIP / NUPTK (Opsional):
+            </label>
+            <input type="text" id="teacher-modal-nip" class="form-control" style="width: 100%;" placeholder="19800512... atau -">
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+              Jenis Kelamin: <span style="color: #f87171;">*</span>
+            </label>
+            <select id="teacher-modal-jk" class="form-control" style="width: 100%;">
+              <option value="L">Laki-laki (L)</option>
+              <option value="P">Perempuan (P)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+              Jabatan Utama: <span style="color: #f87171;">*</span>
+            </label>
+            <select id="teacher-modal-jabatan" class="form-control" style="width: 100%;">
+              <option value="Guru Kelas">Guru Kelas</option>
+              <option value="Guru Mapel">Guru Mapel</option>
+              <option value="Guru PAI">Guru PAI</option>
+              <option value="Guru PJOK">Guru PJOK</option>
+              <option value="Guru Bahasa Arab">Guru Bahasa Arab</option>
+              <option value="Guru Quran Hadits">Guru Quran Hadits</option>
+              <option value="Kepala Madrasah">Kepala Madrasah</option>
+              <option value="Tenaga Kependidikan">Tenaga Kependidikan / TU</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+              Status Kepegawaian:
+            </label>
+            <select id="teacher-modal-status-pegawai" class="form-control" style="width: 100%;">
+              <option value="PNS">PNS (Pegawai Negeri Sipil)</option>
+              <option value="PPPK">PPPK</option>
+              <option value="GTT">GTT (Guru Tidak Tetap)</option>
+              <option value="Honorer">Honorer</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+              Wali Kelas Binaan:
+            </label>
+            <select id="teacher-modal-wali" class="form-control" style="width: 100%;">
+              <option value="">- Bukan Wali Kelas -</option>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+              Tugas Tambahan:
+            </label>
+            <input type="text" id="teacher-modal-tugas" class="form-control" style="width: 100%;" placeholder="Contoh: Guru Piket, Pembina Pramuka">
+          </div>
+
+          <div style="grid-column: span 2;">
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;">
+              No. WhatsApp / HP Guru:
+            </label>
+            <input type="text" id="teacher-modal-hp" class="form-control" style="width: 100%;" placeholder="Contoh: 081234567890">
+            <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-top: 0.25rem;">
+              Digunakan untuk koordinasi madrasah dan komunikasi dengan wali murid.
+            </span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1.25rem;">
+          <label style="display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
+            <input type="checkbox" id="teacher-modal-aktif" class="table-checkbox" checked>
+            <span>Status Guru Aktif Mengajar di MIN 5</span>
+          </label>
+        </div>
+
+        <button type="submit" id="btn-submit-teacher-form" class="btn btn-primary" style="width: 100%; padding: 0.7rem; font-weight: 700;">
+          💾 Simpan Data Guru
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Import Guru Excel / CSV -->
+  <div id="modal-import-teacher" class="modal-overlay">
+    <div class="modal-card" style="max-width: 650px;">
+      <div class="modal-header">
+        <div>
+          <h3>📥 Import Data Guru & Staf (Excel / CSV)</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">Mendukung format file spreadsheet Excel (.xlsx, .xls) dan .csv resmi</p>
+        </div>
+        <button type="button" class="btn btn-secondary btn-icon" onclick="window.closeModal('modal-import-teacher')">✕</button>
+      </div>
+
+      <!-- Download Template Box -->
+      <div style="background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.25); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <strong style="color: #34d399; font-size: 0.9rem;">Unduh Template Format CSV Guru:</strong>
+          <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem;">
+            Format kolom: nip, nama_guru, jenis_kelamin, jabatan, tugas_tambahan, id_kelas_wali, no_hp, status_kepegawaian.
+          </p>
+        </div>
+        <a href="/template_import_guru.csv" download="template_import_guru_min5.csv" class="btn btn-secondary" style="font-size: 0.8rem; text-decoration: none;">
+          📄 Download Template (.csv)
+        </a>
+      </div>
+
+      <!-- Dropzone Upload -->
+      <div style="border: 2px dashed rgba(52, 211, 153, 0.4); border-radius: var(--radius-md); padding: 2rem 1.5rem; text-align: center; background: rgba(52, 211, 153, 0.02); margin-bottom: 1.25rem;">
+        <input type="file" id="input-file-import-teacher" accept=".csv, .xlsx, .xls" style="display: none;" onchange="ADMIN.handleTeacherFileSelected(this.files[0])">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📂</div>
+        <h4 style="font-size: 1rem; margin-bottom: 0.35rem;">Pilih File Excel / CSV Data Guru</h4>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Klik tombol di bawah atau seret file ke area ini
+        </p>
+        <button type="button" class="btn btn-primary" onclick="document.getElementById('input-file-import-teacher').click()">
+          🔍 Cari & Pilih File
+        </button>
+      </div>
+
+      <!-- Preview Parsed Teachers -->
+      <div id="teacher-import-preview-area" style="display: none;">
+        <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem; color: #34d399;">
+          Pratinjau Data Guru (<span id="teacher-import-preview-count">0</span> terdeteksi):
+        </h4>
+        <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 1rem;">
+          <table class="custom-data-table" style="font-size: 0.78rem;">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Nama Guru</th>
+                <th>NIP</th>
+                <th>Jabatan</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="teacher-import-preview-tbody"></tbody>
+          </table>
+        </div>
+        <button type="button" id="btn-confirm-import-teacher" class="btn btn-primary" style="width: 100%;" onclick="ADMIN.executeImportTeacher()">
+          🚀 Mulai Impor ke Database
+        </button>
       </div>
     </div>
   </div>

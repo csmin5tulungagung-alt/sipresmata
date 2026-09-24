@@ -61,6 +61,18 @@ export const ADMIN = {
     pageSize: 10
   },
 
+  teachersState: {
+    allList: [],
+    filteredList: [],
+    currentPage: 1,
+    pageSize: 10,
+    searchQuery: "",
+    jabatanFilter: "ALL",
+    statusFilter: "ALL",
+    currentEditId: null,
+    pendingImportTeachers: []
+  },
+
   // ==========================================================================
   // 1. REUSABLE PAGINATION GENERATOR
   // ==========================================================================
@@ -2133,6 +2145,461 @@ export const ADMIN = {
     select.innerHTML = `<option value="">-- Pilih Nama Siswa --</option>` + list.map(s => `
       <option value="${s.id_siswa}">${s.nama_lengkap} (${s.nama_kelas || s.id_kelas} - ${s.nisn})</option>
     `).join("");
+  },
+
+  // ==========================================================================
+  // 7. MASTER DATA GURU & TENAGA KEPENDIDIKAN
+  // ==========================================================================
+  async loadTeachers(forceRefresh = false) {
+    const tbody = document.getElementById("teachers-table-body");
+    if (tbody && (!this.teachersState.allList || this.teachersState.allList.length === 0)) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2.5rem;"><div style="font-size:1.8rem;animation:spin 1s infinite linear;display:inline-block;margin-bottom:0.5rem;">⏳</div><div style="color:var(--text-muted);font-weight:600;">Memuat data guru MIN 5...</div></td></tr>`;
+    }
+
+    try {
+      const res = await API.getGuru(forceRefresh);
+      if (res && res.status === "success" && Array.isArray(res.data)) {
+        this.teachersState.allList = res.data;
+        this.filterTeachers();
+        this.updateTeacherStats();
+      }
+    } catch (err) {
+      console.warn("Gagal memuat guru:", err);
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:1.5rem;color:#f87171;">Gagal memuat data guru. Silakan coba lagi.</td></tr>`;
+      }
+    }
+  },
+
+  updateTeacherStats() {
+    const list = this.teachersState.allList || [];
+    const total = list.filter(g => g.status_aktif !== false).length;
+    const asn = list.filter(g => (g.status_kepegawaian === "PNS" || g.status_kepegawaian === "PPPK") && g.status_aktif !== false).length;
+    const gtt = list.filter(g => (g.status_kepegawaian === "GTT" || g.status_kepegawaian === "Honorer") && g.status_aktif !== false).length;
+    const wali = list.filter(g => g.id_kelas_wali && g.status_aktif !== false).length;
+
+    const elTotal = document.getElementById("stat-teacher-total");
+    const elAsn = document.getElementById("stat-teacher-asn");
+    const elGtt = document.getElementById("stat-teacher-gtt");
+    const elWali = document.getElementById("stat-teacher-wali");
+
+    if (elTotal) elTotal.textContent = total;
+    if (elAsn) elAsn.textContent = asn;
+    if (elGtt) elGtt.textContent = gtt;
+    if (elWali) elWali.textContent = wali;
+  },
+
+  handleTeacherSearch(query) {
+    this.teachersState.searchQuery = (query || "").trim().toLowerCase();
+    this.teachersState.currentPage = 1;
+    this.filterTeachers();
+  },
+
+  handleTeacherFilter() {
+    const elJabatan = document.getElementById("filter-teacher-jabatan");
+    const elStatus = document.getElementById("filter-teacher-status");
+    this.teachersState.jabatanFilter = elJabatan ? elJabatan.value : "ALL";
+    this.teachersState.statusFilter = elStatus ? elStatus.value : "ALL";
+    this.teachersState.currentPage = 1;
+    this.filterTeachers();
+  },
+
+  filterTeachers() {
+    let list = this.teachersState.allList || [];
+    const q = this.teachersState.searchQuery;
+    const j = this.teachersState.jabatanFilter;
+    const s = this.teachersState.statusFilter;
+
+    if (q) {
+      list = list.filter(g => 
+        (g.nama_guru && g.nama_guru.toLowerCase().includes(q)) ||
+        (g.nip && g.nip.toLowerCase().includes(q)) ||
+        (g.jabatan && g.jabatan.toLowerCase().includes(q)) ||
+        (g.tugas_tambahan && g.tugas_tambahan.toLowerCase().includes(q)) ||
+        (g.id_kelas_wali && g.id_kelas_wali.toLowerCase().includes(q))
+      );
+    }
+
+    if (j && j !== "ALL") {
+      list = list.filter(g => g.jabatan === j);
+    }
+
+    if (s && s !== "ALL") {
+      list = list.filter(g => g.status_kepegawaian === s);
+    }
+
+    this.teachersState.filteredList = list;
+    this.renderTeachersTable();
+  },
+
+  renderTeachersTable() {
+    const tbody = document.getElementById("teachers-table-body");
+    if (!tbody) return;
+
+    const list = this.teachersState.filteredList || [];
+    const total = list.length;
+
+    if (total === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2.5rem;color:var(--text-muted);"><div style="font-size:2rem;margin-bottom:0.5rem;">👨‍🏫</div>Tidak ada data guru yang sesuai dengan filter pencarian.</td></tr>`;
+      this.renderPagination("teachers-pagination", 0, 1, 10, () => {}, () => {});
+      return;
+    }
+
+    const page = this.teachersState.currentPage || 1;
+    const size = this.teachersState.pageSize || 10;
+    const startIndex = (page - 1) * size;
+    const paged = list.slice(startIndex, startIndex + size);
+
+    tbody.innerHTML = paged.map((g, idx) => {
+      const rowNum = startIndex + idx + 1;
+      const isAktif = g.status_aktif !== false;
+      const initial = (g.nama_guru || "G").charAt(0).toUpperCase();
+
+      let badgePegawai = `<span class="badge badge-success">PNS</span>`;
+      if (g.status_kepegawaian === "PPPK") badgePegawai = `<span class="badge" style="background:#3b82f6;color:#fff;">PPPK</span>`;
+      else if (g.status_kepegawaian === "GTT") badgePegawai = `<span class="badge" style="background:#f59e0b;color:#fff;">GTT</span>`;
+      else if (g.status_kepegawaian === "Honorer") badgePegawai = `<span class="badge" style="background:#64748b;color:#fff;">Honor</span>`;
+
+      const rombel = CONFIG.ROMBEL_LIST.find(r => r.id === g.id_kelas_wali);
+      const namaWaliKelas = rombel ? rombel.nama : (g.id_kelas_wali || "-");
+      const cleanHp = (g.no_hp || "").replace(/[^0-9]/g, "");
+      const waLink = cleanHp ? `https://wa.me/${cleanHp.startsWith("0") ? "62" + cleanHp.slice(1) : cleanHp}` : "";
+
+      return `
+        <tr>
+          <td style="text-align: center; font-weight: 600;">${rowNum}</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <div style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #059669, #10b981); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem; flex-shrink: 0;">
+                ${initial}
+              </div>
+              <div>
+                <strong style="color: var(--text-main); font-size: 0.9rem; display: block;">${g.nama_guru}</strong>
+                <span style="font-size: 0.75rem; color: var(--text-muted); font-family: monospace;">NIP: ${g.nip || '-'}</span>
+              </div>
+            </div>
+          </td>
+          <td style="text-align: center;">
+            <span class="badge ${g.jenis_kelamin === 'P' ? 'badge-pink' : 'badge-blue'}" style="font-size: 0.72rem;">
+              ${g.jenis_kelamin === 'P' ? 'P (Wanita)' : 'L (Pria)'}
+            </span>
+          </td>
+          <td>
+            <span style="font-weight: 600; color: #34d399;">${g.jabatan || 'Guru'}</span>
+          </td>
+          <td>
+            <div>
+              <span style="font-size: 0.85rem; font-weight: 500;">${g.tugas_tambahan || '-'}</span>
+              ${g.id_kelas_wali ? `<span class="badge" style="display: inline-block; margin-top: 0.2rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 0.7rem;">Wali ${namaWaliKelas}</span>` : ''}
+            </div>
+          </td>
+          <td>
+            ${waLink ? `
+              <a href="${waLink}" target="_blank" style="display: inline-flex; align-items: center; gap: 0.3rem; color: #25d366; text-decoration: none; font-size: 0.82rem; font-weight: 600;">
+                <span>💬</span> ${g.no_hp}
+              </a>
+            ` : `<span style="color: var(--text-muted); font-size: 0.8rem;">-</span>`}
+          </td>
+          <td style="text-align: center;">${badgePegawai}</td>
+          <td style="text-align: center;">
+            <span class="badge ${isAktif ? 'badge-success' : 'badge-danger'}" style="font-size: 0.72rem;">
+              ${isAktif ? '● Aktif' : '○ Purna'}
+            </span>
+          </td>
+          <td style="text-align: center;">
+            <div style="display: inline-flex; gap: 0.35rem;">
+              <button type="button" class="btn btn-secondary btn-icon" style="height: 30px; width: 30px; font-size: 0.85rem;" onclick="ADMIN.openEditTeacherModal('${g.id_guru}')" title="Edit Guru">
+                ✏️
+              </button>
+              <button type="button" class="btn btn-secondary btn-icon" style="height: 30px; width: 30px; font-size: 0.85rem; color: #f87171;" onclick="ADMIN.deleteTeacher('${g.id_guru}', '${encodeURIComponent(g.nama_guru)}')" title="Hapus Guru">
+                🗑️
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    this.renderPagination(
+      "teachers-pagination",
+      total,
+      page,
+      size,
+      (newPage) => {
+        this.teachersState.currentPage = newPage;
+        this.renderTeachersTable();
+      },
+      (newSize) => {
+        this.teachersState.pageSize = newSize;
+        this.teachersState.currentPage = 1;
+        this.renderTeachersTable();
+      }
+    );
+  },
+
+  populateTeacherWaliSelect(selectedVal = "") {
+    const select = document.getElementById("teacher-modal-wali");
+    if (!select) return;
+
+    let opts = `<option value="">- Bukan Wali Kelas -</option>`;
+    CONFIG.ROMBEL_LIST.forEach(r => {
+      opts += `<option value="${r.id}" ${r.id === selectedVal ? 'selected' : ''}>Wali ${r.nama}</option>`;
+    });
+    select.innerHTML = opts;
+  },
+
+  openAddTeacherModal() {
+    this.teachersState.currentEditId = null;
+    const title = document.getElementById("teacher-modal-title");
+    if (title) title.textContent = "👨‍🏫 Tambah Guru Baru";
+
+    document.getElementById("teacher-modal-id").value = "";
+    document.getElementById("teacher-modal-nama").value = "";
+    document.getElementById("teacher-modal-nip").value = "";
+    document.getElementById("teacher-modal-jk").value = "L";
+    document.getElementById("teacher-modal-jabatan").value = "Guru Kelas";
+    document.getElementById("teacher-modal-status-pegawai").value = "PNS";
+    document.getElementById("teacher-modal-tugas").value = "";
+    document.getElementById("teacher-modal-hp").value = "";
+    document.getElementById("teacher-modal-aktif").checked = true;
+
+    this.populateTeacherWaliSelect("");
+    if (typeof window.openModal === "function") window.openModal("modal-teacher-form");
+  },
+
+  openEditTeacherModal(idGuru) {
+    const list = this.teachersState.allList || [];
+    const g = list.find(item => item.id_guru === idGuru);
+    if (!g) return;
+
+    this.teachersState.currentEditId = idGuru;
+    const title = document.getElementById("teacher-modal-title");
+    if (title) title.textContent = "✏️ Edit Data Guru: " + g.nama_guru;
+
+    document.getElementById("teacher-modal-id").value = g.id_guru;
+    document.getElementById("teacher-modal-nama").value = g.nama_guru || "";
+    document.getElementById("teacher-modal-nip").value = g.nip && g.nip !== "-" ? g.nip : "";
+    document.getElementById("teacher-modal-jk").value = g.jenis_kelamin || "L";
+    document.getElementById("teacher-modal-jabatan").value = g.jabatan || "Guru Kelas";
+    document.getElementById("teacher-modal-status-pegawai").value = g.status_kepegawaian || "PNS";
+    document.getElementById("teacher-modal-tugas").value = g.tugas_tambahan && g.tugas_tambahan !== "-" ? g.tugas_tambahan : "";
+    document.getElementById("teacher-modal-hp").value = g.no_hp || "";
+    document.getElementById("teacher-modal-aktif").checked = g.status_aktif !== false;
+
+    this.populateTeacherWaliSelect(g.id_kelas_wali || "");
+    if (typeof window.openModal === "function") window.openModal("modal-teacher-form");
+  },
+
+  async saveTeacherForm(e) {
+    if (e && e.preventDefault) e.preventDefault();
+
+    const idGuru = document.getElementById("teacher-modal-id").value;
+    const nama = document.getElementById("teacher-modal-nama").value.trim();
+    const nip = document.getElementById("teacher-modal-nip").value.trim() || "-";
+    const jk = document.getElementById("teacher-modal-jk").value;
+    const jabatan = document.getElementById("teacher-modal-jabatan").value;
+    const statusPegawai = document.getElementById("teacher-modal-status-pegawai").value;
+    const idKelasWali = document.getElementById("teacher-modal-wali").value;
+    const tugas = document.getElementById("teacher-modal-tugas").value.trim() || (idKelasWali ? `Wali ${idKelasWali.replace('KLS-', 'Kelas ')}` : "-");
+    const hp = document.getElementById("teacher-modal-hp").value.trim();
+    const aktif = document.getElementById("teacher-modal-aktif").checked;
+
+    if (!nama) {
+      alert("Nama lengkap guru wajib diisi.");
+      return;
+    }
+
+    const payload = {
+      id_guru: idGuru,
+      nama_guru: nama,
+      nip: nip,
+      jenis_kelamin: jk,
+      jabatan: jabatan,
+      status_kepegawaian: statusPegawai,
+      id_kelas_wali: idKelasWali,
+      tugas_tambahan: tugas,
+      no_hp: hp,
+      status_aktif: aktif
+    };
+
+    const btnSubmit = document.getElementById("btn-submit-teacher-form");
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = "⏳ Menyimpan...";
+    }
+
+    try {
+      const res = await API.saveGuru(payload);
+      if (typeof window.closeModal === "function") window.closeModal("modal-teacher-form");
+      const toastFn = window.showToast || alert;
+      toastFn(res.message || "✓ Data guru berhasil disimpan.", "success");
+      await this.loadTeachers(true);
+    } catch (err) {
+      alert("Gagal menyimpan guru: " + err.message);
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = "💾 Simpan Data Guru";
+      }
+    }
+  },
+
+  async deleteTeacher(idGuru, encodedNama) {
+    const nama = decodeURIComponent(encodedNama || "guru ini");
+    if (!confirm(`Apakah Anda yakin ingin menghapus data ${nama}?`)) return;
+
+    try {
+      const res = await API.deleteGuru(idGuru);
+      const toastFn = window.showToast || alert;
+      toastFn(res.message || `✓ Guru ${nama} berhasil dihapus.`, "success");
+      await this.loadTeachers(true);
+    } catch (err) {
+      alert("Gagal menghapus data guru: " + err.message);
+    }
+  },
+
+  exportTeachersExcel() {
+    const list = this.teachersState.filteredList || this.teachersState.allList || [];
+    if (!list || list.length === 0) {
+      alert("Tidak ada data guru untuk diekspor.");
+      return;
+    }
+
+    const exportRows = list.map((g, idx) => ({
+      "No": idx + 1,
+      "ID Guru": g.id_guru,
+      "NIP / NUPTK": g.nip || "-",
+      "Nama Guru": g.nama_guru,
+      "L/P": g.jenis_kelamin,
+      "Jabatan Utama": g.jabatan,
+      "Tugas Tambahan": g.tugas_tambahan || "-",
+      "Wali Kelas": g.id_kelas_wali || "-",
+      "No. WhatsApp": g.no_hp || "-",
+      "Status Pegawai": g.status_kepegawaian,
+      "Kode Barcode": g.kode_barcode,
+      "Status Aktif": g.status_aktif !== false ? "AKTIF" : "NON-AKTIF"
+    }));
+
+    if (typeof XLSX !== "undefined") {
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Master Guru");
+      XLSX.writeFile(wb, `master_guru_min5_${new Date().toISOString().split("T")[0]}.xlsx`);
+    } else {
+      EXPORT.downloadCSV(exportRows, `master_guru_min5_${new Date().toISOString().split("T")[0]}.csv`);
+    }
+  },
+
+  openImportTeacherModal() {
+    this.teachersState.pendingImportTeachers = [];
+    const previewArea = document.getElementById("teacher-import-preview-area");
+    const input = document.getElementById("input-file-import-teacher");
+    if (previewArea) previewArea.style.display = "none";
+    if (input) input.value = "";
+    if (typeof window.openModal === "function") window.openModal("modal-import-teacher");
+  },
+
+  handleTeacherFileSelected(file) {
+    if (!file) return;
+
+    const reader = new FileReader();
+    const isExcel = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
+
+    reader.onload = (e) => {
+      try {
+        let rows = [];
+        if (isExcel && typeof XLSX !== "undefined") {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
+        } else {
+          // Parse CSV
+          const text = e.target.result;
+          const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+          if (lines.length > 1) {
+            const headers = lines[0].split(",").map(h => h.trim().replace(/^["']|["']$/g, "").toLowerCase());
+            for (let i = 1; i < lines.length; i++) {
+              const cols = lines[i].split(",").map(c => c.trim().replace(/^["']|["']$/g, ""));
+              const rowObj = {};
+              headers.forEach((h, colIdx) => {
+                rowObj[h] = cols[colIdx] || "";
+              });
+              rows.push(rowObj);
+            }
+          }
+        }
+
+        const parsedTeachers = rows.map(r => ({
+          nip: r.nip || r.NIP || r["nip / nuptk"] || "-",
+          nama_guru: r.nama_guru || r.nama || r.NAMA || r["nama lengkap"] || "",
+          jenis_kelamin: (r.jenis_kelamin || r.jk || r.JK || "L").toUpperCase().startsWith("P") ? "P" : "L",
+          jabatan: r.jabatan || r.JABATAN || "Guru Kelas",
+          tugas_tambahan: r.tugas_tambahan || r.tugas || "-",
+          id_kelas_wali: r.id_kelas_wali || r.wali_kelas || "",
+          no_hp: r.no_hp || r.hp || r.telepon || "",
+          status_kepegawaian: r.status_kepegawaian || r.status || "PNS"
+        })).filter(t => t.nama_guru.length > 0);
+
+        this.teachersState.pendingImportTeachers = parsedTeachers;
+
+        const countEl = document.getElementById("teacher-import-preview-count");
+        const tbody = document.getElementById("teacher-import-preview-tbody");
+        const previewArea = document.getElementById("teacher-import-preview-area");
+
+        if (countEl) countEl.textContent = parsedTeachers.length;
+        if (tbody) {
+          tbody.innerHTML = parsedTeachers.slice(0, 10).map((t, idx) => `
+            <tr>
+              <td>${idx + 1}</td>
+              <td><strong>${t.nama_guru}</strong></td>
+              <td>${t.nip}</td>
+              <td>${t.jabatan}</td>
+              <td><span class="badge badge-success">${t.status_kepegawaian}</span></td>
+            </tr>
+          `).join("");
+        }
+        if (previewArea) previewArea.style.display = "block";
+
+      } catch (err) {
+        alert("Gagal membaca file: " + err.message);
+      }
+    };
+
+    if (isExcel) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file, "UTF-8");
+    }
+  },
+
+  async executeImportTeacher() {
+    const list = this.teachersState.pendingImportTeachers || [];
+    if (list.length === 0) {
+      alert("Tidak ada data guru yang terbaca.");
+      return;
+    }
+
+    const btn = document.getElementById("btn-confirm-import-teacher");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = `⏳ Mengimpor ${list.length} guru...`;
+    }
+
+    try {
+      const res = await API.batchImportGuru(list);
+      if (typeof window.closeModal === "function") window.closeModal("modal-import-teacher");
+      const toastFn = window.showToast || alert;
+      toastFn(res.message || `✓ Berhasil mengimpor ${list.length} guru.`, "success");
+      await this.loadTeachers(true);
+    } catch (err) {
+      alert("Gagal import data guru: " + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "🚀 Mulai Impor ke Database";
+      }
+    }
   }
 };
 

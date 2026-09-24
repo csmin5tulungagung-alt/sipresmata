@@ -21,10 +21,18 @@ let localStudents = JSON.parse(localStorage.getItem("SIPRESMATA_LOCAL_STUDENTS")
 ];
 
 let localAttendance = JSON.parse(localStorage.getItem("SIPRESMATA_LOCAL_ATTENDANCE")) || [];
+let localTeachers = JSON.parse(localStorage.getItem("SIPRESMATA_LOCAL_TEACHERS")) || [
+  { id_guru: "GURU-001", nip: "197508122005011003", nama_guru: "Drs. H. Ahmad Fauzi, M.Pd.I", jenis_kelamin: "L", jabatan: "Kepala Madrasah", tugas_tambahan: "Penanggung Jawab", id_kelas_wali: "", no_hp: "081234567901", status_kepegawaian: "PNS", kode_barcode: "GURU-19750812", status_aktif: true },
+  { id_guru: "GURU-002", nip: "198203152009012011", nama_guru: "Siti Nurjanah, S.Pd.I", jenis_kelamin: "P", jabatan: "Guru Kelas", tugas_tambahan: "Wali Kelas 1A", id_kelas_wali: "KLS-1A", no_hp: "081234567902", status_kepegawaian: "PNS", kode_barcode: "GURU-19820315", status_aktif: true },
+  { id_guru: "GURU-003", nip: "198511202010011018", nama_guru: "Moch. Zainuri, S.Pd", jenis_kelamin: "L", jabatan: "Guru Kelas", tugas_tambahan: "Wali Kelas 6B", id_kelas_wali: "KLS-6B", no_hp: "081234567903", status_kepegawaian: "PNS", kode_barcode: "GURU-19851120", status_aktif: true },
+  { id_guru: "GURU-004", nip: "199004182023212025", nama_guru: "Rina Wahyuni, S.Pd", jenis_kelamin: "P", jabatan: "Guru PJOK", tugas_tambahan: "Pembina UKS", id_kelas_wali: "", no_hp: "081234567904", status_kepegawaian: "PPPK", kode_barcode: "GURU-19900418", status_aktif: true },
+  { id_guru: "GURU-005", nip: "-", nama_guru: "Fajar Shodiq, S.Hum", jenis_kelamin: "L", jabatan: "Guru Bahasa Arab", tugas_tambahan: "Guru Piket", id_kelas_wali: "", no_hp: "081234567905", status_kepegawaian: "GTT", kode_barcode: "GURU-99001", status_aktif: true }
+];
 
 function saveLocalState() {
   localStorage.setItem("SIPRESMATA_LOCAL_STUDENTS", JSON.stringify(localStudents));
   localStorage.setItem("SIPRESMATA_LOCAL_ATTENDANCE", JSON.stringify(localAttendance));
+  localStorage.setItem("SIPRESMATA_LOCAL_TEACHERS", JSON.stringify(localTeachers));
 }
 
 function createApiError(json, fallbackMessage) {
@@ -620,6 +628,148 @@ export const API = {
     }
 
     return { status: "success", message: `${idSiswaList.length} data siswa berhasil dihapus.` };
+  },
+
+  // ==========================================================================
+  // 5B. DATA MASTER GURU & TENAGA KEPENDIDIKAN
+  // ==========================================================================
+  _cachedTeachers: null,
+  _cachedTeachersTime: 0,
+
+  invalidateGuruCache() {
+    this._cachedTeachers = null;
+    this._cachedTeachersTime = 0;
+  },
+
+  async getGuru(forceRefresh = false) {
+    const now = Date.now();
+    const isCacheValid = this._cachedTeachers && (now - this._cachedTeachersTime < 60000);
+
+    if (isCacheValid && !forceRefresh) {
+      return { status: "success", total: this._cachedTeachers.length, data: this._cachedTeachers, fromCache: true };
+    }
+
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=get_guru&_t=${Date.now()}`);
+        const json = await res.json();
+        if (json.status === "success" && Array.isArray(json.data)) {
+          this._cachedTeachers = json.data;
+          this._cachedTeachersTime = Date.now();
+          localTeachers = json.data;
+          saveLocalState();
+          return { status: "success", total: json.data.length, data: json.data };
+        }
+      } catch (err) {
+        console.warn("GAS get_guru fetch error, using local fallback:", err);
+      }
+    }
+
+    this._cachedTeachers = localTeachers;
+    this._cachedTeachersTime = Date.now();
+    return { status: "success", total: localTeachers.length, data: localTeachers };
+  },
+
+  async saveGuru(guruData) {
+    this.invalidateGuruCache();
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=save_guru`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(guruData)
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+          return json;
+        }
+      } catch (err) {
+        console.warn("GAS save_guru error, saving locally:", err);
+      }
+    }
+
+    // Local Fallback
+    if (guruData.id_guru) {
+      const idx = localTeachers.findIndex(g => g.id_guru === guruData.id_guru);
+      if (idx !== -1) {
+        localTeachers[idx] = { ...localTeachers[idx], ...guruData };
+      }
+    } else {
+      const newId = `GURU-${String(localTeachers.length + 1).padStart(3, '0')}`;
+      localTeachers.push({
+        id_guru: newId,
+        ...guruData,
+        kode_barcode: guruData.kode_barcode || `GURU-${guruData.nip || newId}`,
+        status_aktif: true,
+        created_at: new Date().toISOString()
+      });
+    }
+    saveLocalState();
+    return { status: "success", message: "Data guru berhasil disimpan." };
+  },
+
+  async deleteGuru(idGuru) {
+    this.invalidateGuruCache();
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=delete_guru`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ id_guru: idGuru })
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+          return json;
+        }
+      } catch (err) {
+        console.warn("GAS delete_guru error:", err);
+      }
+    }
+
+    localTeachers = localTeachers.filter(g => g.id_guru !== idGuru);
+    saveLocalState();
+    return { status: "success", message: "Data guru berhasil dihapus." };
+  },
+
+  async batchImportGuru(teachersList) {
+    this.invalidateGuruCache();
+    if (CONFIG.DEFAULT_API_URL) {
+      try {
+        const res = await fetch(`${CONFIG.DEFAULT_API_URL}?action=batch_import_guru`, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ teachers: teachersList })
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+          return json;
+        }
+      } catch (err) {
+        console.warn("GAS batch_import_guru error:", err);
+      }
+    }
+
+    let added = 0;
+    teachersList.forEach(t => {
+      const newId = `GURU-${String(localTeachers.length + 1).padStart(3, '0')}`;
+      localTeachers.push({
+        id_guru: newId,
+        nip: t.nip || "-",
+        nama_guru: t.nama_guru || t.nama || "Guru Baru",
+        jenis_kelamin: t.jenis_kelamin || "L",
+        jabatan: t.jabatan || "Guru Kelas",
+        tugas_tambahan: t.tugas_tambahan || "-",
+        id_kelas_wali: t.id_kelas_wali || "",
+        no_hp: t.no_hp || "",
+        status_kepegawaian: t.status_kepegawaian || "PNS",
+        kode_barcode: `GURU-${t.nip || newId}`,
+        status_aktif: true,
+        created_at: new Date().toISOString()
+      });
+      added++;
+    });
+    saveLocalState();
+    return { status: "success", message: `Berhasil mengimpor ${added} guru baru.` };
   },
 
   // 6. Manual Absen

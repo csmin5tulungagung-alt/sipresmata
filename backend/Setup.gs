@@ -48,6 +48,9 @@ function setupDatabaseSIPRESMATA() {
   // 6. Setup Sheet: log_aktivitas
   setupSheetLogAktivitas(ss);
 
+  // 7. Setup Sheet: master_guru
+  setupSheetMasterGuru(ss);
+
   // Hapus sheet default "Sheet1" / "Sheet 1" jika kosong
   var defaultSheet = ss.getSheetByName("Sheet1") || ss.getSheetByName("Sheet 1") || ss.getSheetByName("Lembar1");
   if (defaultSheet && ss.getSheets().length > 1 && defaultSheet.getLastRow() <= 1) {
@@ -201,6 +204,34 @@ function setupSheetLogAktivitas(ss) {
   
   var headers = ["id_log", "timestamp", "aktor", "aksi", "detail"];
   setHeaderRow(sheet, headers, "#64748b"); // Slate Gray
+  formatSheetClean(sheet);
+}
+
+// ----------------------------------------------------------------------------
+// 7. Setup Tab: master_guru
+// ----------------------------------------------------------------------------
+function setupSheetMasterGuru(ss) {
+  var sheetName = "master_guru";
+  var sheet = getOrCreateSheet(ss, sheetName);
+
+  var headers = [
+    "id_guru", "nip", "nama_guru", "jenis_kelamin", "jabatan",
+    "tugas_tambahan", "id_kelas_wali", "no_hp", "status_kepegawaian",
+    "kode_barcode", "status_aktif", "created_at"
+  ];
+  setHeaderRow(sheet, headers, "#059669"); // Emerald Green
+
+  if (sheet.getLastRow() <= 1) {
+    var defaultTeachers = [
+      ["GURU-001", "197508122005011003", "Drs. H. Ahmad Fauzi, M.Pd.I", "L", "Kepala Madrasah", "Penanggung Jawab", "", "081234567901", "PNS", "GURU-19750812", true, Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")],
+      ["GURU-002", "198203152009012011", "Siti Nurjanah, S.Pd.I", "P", "Guru Kelas", "Wali Kelas 1A", "KLS-1A", "081234567902", "PNS", "GURU-19820315", true, Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")],
+      ["GURU-003", "198511202010011018", "Moch. Zainuri, S.Pd", "L", "Guru Kelas", "Wali Kelas 6B", "KLS-6B", "081234567903", "PNS", "GURU-19851120", true, Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")],
+      ["GURU-004", "199004182023212025", "Rina Wahyuni, S.Pd", "P", "Guru PJOK", "Pembina UKS", "", "081234567904", "PPPK", "GURU-19900418", true, Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")],
+      ["GURU-005", "-", "Fajar Shodiq, S.Hum", "L", "Guru Bahasa Arab", "Guru Piket", "", "081234567905", "GTT", "GURU-99001", true, Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")]
+    ];
+    sheet.getRange(2, 1, defaultTeachers.length, headers.length).setValues(defaultTeachers);
+    Logger.log("Data awal guru diisi di master_guru.");
+  }
   formatSheetClean(sheet);
 }
 

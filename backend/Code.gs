@@ -84,6 +84,20 @@ function handleRequest(e, method) {
         result = handleGetKelas(requestData);
         break;
 
+      // 2B. Data Master Guru & Tenaga Kependidikan
+      case "get_guru":
+        result = handleGetGuru(requestData);
+        break;
+      case "save_guru":
+        result = handleSaveGuru(requestData);
+        break;
+      case "delete_guru":
+        result = handleDeleteGuru(requestData);
+        break;
+      case "batch_import_guru":
+        result = handleBatchImportGuru(requestData);
+        break;
+
       // 3. Rekapitulasi & Dashboard
       case "get_rekap_absensi":
         result = handleGetRekapAbsensi(requestData);
@@ -920,6 +934,270 @@ function handleGetKelas(req) {
   }
 
   return { status: "success", total: list.length, data: list };
+}
+
+// ----------------------------------------------------------------------------
+// 4B. HANDLER: DATA MASTER GURU & TENAGA KEPENDIDIKAN
+// ----------------------------------------------------------------------------
+function handleGetGuru(req) {
+  var db = getDB();
+  var list = getGuruList(db);
+  return { status: "success", total: list.length, data: list };
+}
+
+function handleSaveGuru(req) {
+  var idGuru = (req.id_guru || "").trim();
+  var nip = (req.nip || "").trim();
+  var nama = (req.nama_guru || "").trim();
+  var jk = req.jenis_kelamin || "L";
+  var jabatan = (req.jabatan || "Guru Mapel").trim();
+  var tugas = (req.tugas_tambahan || "-").trim();
+  var idKelasWali = (req.id_kelas_wali || "").trim();
+  var noHp = (req.no_hp || "").trim();
+  var statusPegawai = (req.status_kepegawaian || "PNS").trim();
+  var barcode = (req.kode_barcode || ("GURU-" + (nip !== "-" && nip ? nip : Date.now()))).trim();
+  var statusAktif = req.status_aktif !== false && req.status_aktif !== "false";
+  var nowStr = Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
+
+  if (!nama) {
+    return { status: "error", code: "MISSING_FIELDS", message: "Nama lengkap guru wajib diisi." };
+  }
+
+  var db = getDB();
+  var sheet = getOrCreateGuruSheet(db);
+  var data = sheet.getDataRange().getValues();
+  var foundRow = -1;
+
+  if (idGuru) {
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === idGuru) {
+        foundRow = i + 1;
+        break;
+      }
+    }
+  }
+
+  if (foundRow > 0) {
+    // Update data guru
+    sheet.getRange(foundRow, 2, 1, 10).setValues([[
+      nip || "-",
+      nama,
+      jk,
+      jabatan,
+      tugas,
+      idKelasWali,
+      noHp,
+      statusPegawai,
+      barcode,
+      statusAktif
+    ]]);
+    clearGuruCache();
+    catatLog(db, req.aktor || "ADMIN", "UPDATE_GURU", "Memperbarui guru: " + nama + " (" + idGuru + ")");
+    return {
+      status: "success",
+      message: "Data guru " + nama + " berhasil diperbarui.",
+      data: {
+        id_guru: idGuru,
+        nip: nip || "-",
+        nama_guru: nama,
+        jenis_kelamin: jk,
+        jabatan: jabatan,
+        tugas_tambahan: tugas,
+        id_kelas_wali: idKelasWali,
+        no_hp: noHp,
+        status_kepegawaian: statusPegawai,
+        kode_barcode: barcode,
+        status_aktif: statusAktif
+      }
+    };
+  } else {
+    // Tambah guru baru
+    var newId = "GURU-" + Utilities.formatString("%03d", data.length);
+    sheet.appendRow([
+      newId,
+      nip || "-",
+      nama,
+      jk,
+      jabatan,
+      tugas,
+      idKelasWali,
+      noHp,
+      statusPegawai,
+      barcode,
+      statusAktif,
+      nowStr
+    ]);
+    clearGuruCache();
+    catatLog(db, req.aktor || "ADMIN", "CREATE_GURU", "Menambahkan guru baru: " + nama + " (" + newId + ")");
+    return {
+      status: "success",
+      message: "Guru " + nama + " berhasil ditambahkan.",
+      data: {
+        id_guru: newId,
+        nip: nip || "-",
+        nama_guru: nama,
+        jenis_kelamin: jk,
+        jabatan: jabatan,
+        tugas_tambahan: tugas,
+        id_kelas_wali: idKelasWali,
+        no_hp: noHp,
+        status_kepegawaian: statusPegawai,
+        kode_barcode: barcode,
+        status_aktif: statusAktif
+      }
+    };
+  }
+}
+
+function handleDeleteGuru(req) {
+  var idGuru = (req.id_guru || "").trim();
+  if (!idGuru) {
+    return { status: "error", code: "MISSING_ID", message: "ID Guru wajib disertakan." };
+  }
+
+  var db = getDB();
+  var sheet = getOrCreateGuruSheet(db);
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === idGuru) {
+      var namaGuru = data[i][2];
+      sheet.deleteRow(i + 1);
+      clearGuruCache();
+      catatLog(db, req.aktor || "ADMIN", "DELETE_GURU", "Menghapus guru: " + namaGuru + " (" + idGuru + ")");
+      return { status: "success", message: "Data guru " + namaGuru + " berhasil dihapus." };
+    }
+  }
+
+  return { status: "error", code: "NOT_FOUND", message: "Data guru tidak ditemukan." };
+}
+
+function handleBatchImportGuru(req) {
+  var teachers = req.teachers || [];
+  if (!Array.isArray(teachers) || teachers.length === 0) {
+    return { status: "error", code: "EMPTY_DATA", message: "Data guru kosong atau format tidak sesuai." };
+  }
+
+  var db = getDB();
+  var sheet = getOrCreateGuruSheet(db);
+  var data = sheet.getDataRange().getValues();
+  var nowStr = Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss");
+
+  var existingNames = {};
+  for (var i = 1; i < data.length; i++) {
+    existingNames[String(data[i][2] || "").trim().toLowerCase()] = true;
+  }
+
+  var newRows = [];
+  var imported = 0;
+  var skipped = 0;
+
+  for (var j = 0; j < teachers.length; j++) {
+    var t = teachers[j];
+    var nama = String(t.nama_guru || t.nama || "").trim();
+    if (!nama) { skipped++; continue; }
+    if (existingNames[nama.toLowerCase()]) { skipped++; continue; }
+
+    existingNames[nama.toLowerCase()] = true;
+    var newId = "GURU-" + Utilities.formatString("%03d", (data.length + newRows.length));
+    var nip = String(t.nip || "-").trim();
+    var jk = (t.jenis_kelamin === "P" || t.jenis_kelamin === "Perempuan") ? "P" : "L";
+    var jabatan = String(t.jabatan || "Guru Kelas").trim();
+    var tugas = String(t.tugas_tambahan || "-").trim();
+    var idKelasWali = String(t.id_kelas_wali || "").trim();
+    var noHp = String(t.no_hp || "").trim();
+    var statusPegawai = String(t.status_kepegawaian || "PNS").trim();
+    var barcode = "GURU-" + (nip !== "-" && nip ? nip : ("AUTO" + (data.length + newRows.length)));
+
+    newRows.push([newId, nip, nama, jk, jabatan, tugas, idKelasWali, noHp, statusPegawai, barcode, true, nowStr]);
+    imported++;
+  }
+
+  if (newRows.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, 12).setValues(newRows);
+    clearGuruCache();
+  }
+
+  catatLog(db, req.aktor || "ADMIN", "BATCH_IMPORT_GURU", "Import " + imported + " data guru baru.");
+  return {
+    status: "success",
+    message: "Berhasil mengimpor " + imported + " data guru baru (" + skipped + " duplikat/dilewati).",
+    data: { imported: imported, skipped: skipped }
+  };
+}
+
+function getOrCreateGuruSheet(db) {
+  var sheet = db.getSheetByName("master_guru");
+  if (!sheet) {
+    sheet = db.insertSheet("master_guru");
+    var headers = ["id_guru", "nip", "nama_guru", "jenis_kelamin", "jabatan", "tugas_tambahan", "id_kelas_wali", "no_hp", "status_kepegawaian", "kode_barcode", "status_aktif", "created_at"];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#059669").setFontColor("#ffffff");
+    sheet.setFrozenRows(1);
+
+    // Initial default teachers data for MIN 5 Tulungagung
+    var defaultTeachers = [
+      ["GURU-001", "197508122005011003", "Drs. H. Ahmad Fauzi, M.Pd.I", "L", "Kepala Madrasah", "Penanggung Jawab", "", "081234567901", "PNS", "GURU-19750812", true, Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")],
+      ["GURU-002", "198203152009012011", "Siti Nurjanah, S.Pd.I", "P", "Guru Kelas", "Wali Kelas 1A", "KLS-1A", "081234567902", "PNS", "GURU-19820315", true, Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")],
+      ["GURU-003", "198511202010011018", "Moch. Zainuri, S.Pd", "L", "Guru Kelas", "Wali Kelas 6B", "KLS-6B", "081234567903", "PNS", "GURU-19851120", true, Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")],
+      ["GURU-004", "199004182023212025", "Rina Wahyuni, S.Pd", "P", "Guru PJOK", "Pembina UKS", "", "081234567904", "PPPK", "GURU-19900418", true, Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")],
+      ["GURU-005", "-", "Fajar Shodiq, S.Hum", "L", "Guru Bahasa Arab", "Guru Piket", "", "081234567905", "GTT", "GURU-99001", true, Utilities.formatDate(new Date(), "Asia/Jakarta", "yyyy-MM-dd HH:mm:ss")]
+    ];
+    sheet.getRange(2, 1, defaultTeachers.length, headers.length).setValues(defaultTeachers);
+  }
+  return sheet;
+}
+
+function getGuruList(db) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var cached = cache.get("CACHE_GURU_LIST");
+    if (cached) {
+      try { return JSON.parse(cached); } catch (e) {}
+    }
+  } catch (e) {}
+
+  var sheet = getOrCreateGuruSheet(db);
+  var data = sheet.getDataRange().getValues();
+  var list = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var idGuru = String(data[i][0] || "").trim();
+    var nama = String(data[i][2] || "").trim();
+    if (!idGuru && !nama) continue;
+
+    var statusAktif = data[i][10];
+    var isAktif = (statusAktif !== false && statusAktif !== "FALSE" && statusAktif !== 0 && statusAktif !== "0");
+
+    list.push({
+      id_guru: idGuru,
+      nip: String(data[i][1] || "-"),
+      nama_guru: nama,
+      jenis_kelamin: data[i][3] || "L",
+      jabatan: data[i][4] || "Guru Mapel",
+      tugas_tambahan: data[i][5] || "-",
+      id_kelas_wali: data[i][6] || "",
+      no_hp: data[i][7] || "",
+      status_kepegawaian: data[i][8] || "PNS",
+      kode_barcode: data[i][9] || ("GURU-" + idGuru),
+      status_aktif: isAktif,
+      created_at: formatDateISO(data[i][11])
+    });
+  }
+
+  try {
+    var cache = CacheService.getScriptCache();
+    cache.put("CACHE_GURU_LIST", JSON.stringify(list), 600);
+  } catch (e) {}
+
+  return list;
+}
+
+function clearGuruCache() {
+  try {
+    var cache = CacheService.getScriptCache();
+    cache.remove("CACHE_GURU_LIST");
+  } catch (e) {}
 }
 
 // ----------------------------------------------------------------------------
