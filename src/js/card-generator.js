@@ -518,10 +518,7 @@ export const CARD_GENERATOR = {
           <path d="M95 15 L15 95 L12 95 L95 12 Z" fill="url(#goldCornerGradBR_${s.id_siswa})" opacity="0.75" />
         </svg>
 
-        <!-- 1. Lubang Tali Lanyard (Slot Punch Hole) -->
-        <div class="card-lanyard-slot" title="Lubang Lanyard"></div>
-
-        <!-- 2. Header: Logo & Judul Madrasah -->
+        <!-- 1. Header: Logo & Judul Madrasah -->
         <div class="card-header-section">
           <div class="card-logo-container">
             <img src="/logo-min5.png" class="card-min5-logo" alt="Logo MIN 5 Tulungagung">
