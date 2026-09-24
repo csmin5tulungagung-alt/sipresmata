@@ -208,6 +208,9 @@ function initScannerView() {
     });
 
     camSelect.addEventListener("change", () => {
+      if (camSelect.value) {
+        localStorage.setItem("SIPRESMATA_PREFERRED_CAMERA", camSelect.value);
+      }
       SCANNER.stop().then(() => {
         SCANNER.start(camSelect.value, handleScanFeedback);
       });

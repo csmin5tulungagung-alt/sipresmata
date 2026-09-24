@@ -144,10 +144,37 @@ export const SCANNER = {
           `<option value="${d.id}">${d.label || 'Kamera ' + d.id}</option>`
         ).join("");
         
-        // Pilih kamera belakang secara default jika ada
-        const backCamera = devices.find(d => d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("belakang"));
-        if (backCamera) {
-          cameraSelectElement.value = backCamera.id;
+        // 1. Cek apakah ada kamera yang sebelumnya disimpan oleh pengguna di perangkat ini (TV / PC / Kiosk)
+        const savedCameraId = localStorage.getItem("SIPRESMATA_PREFERRED_CAMERA");
+        const hasSaved = savedCameraId && devices.some(d => d.id === savedCameraId);
+
+        if (hasSaved) {
+          cameraSelectElement.value = savedCameraId;
+        } else {
+          // 2. Prioritaskan kamera Webcam USB / Eksternal (Standar TV, Android TV Box, atau Mini PC Kiosk)
+          const usbCamera = devices.find(d => {
+            const lbl = (d.label || "").toLowerCase();
+            return lbl.includes("usb") || lbl.includes("uvc") || lbl.includes("webcam") || lbl.includes("external");
+          });
+
+          // 3. Jika bukan USB, cari kamera depan (front/depan/user) yang menghadap ke siswa
+          const frontCamera = devices.find(d => {
+            const lbl = (d.label || "").toLowerCase();
+            return lbl.includes("front") || lbl.includes("depan") || lbl.includes("user");
+          });
+
+          // 4. Jika di smartphone handheld, baru cari kamera belakang
+          const isMobilePhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !/TV|SmartTV|GoogleTV|Large/i.test(navigator.userAgent);
+          const backCamera = isMobilePhone ? devices.find(d => {
+            const lbl = (d.label || "").toLowerCase();
+            return lbl.includes("back") || lbl.includes("belakang") || lbl.includes("rear");
+          }) : null;
+
+          const chosen = usbCamera || frontCamera || backCamera || devices[0];
+          if (chosen) {
+            cameraSelectElement.value = chosen.id;
+            localStorage.setItem("SIPRESMATA_PREFERRED_CAMERA", chosen.id);
+          }
         }
       } else {
         cameraSelectElement.innerHTML = `<option value="">Tidak ada kamera terdeteksi</option>`;
@@ -175,8 +202,12 @@ export const SCANNER = {
     };
 
     try {
+      const cameraConstraint = cameraId 
+        ? { deviceId: { exact: cameraId } } 
+        : { facingMode: "user" }; // Default ke user (menghadap ke siswa/kiosk), BUKAN environment (kamera belakang)
+
       await html5QrCode.start(
-        cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" },
+        cameraConstraint,
         config,
         async (decodedText) => {
           const now = Date.now();
