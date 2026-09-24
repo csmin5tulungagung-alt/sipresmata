@@ -1,12 +1,12 @@
 /* ==========================================================================
    SIPRESMATA - VERTICAL ID CARD PRINT STYLESHEET (MIN 5 TULUNGAGUNG)
-   Desain Kartu Absensi Siswa Premium Bertema Emerald & Gold Madrasah
+   Desain Kartu Absensi Siswa Dark Emerald & Gold Luxury Lanyard Badge
    ========================================================================== */
 
 /* Grid Container di Layar Admin */
 .id-card-print-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
   gap: 1.5rem;
   padding: 1rem;
   justify-items: center;
@@ -17,335 +17,243 @@
    ========================================================================== */
 .student-card-portrait {
   width: 290px;
-  height: 440px;
-  background: #ffffff;
-  border-radius: 18px;
+  height: 460px;
+  background: radial-gradient(130% 90% at 50% 32%, #054832 0%, #033624 45%, #012217 80%, #011810 100%);
+  border-radius: 20px;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25), 0 0 1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   display: flex;
   flex-direction: column;
-  color: #0f172a;
+  justify-content: space-between;
+  padding: 0 0 10px;
+  color: #ffffff;
   box-sizing: border-box;
-  border: 1px solid #d1fae5;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  user-select: none;
 }
 
 .student-card-portrait:hover {
   transform: translateY(-4px);
-  box-shadow: 0 15px 30px rgba(5, 150, 105, 0.25);
+  box-shadow: 0 18px 40px rgba(5, 150, 105, 0.35);
 }
 
-/* 1. Header Banner Atas (Curved Emerald with Gold Wave) */
-.card-top-banner {
-  background: linear-gradient(135deg, #022c22 0%, #064e3b 50%, #047857 100%);
-  padding: 14px 12px 28px;
-  text-align: center;
-  position: relative;
-  border-bottom-left-radius: 50% 18px;
-  border-bottom-right-radius: 50% 18px;
-  box-shadow: 0 4px 12px rgba(2, 44, 34, 0.3);
-}
-
-.card-top-banner::after {
-  content: '';
+/* Ornamen Pita Sudut Emas Mewah (Top-Left & Bottom-Right) */
+.card-gold-corner {
   position: absolute;
-  bottom: -4px;
-  left: 10%;
-  right: 10%;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #fbbf24, #d97706, transparent);
-  border-radius: 50%;
-}
-
-/* Pola Titik-titik Dekoratif (Inline Vector SVG) */
-.banner-dots-pattern {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  width: 28px;
-  height: 20px;
+  width: 80px;
+  height: 80px;
   pointer-events: none;
-}
-
-.banner-dots-pattern-left {
-  position: absolute;
-  bottom: 80px;
-  left: 12px;
-  width: 24px;
-  height: 24px;
-  pointer-events: none;
-}
-
-.banner-dots-pattern-mid-right {
-  position: absolute;
-  top: 170px;
-  right: 14px;
-  width: 24px;
-  height: 24px;
-  pointer-events: none;
-}
-
-/* Logo Kemenag / Ikhlas Beramal Badge */
-.kemenag-logo-wrapper {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 4px;
-}
-
-.kemenag-badge {
-  width: 34px;
-  height: 34px;
-  background: #ffffff;
-  border: 1.5px solid #fbbf24;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
-  overflow: hidden;
-  padding: 1px;
-}
-
-.kemenag-badge-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.kemenag-svg-icon {
-  width: 22px;
-  height: 22px;
-}
-
-/* Teks Header Madrasah */
-.card-subtitle-small {
-  font-size: 7pt;
-  font-weight: 700;
-  color: #fef08a;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-
-.card-title-main {
-  font-size: 11.5pt;
-  font-weight: 900;
-  color: #ffffff;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-}
-
-.card-motto {
-  font-size: 5.8pt;
-  font-weight: 700;
-  color: #a7f3d0;
-  letter-spacing: 0.08em;
-  margin-top: 3px;
-  display: inline-block;
-  border-top: 1px solid rgba(251, 191, 36, 0.4);
-  border-bottom: 1px solid rgba(251, 191, 36, 0.4);
-  padding: 1px 8px;
-}
-
-/* 2. Body Kartu (Foto & Data Siswa) */
-.card-body-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 14px;
-  position: relative;
   z-index: 2;
-  background: linear-gradient(180deg, #ffffff 60%, #f0fdf4 100%);
 }
 
-/* Bingkai Foto Siswa */
-.card-photo-frame {
-  width: 108px;
-  height: 132px;
+.card-gold-corner.tl {
+  top: 0;
+  left: 0;
+}
+
+.card-gold-corner.br {
+  bottom: 0;
+  right: 0;
+}
+
+/* 1. Lubang Tali Lanyard (Slot Punch Hole) */
+.card-lanyard-slot {
+  width: 54px;
+  height: 10px;
   background: #ffffff;
-  border: 2.5px solid #059669;
-  border-radius: 12px;
-  margin-top: -18px;
-  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.2);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  border-radius: 6px;
+  margin: 10px auto 4px;
   position: relative;
-  z-index: 3;
+  z-index: 5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-.photo-placeholder-icon {
-  font-size: 2.8rem;
-  color: #cbd5e1;
-}
-
-.photo-placeholder-text {
-  font-size: 6.5pt;
-  color: #94a3b8;
-  font-weight: 600;
-  margin-top: 2px;
-}
-
-/* Nama & Info Siswa */
-.card-student-name {
-  font-size: 10.5pt;
-  font-weight: 800;
-  color: #064e3b;
+/* 2. Header: Logo & Judul Madrasah */
+.card-header-section {
   text-align: center;
-  margin-top: 8px;
-  line-height: 1.2;
-  text-transform: uppercase;
-  max-width: 250px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Ornamen Pemisah Diamond */
-.name-separator-ornament {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  margin: 3px 0 4px;
-}
-
-.ornament-line {
-  height: 1px;
-  width: 36px;
-  background: linear-gradient(90deg, transparent, #d97706, transparent);
-}
-
-.ornament-diamond {
-  width: 5px;
-  height: 5px;
-  background: #d97706;
-  transform: rotate(45deg);
-}
-
-/* Baris Info NISN & Kelas */
-.card-info-badge-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  font-size: 8.5pt;
-  font-weight: 800;
-  color: #047857;
-  margin-bottom: 6px;
-}
-
-.info-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.info-divider {
-  color: #94a3b8;
-  font-weight: 400;
-}
-
-/* 3. Kotak QR Code / Barcode */
-.card-qr-container {
-  width: 90px;
-  height: 90px;
-  background: #ffffff;
-  border: 1.5px solid #059669;
-  border-radius: 10px;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-  margin-bottom: 6px;
   position: relative;
   z-index: 5;
 }
 
+.card-logo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 2px 0 3px;
+}
+
+.card-min5-logo {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45));
+}
+
+.card-header-texts {
+  text-align: center;
+  margin-top: 1px;
+}
+
+.card-badge-subtitle {
+  font-size: 7.2pt;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #f1f5f9;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.card-badge-line {
+  width: 38px;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, #eab308, transparent);
+  margin: 0 auto 3px;
+}
+
+.card-badge-title {
+  font-size: 13.5pt;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  line-height: 1.1;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* 3. Kotak QR Code Pemindai Presensi (Besar & Kontras Tinggi) */
+.card-qr-box {
+  width: 160px;
+  height: 160px;
+  margin: 6px auto 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 5;
+  background: transparent;
+}
+
 .card-qr-render {
-  width: 100% !important;
-  height: 100% !important;
+  width: 156px !important;
+  height: 156px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .card-qr-render img,
 .card-qr-render canvas {
-  width: 100% !important;
-  height: 100% !important;
+  width: 156px !important;
+  height: 156px !important;
   display: block;
 }
 
-/* 4. Footer Kartu (Wave Hijau Bawah dengan Daun & Icon Scan) */
-.card-bottom-banner {
-  background: linear-gradient(135deg, #047857 0%, #064e3b 50%, #022c22 100%);
-  height: 48px;
+/* 4. Identitas Siswa & Footer */
+.card-student-section {
+  text-align: center;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-  border-top-left-radius: 50% 12px;
-  border-top-right-radius: 50% 12px;
-  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.15);
+  z-index: 5;
+  padding: 0 10px;
 }
 
-.card-bottom-banner::before {
-  content: '';
-  position: absolute;
-  top: -3px;
-  left: 10%;
-  right: 10%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #fbbf24, #d97706, transparent);
-  border-radius: 50%;
-}
-
-.scan-prompt-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.card-student-fullname {
+  font-size: 11pt;
+  font-weight: 800;
   color: #ffffff;
-  position: relative;
-  z-index: 3;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+  margin: 0 auto;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-.scan-icon-badge {
-  width: 24px;
-  height: 24px;
-  border: 1px solid #fbbf24;
-  border-radius: 5px;
+.card-student-gold-line {
+  width: 34px;
+  height: 2px;
+  background: #eab308;
+  margin: 4px auto 6px;
+  border-radius: 2px;
+}
+
+.card-student-meta-grid {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10pt;
-  background: rgba(2, 44, 34, 0.6);
+  gap: 16px;
+  margin: 0 auto 6px;
 }
 
-.scan-prompt-text {
-  font-size: 6pt;
+.card-student-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+}
+
+.card-meta-svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.card-meta-detail {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-meta-heading {
+  font-size: 5.8pt;
   font-weight: 700;
+  color: #cbd5e1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.card-meta-value {
+  font-size: 10pt;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.04em;
   line-height: 1.1;
-  color: #fef08a;
+  margin-top: 1px;
+}
+
+.card-meta-separator {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.card-footer-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.card-footer-line {
+  width: 24px;
+  height: 1px;
+  background: #ca8a04;
+}
+
+.card-footer-text {
+  font-size: 6.2pt;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #cbd5e1;
   text-transform: uppercase;
 }
-
-/* Ilustrasi Daun Hiasan Kanan Bawah */
-.card-leaf-decoration {
-  position: absolute;
-  right: 4px;
-  bottom: -4px;
-  width: 52px;
-  height: 48px;
-  pointer-events: none;
-  opacity: 0.9;
-}
-
 
 /* ==========================================================================
    MEDIA PRINT: CETAK KERTAS A4 PORTRAIT (GRID 2 KOLOM X 3 BARIS)
@@ -378,22 +286,13 @@
 
   .student-card-portrait {
     width: 88mm !important;
-    height: 132mm !important;
+    height: 138mm !important;
     page-break-inside: avoid !important;
     box-shadow: none !important;
-    border: 0.5px solid #94a3b8 !important;
+    border: 0.5px solid #ca8a04 !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-  }
-
-  .card-top-banner {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-
-  .card-bottom-banner {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+    background: radial-gradient(130% 90% at 50% 32%, #054832 0%, #033624 45%, #012217 80%, #011810 100%) !important;
   }
 
   .card-actions-quick, .no-print {
@@ -402,10 +301,6 @@
 }
 
 /* Quick Card Download Overlay (Screen View) */
-.student-card-portrait {
-  position: relative;
-}
-
 .card-actions-quick {
   position: absolute;
   top: 10px;
@@ -443,4 +338,3 @@
   border-color: #38bdf8;
   transform: scale(1.05);
 }
-

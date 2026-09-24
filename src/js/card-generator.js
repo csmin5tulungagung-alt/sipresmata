@@ -408,16 +408,16 @@ export const CARD_GENERATOR = {
     qrElem.innerHTML = "";
     
     const tempDiv = document.createElement("div");
-    tempDiv.style.width = "82px";
-    tempDiv.style.height = "82px";
+    tempDiv.style.width = "156px";
+    tempDiv.style.height = "156px";
     
     try {
       new QRCode(tempDiv, {
         text: qrText,
-        width: 82,
-        height: 82,
-        colorDark: "#022c22",
-        colorLight: "#ffffff",
+        width: 156,
+        height: 156,
+        colorDark: "#ffffff",
+        colorLight: "#022b1d",
         correctLevel: QRCode.CorrectLevel.M
       });
 
@@ -427,11 +427,11 @@ export const CARD_GENERATOR = {
       const canvas = tempDiv.querySelector("canvas");
       if (canvas && canvas.width > 0) {
         const dataUrl = canvas.toDataURL("image/png");
-        qrElem.innerHTML = `<img src="${dataUrl}" width="82" height="82" style="width:82px;height:82px;display:block;margin:auto;" alt="QR" />`;
+        qrElem.innerHTML = `<img src="${dataUrl}" width="156" height="156" style="width:156px;height:156px;display:block;margin:auto;" alt="QR" />`;
       } else {
         const img = tempDiv.querySelector("img");
         if (img && img.src) {
-          qrElem.innerHTML = `<img src="${img.src}" width="82" height="82" style="width:82px;height:82px;display:block;margin:auto;" alt="QR" />`;
+          qrElem.innerHTML = `<img src="${img.src}" width="156" height="156" style="width:156px;height:156px;display:block;margin:auto;" alt="QR" />`;
         }
       }
     } catch (e) {
@@ -491,105 +491,90 @@ export const CARD_GENERATOR = {
     return `
       <div class="student-card-portrait" id="card-item-${s.id_siswa}" data-student-id="${s.id_siswa}" data-nisn="${s.nisn}" data-nama="${s.nama_lengkap}" data-kelas="${shortKelas}">
         
-        <!-- 1. Header Banner Atas -->
-        <div class="card-top-banner">
-          <svg class="banner-dots-pattern" width="28" height="20" viewBox="0 0 28 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="4" cy="4" r="1.5" fill="rgba(255,255,255,0.45)"/>
-            <circle cx="14" cy="4" r="1.5" fill="rgba(255,255,255,0.45)"/>
-            <circle cx="24" cy="4" r="1.5" fill="rgba(255,255,255,0.45)"/>
-            <circle cx="4" cy="14" r="1.5" fill="rgba(255,255,255,0.45)"/>
-            <circle cx="14" cy="14" r="1.5" fill="rgba(255,255,255,0.45)"/>
-            <circle cx="24" cy="14" r="1.5" fill="rgba(255,255,255,0.45)"/>
-          </svg>
-          
-          <!-- Logo Resmi MIN 5 Tulungagung -->
-          <div class="kemenag-logo-wrapper">
-            <div class="kemenag-badge" title="MIN 5 Tulungagung">
-              <img src="/logo-min5.png" class="kemenag-badge-img" alt="Logo MIN 5 Tulungagung">
-            </div>
+        <!-- Ornamen Sudut Emas Mewah (Top-Left & Bottom-Right) -->
+        <svg class="card-gold-corner tl" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="goldCornerGradTL_${s.id_siswa}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fef08a" />
+              <stop offset="35%" stop-color="#eab308" />
+              <stop offset="70%" stop-color="#ca8a04" />
+              <stop offset="100%" stop-color="#854d0e" />
+            </linearGradient>
+          </defs>
+          <path d="M-15 45 L45 -15 L52 -15 L-15 52 Z" fill="url(#goldCornerGradTL_${s.id_siswa})" opacity="0.95" />
+          <path d="M-15 65 L65 -15 L68 -15 L-15 68 Z" fill="url(#goldCornerGradTL_${s.id_siswa})" opacity="0.75" />
+        </svg>
+
+        <svg class="card-gold-corner br" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="goldCornerGradBR_${s.id_siswa}" x1="100%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#fef08a" />
+              <stop offset="35%" stop-color="#eab308" />
+              <stop offset="70%" stop-color="#ca8a04" />
+              <stop offset="100%" stop-color="#854d0e" />
+            </linearGradient>
+          </defs>
+          <path d="M95 35 L35 95 L28 95 L95 28 Z" fill="url(#goldCornerGradBR_${s.id_siswa})" opacity="0.95" />
+          <path d="M95 15 L15 95 L12 95 L95 12 Z" fill="url(#goldCornerGradBR_${s.id_siswa})" opacity="0.75" />
+        </svg>
+
+        <!-- 1. Lubang Tali Lanyard (Slot Punch Hole) -->
+        <div class="card-lanyard-slot" title="Lubang Lanyard"></div>
+
+        <!-- 2. Header: Logo & Judul Madrasah -->
+        <div class="card-header-section">
+          <div class="card-logo-container">
+            <img src="/logo-min5.png" class="card-min5-logo" alt="Logo MIN 5 Tulungagung">
           </div>
 
-          <div class="card-subtitle-small">— KARTU ABSEN SISWA —</div>
-          <div class="card-title-main">MIN 5 TULUNGAGUNG</div>
-          <div class="card-motto">MADRASAH RAMAH ANAK • MADRASAH ADIWIYATA • TIADA HARI TANPA PRESTASI</div>
-        </div>
-
-        <!-- 2. Body Kartu (Foto & Data Siswa) -->
-        <div class="card-body-content">
-          <svg class="banner-dots-pattern-left" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="4" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="12" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="20" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="4" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="12" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="20" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="4" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="12" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="20" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
-          </svg>
-          <svg class="banner-dots-pattern-mid-right" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="4" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="12" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="20" cy="4" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="4" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="12" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="20" cy="12" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="4" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="12" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
-            <circle cx="20" cy="20" r="1.5" fill="rgba(5,150,105,0.3)"/>
-          </svg>
-
-          <!-- Bingkai Foto Siswa -->
-          <div class="card-photo-frame">
-            <div class="photo-placeholder-icon">👤</div>
-            <div class="photo-placeholder-text">FOTO SISWA 3x4</div>
-          </div>
-
-          <!-- Nama Siswa -->
-          <div class="card-student-name" title="${s.nama_lengkap}">${s.nama_lengkap}</div>
-
-          <!-- Ornamen Garis & Diamond -->
-          <div class="name-separator-ornament">
-            <div class="ornament-line"></div>
-            <div class="ornament-diamond"></div>
-            <div class="ornament-line"></div>
-          </div>
-
-          <!-- Info NISN & Kelas -->
-          <div class="card-info-badge-row">
-            <span class="info-item">
-              <span>👤</span>
-              <span>${s.nisn}</span>
-            </span>
-            <span class="info-divider">|</span>
-            <span class="info-item">
-              <span>🎓</span>
-              <span>${shortKelas}</span>
-            </span>
-          </div>
-
-          <!-- 3. Kotak QR Code Pemindai -->
-          <div class="card-qr-container">
-            <div id="qrcode-${s.id_siswa}" class="card-qr-render"></div>
+          <div class="card-header-texts">
+            <div class="card-badge-subtitle">KARTU ABSEN SISWA</div>
+            <div class="card-badge-line"></div>
+            <div class="card-badge-title">MIN 5 TULUNGAGUNG</div>
           </div>
         </div>
 
-        <!-- 4. Footer Kartu (Wave Hijau Bawah dengan Icon Scan) -->
-        <div class="card-bottom-banner">
-          <div class="scan-prompt-group">
-            <div class="scan-icon-badge">📱</div>
-            <div class="scan-prompt-text">
-              Scan untuk<br>absensi siswa
+        <!-- 3. Kotak QR Code Pemindai Presensi (Besar & Kontras Tinggi) -->
+        <div class="card-qr-box">
+          <div id="qrcode-${s.id_siswa}" class="card-qr-render"></div>
+        </div>
+
+        <!-- 4. Identitas Siswa & Footer -->
+        <div class="card-student-section">
+          <div class="card-student-fullname" title="${s.nama_lengkap}">${s.nama_lengkap}</div>
+          <div class="card-student-gold-line"></div>
+
+          <div class="card-student-meta-grid">
+            <div class="card-student-meta-item">
+              <svg class="card-meta-svg" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+              </svg>
+              <div class="card-meta-detail">
+                <span class="card-meta-heading">KELAS</span>
+                <span class="card-meta-value">${shortKelas}</span>
+              </div>
+            </div>
+
+            <div class="card-meta-separator"></div>
+
+            <div class="card-student-meta-item">
+              <svg class="card-meta-svg" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <div class="card-meta-detail">
+                <span class="card-meta-heading">NO. ABSEN</span>
+                <span class="card-meta-value">${s.nisn || s.id_siswa}</span>
+              </div>
             </div>
           </div>
 
-          <!-- Hiasan Daun Kanan Bawah -->
-          <svg class="card-leaf-decoration" viewBox="0 0 60 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 45 C40 25, 20 15, 10 10 C25 25, 35 40, 50 45 Z" fill="#34d399" opacity="0.6"/>
-            <path d="M55 48 C45 35, 30 25, 15 25 C30 35, 45 45, 55 48 Z" fill="#10b981" opacity="0.8"/>
-            <path d="M58 50 C50 42, 40 38, 25 40 C40 45, 50 48, 58 50 Z" fill="#047857"/>
-            <circle cx="48" cy="38" r="2" fill="#fbbf24"/>
-          </svg>
+          <div class="card-footer-prompt">
+            <span class="card-footer-line"></span>
+            <span class="card-footer-text">SCAN UNTUK ABSENSI</span>
+            <span class="card-footer-line"></span>
+          </div>
         </div>
 
       </div>
@@ -635,7 +620,7 @@ export const CARD_GENERATOR = {
     captureWrapper.style.left = "0";
     captureWrapper.style.top = "0";
     captureWrapper.style.width = "290px";
-    captureWrapper.style.height = "440px";
+    captureWrapper.style.height = "460px";
     captureWrapper.style.opacity = "0.01";
     captureWrapper.style.pointerEvents = "none";
     captureWrapper.style.zIndex = "-999";
@@ -671,7 +656,7 @@ export const CARD_GENERATOR = {
         scale: 3,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: "#ffffff",
+        backgroundColor: null,
         logging: false
       });
 
@@ -710,10 +695,10 @@ export const CARD_GENERATOR = {
     if (qrElem && typeof QRCode !== 'undefined') {
       new QRCode(qrElem, {
         text: student.kode_barcode || `MIN5-${student.nisn}`,
-        width: 82,
-        height: 82,
-        colorDark: "#022c22",
-        colorLight: "#ffffff",
+        width: 156,
+        height: 156,
+        colorDark: "#ffffff",
+        colorLight: "#022b1d",
         correctLevel: QRCode.CorrectLevel.M
       });
     }
@@ -776,7 +761,7 @@ export const CARD_GENERATOR = {
     tempContainer.style.left = "0";
     tempContainer.style.top = "0";
     tempContainer.style.width = "290px";
-    tempContainer.style.height = "440px";
+    tempContainer.style.height = "460px";
     tempContainer.style.opacity = "0.01";
     tempContainer.style.pointerEvents = "none";
     tempContainer.style.zIndex = "-999";
@@ -814,7 +799,7 @@ export const CARD_GENERATOR = {
           scale: 3,
           useCORS: true,
           allowTaint: true,
-          backgroundColor: "#ffffff",
+          backgroundColor: null,
           logging: false
         });
 
@@ -885,10 +870,10 @@ export const CARD_GENERATOR = {
       if (qrElem && typeof QRCode !== 'undefined') {
         new QRCode(qrElem, {
           text: s.kode_barcode || `MIN5-${s.nisn}`,
-          width: 82,
-          height: 82,
-          colorDark: "#022c22",
-          colorLight: "#ffffff",
+          width: 156,
+          height: 156,
+          colorDark: "#ffffff",
+          colorLight: "#022b1d",
           correctLevel: QRCode.CorrectLevel.M
         });
       }
