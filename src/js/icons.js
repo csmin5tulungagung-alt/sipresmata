@@ -77,23 +77,57 @@ function replaceEmojiText(root) {
   });
 }
 
+let isRefreshing = false;
+let iconDebounceTimer = null;
+
 export function refreshIcons(root = document.body) {
-  replaceEmojiText(root);
-  createIcons({
-    icons,
-    attrs: {
-      'aria-hidden': 'true',
-      'stroke-width': 1.9
-    }
-  });
+  if (isRefreshing) return;
+  isRefreshing = true;
+  try {
+    replaceEmojiText(root);
+    createIcons({
+      root,
+      icons,
+      attrs: {
+        'aria-hidden': 'true',
+        'stroke-width': 1.9
+      }
+    });
+  } catch (err) {
+    console.warn("Icon refresh warning:", err);
+  } finally {
+    // Release lock in next animation frame to prevent synchronous cascade
+    requestAnimationFrame(() => {
+      isRefreshing = false;
+    });
+  }
 }
 
 export function initIcons() {
-  refreshIcons();
+  refreshIcons(document.body);
 
+  // Debounced, filtered mutation observer to prevent CPU lag
   const observer = new MutationObserver((mutations) => {
-    const hasNewContent = mutations.some((mutation) => mutation.addedNodes.length > 0);
-    if (hasNewContent) window.requestAnimationFrame(() => refreshIcons());
+    if (isRefreshing) return;
+
+    // Only process if user-added elements exist (exclude our own SVGs/icons)
+    const hasMeaningfulAddition = mutations.some(m =>
+      Array.from(m.addedNodes).some(n =>
+        n.nodeType === Node.ELEMENT_NODE &&
+        n.tagName !== 'svg' &&
+        n.tagName !== 'path' &&
+        n.tagName !== 'g' &&
+        !n.classList.contains('lucide') &&
+        !n.classList.contains('app-lucide-icon')
+      )
+    );
+
+    if (!hasMeaningfulAddition) return;
+
+    if (iconDebounceTimer) clearTimeout(iconDebounceTimer);
+    iconDebounceTimer = setTimeout(() => {
+      refreshIcons(document.body);
+    }, 200);
   });
 
   observer.observe(document.body, { childList: true, subtree: true });

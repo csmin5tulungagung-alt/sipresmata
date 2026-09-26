@@ -184,8 +184,41 @@ export const ADMIN = {
   },
 
   // ==========================================================================
-  // 2. DASHBOARD METRICS & LIVE MONITORING
+  // 2. DASHBOARD METRICS & LIVE MONITORING (OPTIMIZED CACHE-FIRST)
   // ==========================================================================
+  _lastDbCheckTime: 0,
+  _lastFonnteCheckTime: 0,
+
+  _renderStatsCards(container, data) {
+    const rincian = data.rincian || {};
+    container.innerHTML = `
+      <div class="stat-card total">
+        <div class="stat-label">Total Siswa Aktif</div>
+        <div class="stat-value">${data.total_siswa_aktif || 0}</div>
+      </div>
+      <div class="stat-card hadir">
+        <div class="stat-label">Hadir Tepat Waktu</div>
+        <div class="stat-value" style="color: #34d399;">${rincian.hadir_tepat_waktu || 0}</div>
+      </div>
+      <div class="stat-card terlambat">
+        <div class="stat-label">Terlambat</div>
+        <div class="stat-value" style="color: #fbbf24;">${rincian.terlambat || 0}</div>
+      </div>
+      <div class="stat-card izin">
+        <div class="stat-label">Izin</div>
+        <div class="stat-value" style="color: #818cf8;">${rincian.izin || 0}</div>
+      </div>
+      <div class="stat-card sakit">
+        <div class="stat-label">Sakit</div>
+        <div class="stat-value" style="color: #ec4899;">${rincian.sakit || 0}</div>
+      </div>
+      <div class="stat-card alpa">
+        <div class="stat-label">Alpa / Belum Absen</div>
+        <div class="stat-value" style="color: #f87171;">${data.total_belum_absen || 0}</div>
+      </div>
+    `;
+  },
+
   async loadDashboard(showToastFeedback = false) {
     const statsContainer = document.getElementById("dashboard-stats-grid");
     if (!statsContainer) return;
@@ -194,40 +227,39 @@ export const ADMIN = {
       showToast("🔄 Memperbarui statistik presensi...", "info");
     }
 
-    // Auto-check database connection status & Fonnte WhatsApp Gateway status
-    this.checkDbConnection();
-    this.checkFonnteConnection();
+    // 1. Instant Cache-First Render (< 2ms) jika ada data sebelumnya
+    try {
+      const cached = localStorage.getItem("SIPRESMATA_DASHBOARD_STATS_CACHE");
+      if (cached && statsContainer.children.length === 0) {
+        const cachedData = JSON.parse(cached);
+        this._renderStatsCards(statsContainer, cachedData);
+        if (cachedData.recent_scans && (!this.dashboardState.scans || this.dashboardState.scans.length === 0)) {
+          this.dashboardState.scans = cachedData.recent_scans;
+          this.renderDashboardFeed();
+        }
+      }
+    } catch (_) {}
 
+    // Auto-check database & Fonnte hanya jika belum pernah diperiksa dalam 5 menit terakhir
+    const now = Date.now();
+    if (now - this._lastDbCheckTime > 300000) {
+      this.checkDbConnection();
+    }
+    if (now - this._lastFonnteCheckTime > 300000) {
+      this.checkFonnteConnection();
+    }
+
+    // 2. Background Revalidation dari Cloud
     try {
       const res = await API.getDashboardStats();
       const data = res.data;
 
-      statsContainer.innerHTML = `
-        <div class="stat-card total">
-          <div class="stat-label">Total Siswa Aktif</div>
-          <div class="stat-value">${data.total_siswa_aktif}</div>
-        </div>
-        <div class="stat-card hadir">
-          <div class="stat-label">Hadir Tepat Waktu</div>
-          <div class="stat-value" style="color: #34d399;">${data.rincian.hadir_tepat_waktu}</div>
-        </div>
-        <div class="stat-card terlambat">
-          <div class="stat-label">Terlambat</div>
-          <div class="stat-value" style="color: #fbbf24;">${data.rincian.terlambat}</div>
-        </div>
-        <div class="stat-card izin">
-          <div class="stat-label">Izin</div>
-          <div class="stat-value" style="color: #818cf8;">${data.rincian.izin}</div>
-        </div>
-        <div class="stat-card sakit">
-          <div class="stat-label">Sakit</div>
-          <div class="stat-value" style="color: #ec4899;">${data.rincian.sakit}</div>
-        </div>
-        <div class="stat-card alpa">
-          <div class="stat-label">Alpa / Belum Absen</div>
-          <div class="stat-value" style="color: #f87171;">${data.total_belum_absen}</div>
-        </div>
-      `;
+      // Simpan ke local cache untuk fast load berikutnya
+      try {
+        localStorage.setItem("SIPRESMATA_DASHBOARD_STATS_CACHE", JSON.stringify(data));
+      } catch (_) {}
+
+      this._renderStatsCards(statsContainer, data);
 
       this.dashboardState.scans = data.recent_scans || [];
       this.dashboardState.currentPage = 1;
@@ -247,11 +279,13 @@ export const ADMIN = {
   startAutoSync() {
     if (this._syncInterval) clearInterval(this._syncInterval);
     this._syncInterval = setInterval(() => {
-      const dashSec = document.getElementById("section-dashboard");
-      if (dashSec && dashSec.style.display !== "none" && !dashSec.classList.contains("hidden")) {
+      // Hanya auto-sync jika tab browser aktif dan tampilan dashboard sedang dibuka
+      if (document.hidden) return;
+      const dashSec = document.getElementById("cms-view-dashboard");
+      if (dashSec && dashSec.classList.contains("active")) {
         this.loadDashboard(false);
       }
-    }, 20000);
+    }, 60000);
   },
 
   renderDashboardFeed() {
@@ -369,6 +403,11 @@ export const ADMIN = {
     
     if (!dot || !label) return;
 
+    // Lewati jika baru saja diperiksa (< 5 menit) dan status sudah online, kecuali dipicu manual (forceToast)
+    if (!forceToast && (Date.now() - (this._lastDbCheckTime || 0) < 300000) && dot.classList.contains("online")) {
+      return;
+    }
+
     // Reset ke status checking
     dot.className = "db-dot checking";
     label.className = "db-label";
@@ -379,6 +418,7 @@ export const ADMIN = {
       const res = await API.checkDbHealth();
 
       if (res.status === "success" && res.data) {
+        this._lastDbCheckTime = Date.now();
         const d = res.data;
         const latency = res.latencyMs || 0;
         dot.className = "db-dot online";
@@ -393,6 +433,7 @@ export const ADMIN = {
       } else {
         const pingRes = await API.pingBackend();
         if (pingRes.status === "success") {
+          this._lastDbCheckTime = Date.now();
           dot.className = "db-dot online";
           label.className = "db-label online";
           label.textContent = `✅ Server GAS (${pingRes.latencyMs || 0}ms)`;
@@ -436,6 +477,11 @@ export const ADMIN = {
       return;
     }
 
+    // Lewati jika baru saja diperiksa (< 5 menit) dan status sudah online, kecuali dipicu manual (forceToast)
+    if (!forceToast && (Date.now() - (this._lastFonnteCheckTime || 0) < 300000) && dot.classList.contains("online")) {
+      return;
+    }
+
     // Reset ke status checking
     dot.className = "db-dot checking";
     label.className = "db-label";
@@ -444,6 +490,7 @@ export const ADMIN = {
     try {
       const res = await API.checkFonnteStatus(CONFIG.FONNTE_TOKEN);
       if (res.status === "success") {
+        this._lastFonnteCheckTime = Date.now();
         if (res.is_connected) {
           dot.className = "db-dot online";
           label.className = "db-label online";
@@ -480,10 +527,13 @@ export const ADMIN = {
       if (res.status === "success") {
         showToast("✅ Cache Google Apps Script berhasil dibersihkan!", "success");
       }
+      localStorage.removeItem("SIPRESMATA_DASHBOARD_STATS_CACHE");
+      this._lastDbCheckTime = 0;
+      this._lastFonnteCheckTime = 0;
       await this.loadStudents("", "", true);
-      await this.loadDashboard();
-      this.checkDbConnection(false);
-      this.checkFonnteConnection(false);
+      await this.loadDashboard(false);
+      this.checkDbConnection(true);
+      this.checkFonnteConnection(true);
       showToast("✓ Seluruh data siswa & presensi telah disinkronkan dari Google Sheets!", "success");
     } catch (err) {
       showToast("⚠️ Gagal sinkronkan cache: " + err.message, "danger");
