@@ -31,7 +31,7 @@ const emojiPattern = new RegExp(
 const UI_ICON_SELECTOR = [
   'button', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', '.nav-icon', '.badge',
   '.status-tag', '.toast-msg', '.modal-header', '.kiosk-guide-tip',
-  '.scanner-title', '.quick-scanner-title', '.session-badge-banner',
+  '.scanner-title', '.session-badge-banner',
   '.folder-icon-wrapper', '.card-actions-quick', '.schedule-page-icon',
   '.timeline-milestone-card', '#admin-cms-layout span', '#public-kiosk-layout span'
 ].join(', ');
