@@ -3476,33 +3476,49 @@ body.mode-kiosk .session-tutup {
 
 /* Result Card Display (Current Student & Standby State) */
 body.mode-kiosk .result-card-display {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  padding: 0.65rem 0.85rem;
-  text-align: center;
+  padding: 0.8rem 1rem;
+  width: 100% !important;
+  box-sizing: border-box !important;
   flex-shrink: 0;
   box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.05);
   transition: all 0.25s ease;
 }
 
 body.mode-kiosk .result-card-display.standby-state {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   border: 1px solid #e2e8f0;
 }
 
 body.mode-kiosk .standby-illustration-wrap {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0.25rem;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  margin: 0 auto 0.4rem auto !important;
+  text-align: center !important;
 }
 
 body.mode-kiosk .madrasah-halo-glow {
   position: absolute;
-  width: 90px;
-  height: 90px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 95px;
+  height: 95px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(245, 158, 11, 0.12) 50%, transparent 72%);
   animation: haloPulse 3.5s ease-in-out infinite alternate;
@@ -3510,33 +3526,36 @@ body.mode-kiosk .madrasah-halo-glow {
 }
 
 @keyframes haloPulse {
-  0% { transform: scale(0.9); opacity: 0.55; }
-  100% { transform: scale(1.15); opacity: 0.95; }
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.55; }
+  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.95; }
 }
 
 body.mode-kiosk .madrasah-students-svg {
-  width: 105px;
-  height: 72px;
+  width: 115px;
+  height: 78px;
+  display: block;
+  margin: 0 auto;
   position: relative;
   z-index: 1;
   filter: drop-shadow(0 3px 8px rgba(5, 150, 105, 0.14));
 }
 
 body.mode-kiosk .status-tag-standby-glow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto 0.45rem auto !important;
   gap: 0.35rem;
-  padding: 0.2rem 0.75rem;
+  padding: 0.22rem 0.85rem;
   border-radius: 9999px;
   background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
   border: 1px solid #6ee7b7;
   color: #065f46;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.18);
-  margin-bottom: 0.25rem;
+  width: fit-content;
 }
 
 body.mode-kiosk .status-tag-standby-glow .sparkle-star {
@@ -3545,31 +3564,35 @@ body.mode-kiosk .status-tag-standby-glow .sparkle-star {
 }
 
 body.mode-kiosk .result-avatar-circle {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: linear-gradient(135deg, #059669, #0d9488);
   box-shadow: 0 4px 12px rgba(5, 150, 105, 0.22);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   font-size: 1.35rem;
   color: #ffffff;
-  margin-bottom: 0.25rem;
+  margin: 0 auto 0.35rem auto !important;
 }
 
 body.mode-kiosk .result-student-name {
   color: #0f172a;
-  font-size: 1.12rem;
+  font-size: 1.15rem;
   font-weight: 800;
-  margin-bottom: 0.1rem;
+  margin: 0 0 0.15rem 0 !important;
+  text-align: center !important;
+  width: 100%;
 }
 
 body.mode-kiosk .result-student-meta {
   color: #64748b;
   font-weight: 500;
-  font-size: 0.76rem;
-  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+  margin: 0 0 0.4rem 0 !important;
+  text-align: center !important;
+  width: 100%;
 }
 
 body.mode-kiosk .result-timestamp {
@@ -3577,7 +3600,9 @@ body.mode-kiosk .result-timestamp {
   color: #64748b;
   font-weight: 600;
   font-size: 0.72rem;
-  margin-top: 0.25rem;
+  margin: 0.35rem 0 0 0 !important;
+  text-align: center !important;
+  width: 100%;
 }
 
 body.mode-kiosk .status-tag.hadir {
