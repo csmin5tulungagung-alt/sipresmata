@@ -12,11 +12,13 @@ import { ADMIN } from './admin.js';
 import { CARD_GENERATOR } from './card-generator.js';
 import { EXPORT } from './export.js';
 import { SCHEDULE_PAGE } from './schedule.js';
+import { initIcons } from './icons.js';
 
 // State App
 let currentSessionUser = JSON.parse(localStorage.getItem("SIPRESMATA_ADMIN_USER")) || null;
 
 document.addEventListener("DOMContentLoaded", () => {
+  initIcons();
   initLiveClock();
   initLayoutSwitching();
   initCmsNavigation();

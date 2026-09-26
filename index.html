@@ -9,10 +9,10 @@
   <meta name="description" content="SIPRESMATA: Pantau Kehadiran, Wujudkan Madrasah Cerdas. Sistem Informasi Presensi Siswa Berbasis Barcode & QR Code MIN 5 Tulungagung.">
   <meta name="theme-color" content="#059669">
 
-  <!-- Google Fonts: Plus Jakarta Sans -->
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <!-- Core Stylesheets -->
   <link rel="stylesheet" href="/src/css/style.css">
@@ -182,7 +182,10 @@
       <div class="cms-sidebar-header">
         <img src="/logo-min5.png" alt="Logo MIN 5 Tulungagung" class="brand-img-logo-cms">
         <div class="cms-sidebar-title">
-          <h2>SIPRESMATA</h2>
+          <div class="cms-sidebar-brand-row">
+            <h2>SIPRESMATA</h2>
+            <span class="cms-version-badge">v2.4</span>
+          </div>
           <p>MIN 5 TULUNGAGUNG</p>
         </div>
       </div>
@@ -238,6 +241,12 @@
           <span class="nav-icon">🚪</span> Keluar / Logout
         </button>
       </nav>
+
+      <!-- CMS Sidebar Footer -->
+      <div class="cms-sidebar-footer">
+        <span class="sync-label">EMIS &amp; Simpatika Sync</span>
+        <span class="status-online"><span class="pulse-dot"></span> Online</span>
+      </div>
     </aside>
 
     <!-- CMS Main Body Wrapper -->
