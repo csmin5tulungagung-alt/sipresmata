@@ -370,9 +370,67 @@ function initScannerView() {
   });
 }
 
+let scanFeedbackResetTimer = null;
+
+const STANDBY_RESULT_HTML = `
+  <div class="standby-illustration-wrap">
+    <div class="madrasah-halo-glow"></div>
+    <svg class="madrasah-students-svg" viewBox="0 0 160 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22 65C18 55 24 45 32 48C30 58 24 64 22 65Z" fill="#10b981" opacity="0.35"/>
+      <path d="M138 65C142 55 136 45 128 48C130 58 136 64 138 65Z" fill="#10b981" opacity="0.35"/>
+      <g transform="translate(112, 10) scale(0.65)">
+        <path d="M24 6L44 15L24 24L4 15L24 6Z" fill="#047857"/>
+        <path d="M10 20V28C10 33 24 38 24 38C24 38 38 33 38 28V20" stroke="#047857" stroke-width="2" fill="none"/>
+        <path d="M40 17V33" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="40" cy="34" r="2.5" fill="#f59e0b"/>
+      </g>
+      <g transform="translate(30, 20)">
+        <path d="M10 58C10 50 18 46 25 46C32 46 40 50 40 58V72H10V58Z" fill="#ffffff"/>
+        <path d="M16 48L25 58L34 48V72H16V48Z" fill="#059669"/>
+        <path d="M23 48L25 54L27 48" stroke="#047857" stroke-width="2"/>
+        <circle cx="25" cy="30" r="14" fill="#fed7aa"/>
+        <circle cx="21" cy="30" r="1.5" fill="#1e293b"/>
+        <circle cx="29" cy="30" r="1.5" fill="#1e293b"/>
+        <path d="M22 35C23.5 37 26.5 37 28 35" stroke="#9a3412" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M11 25C11 18 16 12 25 12C34 12 39 18 39 25H11Z" fill="#064e3b"/>
+        <rect x="10" y="22" width="30" height="5" rx="2" fill="#0f172a"/>
+      </g>
+      <g transform="translate(80, 18)">
+        <path d="M10 60C10 52 18 48 25 48C32 48 40 52 40 60V74H10V60Z" fill="#ffffff"/>
+        <path d="M14 50L25 60L36 50V74H14V50Z" fill="#059669"/>
+        <path d="M10 32C10 18 16 10 25 10C34 10 40 18 40 32C40 45 35 52 25 52C15 52 10 45 10 32Z" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+        <ellipse cx="25" cy="32" rx="9" ry="11" fill="#fed7aa"/>
+        <circle cx="22" cy="31" r="1.5" fill="#1e293b"/>
+        <circle cx="28" cy="31" r="1.5" fill="#1e293b"/>
+        <path d="M23 36C24 37.5 26 37.5 27 36" stroke="#9a3412" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M17 28C19 23 31 23 33 28" stroke="#10b981" stroke-width="1.5" fill="none"/>
+      </g>
+    </svg>
+  </div>
+  <div class="status-tag-standby-glow">
+    <span class="sparkle-star">✨</span> STANDBY SCANNER <span class="sparkle-star">✨</span>
+  </div>
+  <h3 class="result-student-name">Siap Memindai</h3>
+  <p class="result-student-meta">Arahkan barcode kartu pelajar MIN 5 ke depan kamera</p>
+  <p class="result-timestamp">Sistem akan menyapa nama siswa via audio otomatis.</p>
+`;
+
+function scheduleStandbyReset(delayMs = 7000) {
+  if (scanFeedbackResetTimer) clearTimeout(scanFeedbackResetTimer);
+  scanFeedbackResetTimer = setTimeout(() => {
+    const resultCard = document.getElementById("scan-result-card");
+    if (resultCard) {
+      resultCard.classList.add("standby-state");
+      resultCard.innerHTML = STANDBY_RESULT_HTML;
+    }
+  }, delayMs);
+}
+
 function handleScanFeedback(res) {
   const resultCard = document.getElementById("scan-result-card");
   if (!resultCard) return;
+
+  resultCard.classList.remove("standby-state");
 
   if (res.status === "pending") {
     const data = res.data;
@@ -400,6 +458,7 @@ function handleScanFeedback(res) {
 
     // Rekam langsung ke riwayat scan sesi ini
     recordRecentScan(data, statusClass);
+    scheduleStandbyReset(7000);
     return;
   }
 
@@ -436,6 +495,7 @@ function handleScanFeedback(res) {
     `;
     recordRecentScan(data, statusClass);
     showToast(`Presensi Berhasil: ${data.nama_lengkap} (${isPulang ? 'Sudah Pulang' : 'Hadir Masuk'})`, "success");
+    scheduleStandbyReset(7000);
   } else {
     const student = res.student || res.data || null;
     resultCard.innerHTML = `
@@ -454,6 +514,7 @@ function handleScanFeedback(res) {
       </div>
     `;
     showToast(res.message, "danger");
+    scheduleStandbyReset(6000);
   }
 }
 
