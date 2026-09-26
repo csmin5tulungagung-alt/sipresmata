@@ -502,7 +502,7 @@ export const CARD_GENERATOR = {
     const shortKelas = rawKelas.replace(/Kelas\s*/i, "").replace("KLS-", "").trim();
 
     return `
-      <div class="student-card-portrait" id="card-item-${s.id_siswa}" data-student-id="${s.id_siswa}" data-nisn="${s.nisn}" data-nama="${s.nama_lengkap}" data-kelas="${shortKelas}">
+      <div class="student-card-portrait student-card-student" id="card-item-${s.id_siswa}" data-student-id="${s.id_siswa}" data-nisn="${s.nisn}" data-nama="${s.nama_lengkap}" data-kelas="${shortKelas}">
         
         <!-- Ornamen Sudut Emas Mewah (Top-Left & Bottom-Right) -->
         <svg class="card-gold-corner tl" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1193,7 +1193,7 @@ export const CARD_GENERATOR = {
     const nipVal = (g.nip && g.nip !== "-") ? g.nip : (g.status_kepegawaian || "PTK");
 
     return `
-      <div class="student-card-portrait" id="teacher-card-item-${g.id_guru}" data-teacher-id="${g.id_guru}" data-nama="${g.nama_guru}" data-jabatan="${jabatan}">
+      <div class="student-card-portrait student-card-teacher" id="teacher-card-item-${g.id_guru}" data-teacher-id="${g.id_guru}" data-nama="${g.nama_guru}" data-jabatan="${jabatan}">
         
         <!-- Ornamen Sudut Emas Mewah (Top-Left & Bottom-Right) -->
         <svg class="card-gold-corner tl" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1252,7 +1252,7 @@ export const CARD_GENERATOR = {
               </svg>
               <div class="card-meta-detail">
                 <span class="card-meta-heading">JABATAN</span>
-                <span class="card-meta-value" style="font-size: 8.5pt; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${jabatan}</span>
+                <span class="card-meta-value card-meta-value-compact">${jabatan}</span>
               </div>
             </div>
 
@@ -1265,7 +1265,7 @@ export const CARD_GENERATOR = {
               </svg>
               <div class="card-meta-detail">
                 <span class="card-meta-heading">NIP / STATUS</span>
-                <span class="card-meta-value" style="font-size: 8.5pt; font-family: monospace;">${nipVal}</span>
+                <span class="card-meta-value card-meta-value-code">${nipVal}</span>
               </div>
             </div>
           </div>

@@ -149,16 +149,21 @@
 }
 
 .card-student-fullname {
-  font-size: 11pt;
+  font-size: 10.5pt;
   font-weight: 800;
   color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  line-height: 1.2;
-  white-space: nowrap;
+  line-height: 1.15;
+  white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 260px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: 268px;
+  min-height: 24px;
+  align-content: center;
   margin: 0 auto;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
@@ -175,13 +180,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  width: 100%;
+  max-width: 268px;
+  gap: 10px;
   margin: 0 auto 6px;
 }
 
 .card-student-meta-item {
   display: flex;
   align-items: center;
+  flex: 1 1 0;
+  min-width: 0;
   gap: 7px;
   text-align: left;
 }
@@ -196,6 +205,8 @@
 .card-meta-detail {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .card-meta-heading {
@@ -214,6 +225,23 @@
   letter-spacing: 0.04em;
   line-height: 1.1;
   margin-top: 1px;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-meta-value-compact {
+  font-size: 8.2pt;
+  letter-spacing: 0.01em;
+}
+
+.card-meta-value-code {
+  font-size: 7.4pt;
+  letter-spacing: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .card-meta-separator {
