@@ -113,130 +113,176 @@ export function speakText(text) {
 
 export const SCANNER = {
   async init(cameraSelectElement) {
+    let retries = 0;
+    while (typeof Html5Qrcode === 'undefined' && retries < 20) {
+      await new Promise(r => setTimeout(r, 150));
+      retries++;
+    }
+
     if (typeof Html5Qrcode === 'undefined') {
       console.warn("Html5Qrcode library not loaded yet.");
       return;
     }
 
-    // Aktifkan akselerasi hardware BarcodeDetector asli browser jika didukung
-    const formatsToSupport = (typeof Html5QrcodeSupportedFormats !== 'undefined') ? [
-      Html5QrcodeSupportedFormats.QR_CODE,
-      Html5QrcodeSupportedFormats.CODE_128,
-      Html5QrcodeSupportedFormats.CODE_39
-    ] : undefined;
-
     try {
-      html5QrCode = new Html5Qrcode("camera-reader", {
-        formatsToSupport: formatsToSupport,
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        },
-        verbose: false
-      });
+      html5QrCode = new Html5Qrcode("camera-reader", { verbose: false });
     } catch (e) {
-      html5QrCode = new Html5Qrcode("camera-reader");
+      console.warn("Html5Qrcode instantiation fallback:", e);
     }
 
     try {
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length > 0) {
-        cameraSelectElement.innerHTML = devices.map(d => 
-          `<option value="${d.id}">${d.label || 'Kamera ' + d.id}</option>`
-        ).join("");
-        
-        // 1. Cek apakah ada kamera yang sebelumnya disimpan oleh pengguna di perangkat ini (TV / PC / Kiosk)
-        const savedCameraId = localStorage.getItem("SIPRESMATA_PREFERRED_CAMERA");
-        const hasSaved = savedCameraId && devices.some(d => d.id === savedCameraId);
+        if (cameraSelectElement) {
+          cameraSelectElement.innerHTML = devices.map((d, idx) => 
+            `<option value="${d.id}">${d.label || 'Kamera ' + (idx + 1)}</option>`
+          ).join("");
+          
+          const savedCameraId = localStorage.getItem("SIPRESMATA_PREFERRED_CAMERA");
+          const hasSaved = savedCameraId && devices.some(d => d.id === savedCameraId);
 
-        if (hasSaved) {
-          cameraSelectElement.value = savedCameraId;
-        } else {
-          // 2. Prioritaskan kamera Webcam USB / Eksternal (Standar TV, Android TV Box, atau Mini PC Kiosk)
-          const usbCamera = devices.find(d => {
-            const lbl = (d.label || "").toLowerCase();
-            return lbl.includes("usb") || lbl.includes("uvc") || lbl.includes("webcam") || lbl.includes("external");
-          });
+          if (hasSaved) {
+            cameraSelectElement.value = savedCameraId;
+          } else {
+            const usbCamera = devices.find(d => {
+              const lbl = (d.label || "").toLowerCase();
+              return lbl.includes("usb") || lbl.includes("uvc") || lbl.includes("webcam") || lbl.includes("external");
+            });
 
-          // 3. Jika bukan USB, cari kamera depan (front/depan/user) yang menghadap ke siswa
-          const frontCamera = devices.find(d => {
-            const lbl = (d.label || "").toLowerCase();
-            return lbl.includes("front") || lbl.includes("depan") || lbl.includes("user");
-          });
+            const frontCamera = devices.find(d => {
+              const lbl = (d.label || "").toLowerCase();
+              return lbl.includes("front") || lbl.includes("depan") || lbl.includes("user");
+            });
 
-          // 4. Jika di smartphone handheld, baru cari kamera belakang
-          const isMobilePhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !/TV|SmartTV|GoogleTV|Large/i.test(navigator.userAgent);
-          const backCamera = isMobilePhone ? devices.find(d => {
-            const lbl = (d.label || "").toLowerCase();
-            return lbl.includes("back") || lbl.includes("belakang") || lbl.includes("rear");
-          }) : null;
-
-          const chosen = usbCamera || frontCamera || backCamera || devices[0];
-          if (chosen) {
-            cameraSelectElement.value = chosen.id;
-            localStorage.setItem("SIPRESMATA_PREFERRED_CAMERA", chosen.id);
+            const chosen = usbCamera || frontCamera || devices[0];
+            if (chosen) {
+              cameraSelectElement.value = chosen.id;
+              localStorage.setItem("SIPRESMATA_PREFERRED_CAMERA", chosen.id);
+            }
           }
         }
-      } else {
-        cameraSelectElement.innerHTML = `<option value="">Tidak ada kamera terdeteksi</option>`;
+      } else if (cameraSelectElement) {
+        cameraSelectElement.innerHTML = `<option value="">Kamera Default Sistem</option>`;
       }
     } catch (err) {
-      console.error("Error accessing camera list:", err);
-      cameraSelectElement.innerHTML = `<option value="">Izin kamera ditolak</option>`;
+      console.warn("Daftar kamera belum diizinkan atau kosong:", err);
+      if (cameraSelectElement) {
+        cameraSelectElement.innerHTML = `<option value="">Kamera Default Sistem</option>`;
+      }
     }
   },
 
   async start(cameraId, onScanSuccess) {
-    if (!html5QrCode || isScanning) return;
+    if (isScanning) {
+      await this.stop();
+    }
 
-    // Konfigurasi 25 FPS dan qrbox responsif lebar agar barcode 1D dan QR terbaca secepat kilat
     const config = {
-      fps: 25,
+      fps: 20,
       qrbox: (viewfinderWidth, viewfinderHeight) => {
         const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
         return {
-          width: Math.min(Math.floor(viewfinderWidth * 0.9), 380),
-          height: Math.min(Math.floor(minEdge * 0.72), 260)
+          width: Math.min(Math.floor(viewfinderWidth * 0.88), 380),
+          height: Math.min(Math.floor(minEdge * 0.72), 250)
         };
       },
       aspectRatio: 1.333333
     };
 
-    try {
-      const cameraConstraint = cameraId 
-        ? { deviceId: { exact: cameraId } } 
-        : { facingMode: "user" }; // Default ke user (menghadap ke siswa/kiosk), BUKAN environment (kamera belakang)
+    const scanHandler = async (decodedText) => {
+      const now = Date.now();
+      const cleanCode = (decodedText || "").trim();
+      if (!cleanCode) return;
 
-      await html5QrCode.start(
-        cameraConstraint,
-        config,
-        async (decodedText) => {
-          const now = Date.now();
-          const cleanCode = (decodedText || "").trim();
-          if (!cleanCode) return;
+      const isSameCode = (cleanCode === lastScannedCode);
+      const elapsed = now - lastScannedTime;
 
-          const isSameCode = (cleanCode === lastScannedCode);
-          const elapsed = now - lastScannedTime;
+      if (isSameCode && elapsed < SAME_CODE_COOLDOWN_MS) {
+        return;
+      }
+      if (!isSameCode && elapsed < DIFF_CODE_COOLDOWN_MS) {
+        return;
+      }
 
-          // Jeda: 1.8 detik jika kartu sama (mencegah double trigger), hanya 0.5 detik jika kartu siswa berikutnya
-          if (isSameCode && elapsed < SAME_CODE_COOLDOWN_MS) {
-            return;
-          }
-          if (!isSameCode && elapsed < DIFF_CODE_COOLDOWN_MS) {
-            return;
-          }
+      lastScannedCode = cleanCode;
+      lastScannedTime = now;
 
-          lastScannedCode = cleanCode;
-          lastScannedTime = now;
+      await this.processBarcode(cleanCode, onScanSuccess);
+    };
 
-          await this.processBarcode(cleanCode, onScanSuccess);
-        },
-        () => {
-          // Frame scanner decoding, ignore standard frame drops
-        }
-      );
+    const overlay = document.getElementById("camera-placeholder-overlay");
+    const toggleBtn = document.getElementById("btn-toggle-camera");
+
+    const tryStart = async (target) => {
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("camera-reader", { verbose: false });
+      }
+      await html5QrCode.start(target, config, scanHandler, () => {});
       isScanning = true;
+      if (overlay) overlay.style.display = "none";
+      if (toggleBtn) {
+        toggleBtn.innerHTML = "⏹️ Stop";
+        toggleBtn.className = "btn btn-secondary btn-sm";
+      }
+    };
+
+    try {
+      // Prioritas 1: Gunakan cameraId yang dipilih user jika ada
+      if (cameraId && typeof cameraId === "string" && cameraId.trim().length > 0) {
+        try {
+          await tryStart(cameraId.trim());
+          return;
+        } catch (idErr) {
+          console.warn("Gagal memulai dengan cameraId spesifik, mencoba facingMode user:", idErr);
+        }
+      }
+
+      // Prioritas 2: Kamera depan (user facing)
+      try {
+        await tryStart({ facingMode: "user" });
+        return;
+      } catch (userErr) {
+        console.warn("Gagal memulai dengan facingMode user, mencoba facingMode environment:", userErr);
+      }
+
+      // Prioritas 3: Kamera belakang (environment)
+      try {
+        await tryStart({ facingMode: "environment" });
+        return;
+      } catch (envErr) {
+        console.warn("Gagal memulai dengan facingMode environment, mencoba getCameras():", envErr);
+      }
+
+      // Prioritas 4: Ambil kamera pertama yang terdeteksi
+      const devices = await Html5Qrcode.getCameras();
+      if (devices && devices.length > 0) {
+        await tryStart(devices[0].id);
+        return;
+      }
+
+      throw new Error("Tidak ada perangkat kamera yang dapat diakses.");
     } catch (err) {
-      console.error("Failed to start Html5Qrcode:", err);
+      console.error("Gagal mengaktifkan kamera pemindai:", err);
+      isScanning = false;
+      if (overlay) {
+        overlay.style.display = "flex";
+        overlay.innerHTML = `
+          <div class="camera-placeholder-icon">⚠️</div>
+          <h4>Kamera Belum Aktif</h4>
+          <p style="font-size: 0.76rem; max-width: 310px; margin: 0 auto 0.6rem; color: #94a3b8;">Klik tombol di bawah untuk memberikan izin kamera pada browser Anda.</p>
+          <button id="btn-start-camera-overlay" class="btn btn-primary btn-sm" type="button">
+            ▶ Izinkan & Mulai Kamera
+          </button>
+        `;
+        const retryBtn = document.getElementById("btn-start-camera-overlay");
+        if (retryBtn) {
+          retryBtn.addEventListener("click", () => this.start(null, onScanSuccess));
+        }
+      }
+      if (toggleBtn) {
+        toggleBtn.innerHTML = "📷 Kamera";
+        toggleBtn.className = "btn btn-primary btn-sm";
+      }
     }
   },
 
@@ -244,11 +290,22 @@ export const SCANNER = {
     if (html5QrCode && isScanning) {
       try {
         await html5QrCode.stop();
-        isScanning = false;
       } catch (err) {
         console.error("Error stopping scanner:", err);
       }
     }
+    isScanning = false;
+    const overlay = document.getElementById("camera-placeholder-overlay");
+    const toggleBtn = document.getElementById("btn-toggle-camera");
+    if (overlay) overlay.style.display = "flex";
+    if (toggleBtn) {
+      toggleBtn.innerHTML = "📷 Kamera";
+      toggleBtn.className = "btn btn-primary btn-sm";
+    }
+  },
+
+  isScanningNow() {
+    return isScanning;
   },
 
   async processBarcode(barcode, callback) {

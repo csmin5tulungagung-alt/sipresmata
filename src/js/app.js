@@ -197,26 +197,121 @@ function initCmsNavigation() {
   });
 }
 
+// State Riwayat Scan Kiosk (disimpan per sesi browser)
+let kioskRecentScans = [];
+try {
+  kioskRecentScans = JSON.parse(sessionStorage.getItem("SIPRESMATA_RECENT_SCANS") || "[]");
+} catch (e) {
+  kioskRecentScans = [];
+}
+
+function renderRecentScans() {
+  const container = document.getElementById("kiosk-recent-scans-list");
+  const counter = document.getElementById("recent-scans-count");
+  if (!container) return;
+
+  if (counter) {
+    counter.textContent = `${kioskRecentScans.length} Siswa`;
+  }
+
+  if (kioskRecentScans.length === 0) {
+    container.innerHTML = `
+      <div class="recent-scan-empty">
+        Belum ada rekaman scan sesi ini. Kartu yang dipindai akan muncul di sini.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = kioskRecentScans.map(item => `
+    <div class="recent-scan-item">
+      <div class="recent-scan-left">
+        <div class="recent-scan-avatar" style="${item.isPulang ? 'background: #0284c7;' : item.statusClass === 'terlambat' ? 'background: #f59e0b;' : 'background: #059669;'}">
+          ${(item.nama || '?').charAt(0).toUpperCase()}
+        </div>
+        <div class="recent-scan-info">
+          <div class="recent-scan-name" title="${item.nama}">${item.nama}</div>
+          <div class="recent-scan-sub">${item.kelas} • ${item.jam} WIB</div>
+        </div>
+      </div>
+      <span class="recent-scan-badge ${item.statusClass}">
+        ${item.isPulang ? 'Pulang' : item.statusClass === 'terlambat' ? 'Terlambat' : 'Tepat Waktu'}
+      </span>
+    </div>
+  `).join("");
+}
+
+function recordRecentScan(data, statusClass) {
+  if (!data || !data.nama_lengkap) return;
+  const isPulang = data.jenis_sesi === "PULANG";
+  const jam = data.jam_scan || new Date().toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  // Mencegah duplicate entry berturut-turut dalam 3 detik untuk siswa yang sama
+  if (kioskRecentScans.length > 0 && kioskRecentScans[0].nisn === data.nisn && (Date.now() - (kioskRecentScans[0].timestamp || 0) < 3000)) {
+    return;
+  }
+
+  kioskRecentScans.unshift({
+    nama: data.nama_lengkap,
+    kelas: data.kelas || '-',
+    nisn: data.nisn || '-',
+    jam: jam,
+    statusClass: statusClass,
+    isPulang: isPulang,
+    timestamp: Date.now()
+  });
+
+  if (kioskRecentScans.length > 15) {
+    kioskRecentScans.pop();
+  }
+
+  try {
+    sessionStorage.setItem("SIPRESMATA_RECENT_SCANS", JSON.stringify(kioskRecentScans));
+  } catch (e) {}
+
+  renderRecentScans();
+}
+
 // 4. Scanner Kiosk Integration
 function initScannerView() {
   const camSelect = document.getElementById("select-camera");
   const manualBarcodeBtn = document.getElementById("btn-submit-manual-code");
   const manualBarcodeInput = document.getElementById("input-manual-barcode");
+  const btnToggleCamera = document.getElementById("btn-toggle-camera");
+  const btnStartOverlay = document.getElementById("btn-start-camera-overlay");
+
+  // Render recent scans jika ada riwayat sesi
+  renderRecentScans();
 
   if (camSelect) {
     SCANNER.init(camSelect).then(() => {
-      if (camSelect.value) {
-        SCANNER.start(camSelect.value, handleScanFeedback);
-      }
+      const targetCam = camSelect.value || null;
+      SCANNER.start(targetCam, handleScanFeedback);
     });
 
     camSelect.addEventListener("change", () => {
       if (camSelect.value) {
         localStorage.setItem("SIPRESMATA_PREFERRED_CAMERA", camSelect.value);
       }
-      SCANNER.stop().then(() => {
-        SCANNER.start(camSelect.value, handleScanFeedback);
-      });
+      SCANNER.start(camSelect.value, handleScanFeedback);
+    });
+  }
+
+  if (btnToggleCamera) {
+    btnToggleCamera.addEventListener("click", () => {
+      if (SCANNER.isScanningNow && SCANNER.isScanningNow()) {
+        SCANNER.stop();
+      } else {
+        const camId = camSelect ? camSelect.value : null;
+        SCANNER.start(camId, handleScanFeedback);
+      }
+    });
+  }
+
+  if (btnStartOverlay) {
+    btnStartOverlay.addEventListener("click", () => {
+      const camId = camSelect ? camSelect.value : null;
+      SCANNER.start(camId, handleScanFeedback);
     });
   }
 
@@ -298,10 +393,13 @@ function handleScanFeedback(res) {
         ${statusLabel} (${data.jam_scan} WIB)
       </div>
 
-      <p class="result-timestamp" style="color: #38bdf8; font-weight: 500;">
+      <p class="result-timestamp" style="color: #0284c7; font-weight: 500;">
         ⚡ Terbaca Instan • Menyinkronkan ke cloud...
       </p>
     `;
+
+    // Rekam langsung ke riwayat scan sesi ini
+    recordRecentScan(data, statusClass);
     return;
   }
 
@@ -332,10 +430,11 @@ function handleScanFeedback(res) {
         ${statusLabel} (${data.jam_scan} WIB)
       </div>
 
-      <p class="result-timestamp" style="color: #34d399; font-weight: 500;">
+      <p class="result-timestamp" style="color: #059669; font-weight: 600;">
         ✓ ${res.message || 'Presensi berhasil dicatat di cloud database.'}
       </p>
     `;
+    recordRecentScan(data, statusClass);
     showToast(`Presensi Berhasil: ${data.nama_lengkap} (${isPulang ? 'Sudah Pulang' : 'Hadir Masuk'})`, "success");
   } else {
     const student = res.student || res.data || null;
@@ -343,7 +442,7 @@ function handleScanFeedback(res) {
       <div class="result-avatar-circle" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">
         ✕
       </div>
-      <h3 class="result-student-name" style="color: #f87171;">
+      <h3 class="result-student-name" style="color: #ef4444;">
         ${student ? student.nama_lengkap : 'Presensi Ditolak'}
       </h3>
       <p class="result-student-meta">

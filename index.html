@@ -106,10 +106,13 @@
               <span class="pulse-dot"></span>
               <strong>Stasiun Pemindai Kartu Siswa</strong>
             </div>
-            <div>
+            <div class="scanner-header-actions" style="display: flex; gap: 0.4rem; align-items: center;">
               <select id="select-camera" class="form-control camera-select-box">
                 <option value="">Mencari kamera...</option>
               </select>
+              <button id="btn-toggle-camera" class="btn btn-primary btn-sm" title="Mulai / Berhenti Kamera" type="button">
+                📷 Kamera
+              </button>
             </div>
           </div>
 
@@ -123,6 +126,16 @@
               <div class="hud-corner bl"></div>
               <div class="hud-corner br"></div>
               <div class="scanner-laser-line"></div>
+            </div>
+
+            <!-- Kamera Standby / Error Overlay -->
+            <div id="camera-placeholder-overlay" class="camera-placeholder-overlay">
+              <div class="camera-placeholder-icon">📷</div>
+              <h4>Kamera Siap Diaktifkan</h4>
+              <p>Klik tombol di bawah jika kamera belum menyala secara otomatis.</p>
+              <button id="btn-start-camera-overlay" class="btn btn-primary btn-sm" type="button">
+                ▶ Mulai Pemindai Kamera
+              </button>
             </div>
           </div>
 
@@ -157,9 +170,24 @@
             <p class="result-timestamp">Sistem akan menyapa nama siswa via audio otomatis.</p>
           </div>
 
+          <!-- Riwayat Presensi Terakhir (Recent Scans) -->
+          <div class="kiosk-recent-scans-card">
+            <div class="recent-scans-header">
+              <span class="recent-scans-title">
+                <span class="recent-icon">⏱️</span> Riwayat Scan Terkini
+              </span>
+              <span id="recent-scans-count" class="recent-scans-counter">0 Siswa</span>
+            </div>
+            <div id="kiosk-recent-scans-list" class="recent-scans-list">
+              <div class="recent-scan-empty">
+                Belum ada rekaman scan sesi ini. Kartu yang dipindai akan muncul di sini.
+              </div>
+            </div>
+          </div>
+
           <!-- Panduan Kiosk -->
           <div class="kiosk-guide-tip">
-            💡 <strong>Panduan Siswa:</strong> Pegang kartu tenang sejajar dengan kotak kamera. Tunggu bunyi <em>beep</em> dan suara konfirmasi sebelum melangkah ke kelas.
+            💡 <strong>Panduan Siswa:</strong> Pegang kartu tenang sejajar dengan kotak kamera. Tunggu bunyi <em>beep</em> dan konfirmasi suara.
           </div>
         </div>
 
